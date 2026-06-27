@@ -411,6 +411,8 @@ function formatAdminUser(user: any) {
     points: user.points,
     upline: user.upline,
     joinedAt: user.joinedAt?.toISOString(),
+    isBanned: user.isBanned ?? false,
+    totalDownlines: 0,
   };
 }
 
