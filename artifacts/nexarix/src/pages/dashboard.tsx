@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Wallet, ArrowDownCircle, Copy, CheckCircle, Users, Zap, Sparkles } from "lucide-react";
+import { Wallet, ArrowDownCircle, Copy, CheckCircle, Users, Zap, Sparkles, CheckSquare } from "lucide-react";
 
 function formatFcfa(amount: number) {
   return `${amount.toLocaleString("fr-FR")} XOF`;
@@ -74,6 +74,14 @@ export default function Dashboard() {
       gradient: "from-amber-400 to-orange-500",
       bg: "bg-amber-50",
       shadow: "shadow-amber-200/60",
+    },
+    {
+      label: "Tâches accomplies",
+      value: `${((stats as any)?.completedTasks || 0).toLocaleString()} tâches`,
+      icon: CheckSquare,
+      gradient: "from-violet-500 to-purple-600",
+      bg: "bg-violet-50",
+      shadow: "shadow-violet-200/60",
     },
   ];
 

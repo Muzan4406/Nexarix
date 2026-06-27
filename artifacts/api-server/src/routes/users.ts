@@ -21,6 +21,10 @@ router.get("/users/dashboard", authMiddleware, async (req, res) => {
     .from(usersTable)
     .where(eq(usersTable.upline, user.username));
 
+  const completedTasksCount = await db.select({ count: sql<number>`count(*)` })
+    .from(taskCompletionsTable)
+    .where(eq(taskCompletionsTable.userId, userId));
+
   const balance = parseFloat(user.balance || "0");
   const totalWithdrawn = parseFloat(user.totalWithdrawn || "0");
   const mlmL1 = parseFloat(user.mlmEarningsL1 || "0");
@@ -39,6 +43,7 @@ router.get("/users/dashboard", authMiddleware, async (req, res) => {
     totalBalance,
     welcomeBonus,
     downlineCount: Number(downlineCount[0]?.count || 0),
+    completedTasks: Number(completedTasksCount[0]?.count || 0),
     referralLink: `https://nexarix.com/register/${user.username}`,
     earnings: { mlmLevel1: mlmL1, mlmLevel2: mlmL2, mlmLevel3: mlmL3, tasks },
   });

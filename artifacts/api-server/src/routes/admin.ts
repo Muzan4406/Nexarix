@@ -316,6 +316,7 @@ router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req
 
 router.delete("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req, res) => {
   const taskId = parseInt(req.params.taskId as string);
+  await db.delete(taskCompletionsTable).where(eq(taskCompletionsTable.taskId, taskId));
   await db.delete(tasksTable).where(eq(tasksTable.id, taskId));
   res.json({ success: true });
 });
