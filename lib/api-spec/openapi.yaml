@@ -758,6 +758,9 @@ components:
           type: number
         totalEarned:
           type: number
+        totalBalance:
+          type: number
+          description: Total cumulative balance (balance + totalWithdrawn)
         welcomeBonus:
           type: number
         downlineCount:
@@ -776,7 +779,7 @@ components:
             tasks:
               type: number
           required: [mlmLevel1, mlmLevel2, mlmLevel3, tasks]
-      required: [balance, points, totalWithdrawn, totalEarned, welcomeBonus, downlineCount, referralLink, earnings]
+      required: [balance, points, totalWithdrawn, totalEarned, totalBalance, welcomeBonus, downlineCount, referralLink, earnings]
 
     RegisterInput:
       type: object

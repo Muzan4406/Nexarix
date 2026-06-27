@@ -48,7 +48,7 @@ export default function Dashboard() {
   );
 
   const activationFee = publicSettings?.activationFee ?? 3000;
-  const totalEarned = stats?.totalEarned || 0;
+  const totalBalance = stats?.totalBalance || 0;
 
   const statCards = [
     {
@@ -122,8 +122,8 @@ export default function Dashboard() {
                 <p className="font-black text-lg">{formatFcfa(activationFee)}</p>
               </div>
               <div className="bg-white/15 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
-                <p className="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Total Gagné</p>
-                <p className="font-black text-lg">{formatFcfa(totalEarned)}</p>
+                <p className="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Solde Total</p>
+                <p className="font-black text-lg">{formatFcfa(totalBalance)}</p>
               </div>
             </div>
           </div>

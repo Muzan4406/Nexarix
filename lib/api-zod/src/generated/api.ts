@@ -110,6 +110,7 @@ export const GetDashboardResponse = zod.object({
   "points": zod.number(),
   "totalWithdrawn": zod.number(),
   "totalEarned": zod.number(),
+  "totalBalance": zod.number().describe('Total cumulative balance (balance + totalWithdrawn)'),
   "welcomeBonus": zod.number(),
   "downlineCount": zod.number(),
   "referralLink": zod.string(),

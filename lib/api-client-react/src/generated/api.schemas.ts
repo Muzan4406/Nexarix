@@ -71,6 +71,8 @@ export interface DashboardStats {
   points: number;
   totalWithdrawn: number;
   totalEarned: number;
+  /** Total cumulative balance (balance + totalWithdrawn) */
+  totalBalance: number;
   welcomeBonus: number;
   downlineCount: number;
   referralLink: string;

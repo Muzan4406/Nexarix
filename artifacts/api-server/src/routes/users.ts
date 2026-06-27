@@ -29,12 +29,14 @@ router.get("/users/dashboard", authMiddleware, async (req, res) => {
   const tasks = parseFloat(user.taskEarnings || "0");
   const welcomeBonus = parseFloat(user.welcomeBonus || "0");
   const totalEarned = mlmL1 + mlmL2 + mlmL3 + tasks + welcomeBonus;
+  const totalBalance = balance + totalWithdrawn;
 
   res.json({
     balance,
     points: user.points,
     totalWithdrawn,
     totalEarned,
+    totalBalance,
     welcomeBonus,
     downlineCount: Number(downlineCount[0]?.count || 0),
     referralLink: `https://nexarix.com/register/${user.username}`,
