@@ -198,6 +198,9 @@ export interface DownlineData {
   level2: DownlineUser[];
   level3: DownlineUser[];
   inactive: DownlineUser[];
+  mlmEarningsL1: number;
+  mlmEarningsL2: number;
+  mlmEarningsL3: number;
 }
 
 export interface AdminLoginInput {
@@ -318,6 +321,10 @@ export interface SiteSettingsUpdate {
 export type GetAdminUsersParams = {
 search?: string;
 status?: string;
+};
+
+export type DeleteAdminUser200 = {
+  success: boolean;
 };
 
 export type GetAdminWithdrawalsParams = {

@@ -39,6 +39,9 @@ router.get("/downline", authMiddleware, async (req, res) => {
     level2: level2Users.map(formatDownlineUser),
     level3: level3Users.map(formatDownlineUser),
     inactive: inactive.map(formatDownlineUser),
+    mlmEarningsL1: parseFloat(user.mlmEarningsL1 || "0"),
+    mlmEarningsL2: parseFloat(user.mlmEarningsL2 || "0"),
+    mlmEarningsL3: parseFloat(user.mlmEarningsL3 || "0"),
   });
 });
 
@@ -49,6 +52,14 @@ function formatDownlineUser(u: any) {
     country: u.country,
     status: u.status,
     joinedAt: u.joinedAt?.toISOString(),
+  };
+}
+
+export function getMLMEarnings(user: any) {
+  return {
+    mlmEarningsL1: parseFloat(user.mlmEarningsL1 || "0"),
+    mlmEarningsL2: parseFloat(user.mlmEarningsL2 || "0"),
+    mlmEarningsL3: parseFloat(user.mlmEarningsL3 || "0"),
   };
 }
 

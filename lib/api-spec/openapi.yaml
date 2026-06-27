@@ -415,6 +415,51 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminUser"
+    delete:
+      operationId: deleteAdminUser
+      tags: [admin]
+      summary: Permanently delete a user from the database
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+
+  /admin/users/{userId}/revoke-referral:
+    post:
+      operationId: revokeAdminUserReferral
+      tags: [admin]
+      summary: Revoke user referral and reverse MLM commissions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
 
   /admin/tasks:
     get:
@@ -984,7 +1029,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DownlineUser"
-      required: [level1, level2, level3, inactive]
+        mlmEarningsL1:
+          type: number
+        mlmEarningsL2:
+          type: number
+        mlmEarningsL3:
+          type: number
+      required: [level1, level2, level3, inactive, mlmEarningsL1, mlmEarningsL2, mlmEarningsL3]
 
     AdminLoginInput:
       type: object

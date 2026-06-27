@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useGetAdminUsers, useUpdateAdminUser, getGetAdminUsersQueryKey } from "@workspace/api-client-react";
+import { useGetAdminUsers, useUpdateAdminUser, useDeleteAdminUser, useRevokeAdminUserReferral, getGetAdminUsersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, UserCheck, Ban, KeyRound, Wallet, GitBranch, ShieldAlert,
-  Phone, Mail, MapPin, Calendar, Users, ChevronRight, UserX
+  Phone, Mail, MapPin, Calendar, Users, ChevronRight, Trash2, Unlink, AlertTriangle
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -45,8 +45,13 @@ export default function AdminUsers() {
   const [uplineInput, setUplineInput] = useState("");
   const [statusInput, setStatusInput] = useState("");
 
+  const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
+  const [confirmRevoke, setConfirmRevoke] = useState<AdminUser | null>(null);
+
   const { data: users = [], isLoading } = useGetAdminUsers({});
   const updateUser = useUpdateAdminUser();
+  const deleteUser = useDeleteAdminUser();
+  const revokeReferral = useRevokeAdminUserReferral();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -79,6 +84,36 @@ export default function AdminUsers() {
     updateUser.mutate({ userId, data: data as any }, {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetAdminUsersQueryKey() }); toast({ title: msg }); },
       onError: (err: any) => toast({ title: "Erreur", description: err?.data?.error || "Échec", variant: "destructive" }),
+    });
+  };
+
+  const handleDeleteUser = (user: AdminUser) => {
+    deleteUser.mutate({ userId: user.id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetAdminUsersQueryKey() });
+        setSelectedUser(null);
+        setConfirmDelete(null);
+        toast({ title: "🗑️ Utilisateur supprimé définitivement" });
+      },
+      onError: (err: any) => {
+        setConfirmDelete(null);
+        toast({ title: "Erreur", description: err?.data?.error || "Échec de la suppression", variant: "destructive" });
+      },
+    });
+  };
+
+  const handleRevokeReferral = (user: AdminUser) => {
+    revokeReferral.mutate({ userId: user.id }, {
+      onSuccess: (updated: any) => {
+        queryClient.invalidateQueries({ queryKey: getGetAdminUsersQueryKey() });
+        setSelectedUser({ ...selectedUser!, ...updated, upline: null });
+        setConfirmRevoke(null);
+        toast({ title: "✅ Parrainage révoqué — commissions annulées" });
+      },
+      onError: (err: any) => {
+        setConfirmRevoke(null);
+        toast({ title: "Erreur", description: err?.data?.error || "Échec", variant: "destructive" });
+      },
     });
   };
 
@@ -353,14 +388,50 @@ export default function AdminUsers() {
                       <GitBranch className="h-4 w-4 shrink-0" />Changer le parrain reconstitue l'arbre MLM pour les commissions futures.
                     </div>
                     <div>
-                      <Label className="text-sm font-bold text-gray-700">Nom du parrain</Label>
+                      <Label className="text-sm font-bold text-gray-700">Nom du parrain actuel</Label>
+                      <div className="mt-2 rounded-2xl border border-gray-200 h-11 px-3 flex items-center bg-gray-50">
+                        <span className="text-sm font-semibold text-gray-600">
+                          {selectedUser.upline || <span className="text-gray-400 font-normal">Aucun parrain</span>}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-bold text-gray-700">Changer le parrain</Label>
                       <Input className="mt-2 rounded-2xl border-gray-200 h-11"
-                        value={uplineInput} onChange={e => setUplineInput(e.target.value)} placeholder="Username du parrain…" />
+                        value={uplineInput} onChange={e => setUplineInput(e.target.value)} placeholder="Nouveau username du parrain…" />
                     </div>
                     <Button className="w-full rounded-2xl h-11 font-bold" disabled={updateUser.isPending}
                       onClick={() => mutate({ upline: uplineInput || null }, "Parrain mis à jour")}>
                       {updateUser.isPending ? "Enregistrement…" : "Sauvegarder le parrain"}
                     </Button>
+
+                    {selectedUser.upline && (
+                      <div className="pt-2 border-t border-gray-100">
+                        <p className="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wide">Actions avancées</p>
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-2xl h-11 border-amber-200 text-amber-600 hover:bg-amber-50 font-bold"
+                          disabled={revokeReferral.isPending}
+                          onClick={() => setConfirmRevoke(selectedUser)}
+                        >
+                          <Unlink className="h-4 w-4 mr-2" />
+                          Révoquer le parrainage + commissions
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-red-100">
+                      <p className="text-xs font-bold text-red-400 mb-2 uppercase tracking-wide">Zone dangereuse</p>
+                      <Button
+                        variant="outline"
+                        className="w-full rounded-2xl h-11 border-red-200 text-red-600 hover:bg-red-50 font-bold"
+                        disabled={deleteUser.isPending}
+                        onClick={() => setConfirmDelete(selectedUser)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Supprimer définitivement l'utilisateur
+                      </Button>
+                    </div>
                   </TabsContent>
                 </Tabs>
               </div>
@@ -368,6 +439,78 @@ export default function AdminUsers() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Delete Dialog */}
+      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <DialogContent className="max-w-sm rounded-3xl border-0 shadow-2xl p-6">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="h-16 w-16 rounded-2xl bg-red-100 flex items-center justify-center">
+              <AlertTriangle className="h-8 w-8 text-red-500" />
+            </div>
+            <div>
+              <p className="font-black text-gray-900 text-lg">Supprimer définitivement ?</p>
+              <p className="text-sm text-gray-500 mt-1">
+                L'utilisateur <span className="font-bold text-gray-700">{confirmDelete?.username}</span> sera supprimé de la base de données. Cette action est <span className="font-bold text-red-500">irréversible</span>.
+              </p>
+              {confirmDelete?.status === "active" && confirmDelete?.upline && (
+                <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700 text-left">
+                  ⚠️ Les commissions MLM générées par cet utilisateur seront annulées pour son parrain et sa chaîne.
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 w-full">
+              <Button variant="outline" className="flex-1 rounded-2xl h-11 font-bold" onClick={() => setConfirmDelete(null)}>
+                Annuler
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1 rounded-2xl h-11 font-bold"
+                disabled={deleteUser.isPending}
+                onClick={() => confirmDelete && handleDeleteUser(confirmDelete)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                {deleteUser.isPending ? "Suppression…" : "Supprimer"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Revoke Referral Dialog */}
+      <Dialog open={!!confirmRevoke} onOpenChange={() => setConfirmRevoke(null)}>
+        <DialogContent className="max-w-sm rounded-3xl border-0 shadow-2xl p-6">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="h-16 w-16 rounded-2xl bg-amber-100 flex items-center justify-center">
+              <Unlink className="h-8 w-8 text-amber-500" />
+            </div>
+            <div>
+              <p className="font-black text-gray-900 text-lg">Révoquer le parrainage ?</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Le lien de parrainage de <span className="font-bold text-gray-700">{confirmRevoke?.username}</span> avec <span className="font-bold text-gray-700">{confirmRevoke?.upline}</span> sera supprimé.
+              </p>
+              {confirmRevoke?.status === "active" && (
+                <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700 text-left">
+                  ⚠️ Les commissions reversées au parrain (L1 : 1 300 F), au grand-parrain (L2 : 700 F) et à l'arrière-grand-parrain (L3 : 400 F) seront annulées.
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 w-full">
+              <Button variant="outline" className="flex-1 rounded-2xl h-11 font-bold" onClick={() => setConfirmRevoke(null)}>
+                Annuler
+              </Button>
+              <Button
+                className="flex-1 rounded-2xl h-11 font-bold bg-amber-500 hover:bg-amber-600 text-white"
+                disabled={revokeReferral.isPending}
+                onClick={() => confirmRevoke && handleRevokeReferral(confirmRevoke)}
+              >
+                <Unlink className="h-4 w-4 mr-1" />
+                {revokeReferral.isPending ? "Révocation…" : "Révoquer"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </AdminLayout>
   );
 }

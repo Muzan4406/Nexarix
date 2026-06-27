@@ -298,7 +298,10 @@ export const GetDownlineResponse = zod.object({
   "country": zod.string(),
   "status": zod.string(),
   "joinedAt": zod.string()
-}))
+})),
+  "mlmEarningsL1": zod.number(),
+  "mlmEarningsL2": zod.number(),
+  "mlmEarningsL3": zod.number()
 })
 
 
@@ -411,6 +414,41 @@ export const UpdateAdminUserBody = zod.object({
 })
 
 export const UpdateAdminUserResponse = zod.object({
+  "id": zod.number(),
+  "username": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string(),
+  "country": zod.string(),
+  "status": zod.string(),
+  "membership": zod.string(),
+  "balance": zod.number(),
+  "points": zod.number(),
+  "upline": zod.string().nullish(),
+  "joinedAt": zod.string(),
+  "totalDownlines": zod.number()
+})
+
+
+/**
+ * @summary Permanently delete a user from the database
+ */
+export const DeleteAdminUserParams = zod.object({
+  "userId": zod.coerce.number()
+})
+
+export const DeleteAdminUserResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
+ * @summary Revoke user referral and reverse MLM commissions
+ */
+export const RevokeAdminUserReferralParams = zod.object({
+  "userId": zod.coerce.number()
+})
+
+export const RevokeAdminUserReferralResponse = zod.object({
   "id": zod.number(),
   "username": zod.string(),
   "email": zod.string(),

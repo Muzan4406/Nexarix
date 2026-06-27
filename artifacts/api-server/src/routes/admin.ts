@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable } from "@workspace/db";
-import { eq, or, ilike, sql } from "drizzle-orm";
+import { eq, or, ilike, sql, inArray } from "drizzle-orm";
 import { signToken, authMiddleware, adminMiddleware } from "../lib/auth";
 
 const router = Router();
@@ -205,6 +205,69 @@ async function distributeMLMCommissions(user: any) {
   }
 }
 
+router.delete("/admin/users/:userId", authMiddleware, adminMiddleware, async (req, res) => {
+  const userId = parseInt(req.params.userId as string);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  if (user.status === "active" && user.upline) {
+    const commissions = [
+      { field: "mlmEarningsL1" as const, amount: 1300 },
+      { field: "mlmEarningsL2" as const, amount: 700 },
+      { field: "mlmEarningsL3" as const, amount: 400 },
+    ];
+    let currentUpline = user.upline;
+    for (const { field, amount } of commissions) {
+      if (!currentUpline) break;
+      const [uplineUser] = await db.select().from(usersTable).where(eq(usersTable.username, currentUpline)).limit(1);
+      if (!uplineUser) break;
+      const mlmField = field === "mlmEarningsL1" ? usersTable.mlmEarningsL1 : field === "mlmEarningsL2" ? usersTable.mlmEarningsL2 : usersTable.mlmEarningsL3;
+      await db.update(usersTable).set({
+        balance: sql`GREATEST(${usersTable.balance}::numeric - ${amount}, 0)`,
+        [field]: sql`GREATEST(${mlmField}::numeric - ${amount}, 0)`,
+      }).where(eq(usersTable.id, uplineUser.id));
+      currentUpline = uplineUser.upline ?? null;
+    }
+  }
+
+  await db.update(usersTable).set({ upline: null }).where(eq(usersTable.upline, user.username));
+  await db.delete(taskCompletionsTable).where(eq(taskCompletionsTable.userId, userId));
+  await db.delete(withdrawalsTable).where(eq(withdrawalsTable.userId, userId));
+  await db.delete(usersTable).where(eq(usersTable.id, userId));
+  res.json({ success: true });
+});
+
+router.post("/admin/users/:userId/revoke-referral", authMiddleware, adminMiddleware, async (req, res) => {
+  const userId = parseInt(req.params.userId as string);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+  if (!user.upline) { res.status(400).json({ error: "Cet utilisateur n'a pas de parrain" }); return; }
+
+  if (user.status === "active") {
+    const commissions = [
+      { field: "mlmEarningsL1" as const, amount: 1300 },
+      { field: "mlmEarningsL2" as const, amount: 700 },
+      { field: "mlmEarningsL3" as const, amount: 400 },
+    ];
+    let currentUpline = user.upline;
+    for (const { field, amount } of commissions) {
+      if (!currentUpline) break;
+      const [uplineUser] = await db.select().from(usersTable).where(eq(usersTable.username, currentUpline)).limit(1);
+      if (!uplineUser) break;
+      const mlmField = field === "mlmEarningsL1" ? usersTable.mlmEarningsL1 : field === "mlmEarningsL2" ? usersTable.mlmEarningsL2 : usersTable.mlmEarningsL3;
+      await db.update(usersTable).set({
+        balance: sql`GREATEST(${usersTable.balance}::numeric - ${amount}, 0)`,
+        [field]: sql`GREATEST(${mlmField}::numeric - ${amount}, 0)`,
+      }).where(eq(usersTable.id, uplineUser.id));
+      currentUpline = uplineUser.upline ?? null;
+    }
+  }
+
+  const [updated] = await db.update(usersTable).set({ upline: null }).where(eq(usersTable.id, userId)).returning();
+  const [dl] = await db.select({ count: sql<number>`count(*)` }).from(usersTable).where(eq(usersTable.upline, updated.username));
+  res.json({ ...formatAdminUser(updated), totalDownlines: Number(dl.count) });
+});
+
 router.get("/admin/tasks", authMiddleware, adminMiddleware, async (req, res) => {
   const tasks = await db.select().from(tasksTable).orderBy(sql`${tasksTable.createdAt} DESC`);
   res.json(tasks.map(formatTask));
@@ -252,6 +315,23 @@ router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req
 
 router.delete("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req, res) => {
   const taskId = parseInt(req.params.taskId as string);
+
+  const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, taskId)).limit(1);
+  if (task) {
+    const pts = task.points || 0;
+    const completions = await db.select().from(taskCompletionsTable)
+      .where(eq(taskCompletionsTable.taskId, taskId));
+    if (completions.length > 0) {
+      const userIds = completions.map(c => c.userId);
+      const earnings = pts * 0.5;
+      await db.update(usersTable).set({
+        points: sql`GREATEST(${usersTable.points} - ${pts}, 0)`,
+        taskEarnings: sql`GREATEST(${usersTable.taskEarnings}::numeric - ${earnings}, 0)`,
+        balance: sql`GREATEST(${usersTable.balance}::numeric - ${earnings}, 0)`,
+      }).where(inArray(usersTable.id, userIds));
+    }
+  }
+
   await db.delete(taskCompletionsTable).where(eq(taskCompletionsTable.taskId, taskId));
   await db.delete(tasksTable).where(eq(tasksTable.id, taskId));
   res.json({ success: true });

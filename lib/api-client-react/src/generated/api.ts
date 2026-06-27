@@ -30,6 +30,7 @@ import type {
   AuthResponse,
   ConvertPointsResult,
   DashboardStats,
+  DeleteAdminUser200,
   DownlineData,
   ErrorResponse,
   GetAdminUsersParams,
@@ -1489,6 +1490,146 @@ export const useUpdateAdminUser = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateAdminUserMutationOptions(options));
+    }
+
+export const getDeleteAdminUserUrl = (userId: number,) => {
+
+
+
+
+  return `/api/admin/users/${userId}`
+}
+
+/**
+ * @summary Permanently delete a user from the database
+ */
+export const deleteAdminUser = async (userId: number, options?: RequestInit): Promise<DeleteAdminUser200> => {
+
+  return customFetch<DeleteAdminUser200>(getDeleteAdminUserUrl(userId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteAdminUserMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminUser>>, TError,{userId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminUser>>, TError,{userId: number}, TContext> => {
+
+const mutationKey = ['deleteAdminUser'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminUser>>, {userId: number}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  deleteAdminUser(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminUserMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminUser>>>
+
+    export type DeleteAdminUserMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Permanently delete a user from the database
+ */
+export const useDeleteAdminUser = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminUser>>, TError,{userId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminUser>>,
+        TError,
+        {userId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAdminUserMutationOptions(options));
+    }
+
+export const getRevokeAdminUserReferralUrl = (userId: number,) => {
+
+
+
+
+  return `/api/admin/users/${userId}/revoke-referral`
+}
+
+/**
+ * @summary Revoke user referral and reverse MLM commissions
+ */
+export const revokeAdminUserReferral = async (userId: number, options?: RequestInit): Promise<AdminUser> => {
+
+  return customFetch<AdminUser>(getRevokeAdminUserReferralUrl(userId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeAdminUserReferralMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAdminUserReferral>>, TError,{userId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeAdminUserReferral>>, TError,{userId: number}, TContext> => {
+
+const mutationKey = ['revokeAdminUserReferral'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeAdminUserReferral>>, {userId: number}> = (props) => {
+          const {userId} = props ?? {};
+
+          return  revokeAdminUserReferral(userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeAdminUserReferralMutationResult = NonNullable<Awaited<ReturnType<typeof revokeAdminUserReferral>>>
+
+    export type RevokeAdminUserReferralMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Revoke user referral and reverse MLM commissions
+ */
+export const useRevokeAdminUserReferral = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAdminUserReferral>>, TError,{userId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeAdminUserReferral>>,
+        TError,
+        {userId: number},
+        TContext
+      > => {
+      return useMutation(getRevokeAdminUserReferralMutationOptions(options));
     }
 
 export const getGetAdminTasksUrl = () => {

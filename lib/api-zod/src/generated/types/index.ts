@@ -17,6 +17,7 @@ export * from './authResponse';
 export * from './convertPointsResult';
 export * from './dashboardStats';
 export * from './dashboardStatsEarnings';
+export * from './deleteAdminUser200';
 export * from './downlineData';
 export * from './downlineUser';
 export * from './errorResponse';
