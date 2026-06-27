@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Activate from "@/pages/activate";
+import PaymentStatus from "@/pages/payment-status";
 import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
 import Withdrawals from "@/pages/withdrawals";
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/register/:upline" component={() => <PublicRoute component={Register} />} />
 
       <Route path="/activate" component={Activate} />
+      <Route path="/payment-status" component={PaymentStatus} />
 
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/tasks" component={() => <ProtectedRoute component={Tasks} />} />

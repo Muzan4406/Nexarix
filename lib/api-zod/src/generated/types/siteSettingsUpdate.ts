@@ -18,4 +18,6 @@ export interface SiteSettingsUpdate {
   sendavapayApiKey?: string | null;
   /** @nullable */
   sendavapayMerchantId?: string | null;
+  /** @nullable */
+  appBaseUrl?: string | null;
 }

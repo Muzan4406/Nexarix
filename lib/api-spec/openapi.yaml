@@ -1121,6 +1121,8 @@ components:
           type: ["string", "null"]
         sendavapayMerchantId:
           type: ["string", "null"]
+        appBaseUrl:
+          type: ["string", "null"]
       required: [id, supportEmail, telegramLink, whatsappLink, activationFee, paymentMode]
 
     SiteSettingsUpdate:
@@ -1141,4 +1143,6 @@ components:
         sendavapayApiKey:
           type: ["string", "null"]
         sendavapayMerchantId:
+          type: ["string", "null"]
+        appBaseUrl:
           type: ["string", "null"]

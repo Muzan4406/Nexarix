@@ -63,8 +63,8 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
         customer_phone: user.phone,
         merchant_id: settings.sendavapayMerchantId,
         reference: `nexarix-activation-${user.id}-${Date.now()}`,
-        callback_url: `${process.env.APP_BASE_URL || ""}/api/activate/webhook`,
-        return_url: `${process.env.APP_BASE_URL || ""}`,
+        callback_url: `${settings.appBaseUrl || process.env.APP_BASE_URL || ""}/api/activate/webhook`,
+        return_url: `${settings.appBaseUrl || process.env.APP_BASE_URL || ""}/payment-status`,
       }),
     });
 

@@ -10,6 +10,7 @@ export const siteSettingsTable = pgTable("site_settings", {
   paymentMode: text("payment_mode").notNull().default("manual"),
   sendavapayApiKey: text("sendavapay_api_key"),
   sendavapayMerchantId: text("sendavapay_merchant_id"),
+  appBaseUrl: text("app_base_url"),
 });
 
 export type SiteSettings = typeof siteSettingsTable.$inferSelect;

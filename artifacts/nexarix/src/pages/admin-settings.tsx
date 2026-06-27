@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Mail, Download, CreditCard, Key, ToggleLeft, ToggleRight } from "lucide-react";
+import { Save, Mail, Download, CreditCard, Key, ToggleLeft, ToggleRight, Globe, Copy, Check } from "lucide-react";
 import { SiTelegram, SiWhatsapp } from "react-icons/si";
 
 export default function AdminSettings() {
@@ -15,6 +15,7 @@ export default function AdminSettings() {
   const updateSettings = useUpdateAdminSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [copied, setCopied] = useState<string | null>(null);
   const [form, setForm] = useState({
     supportEmail: "",
     telegramLink: "",
@@ -24,6 +25,7 @@ export default function AdminSettings() {
     paymentMode: "manual",
     sendavapayApiKey: "",
     sendavapayMerchantId: "",
+    appBaseUrl: "",
   });
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function AdminSettings() {
         paymentMode: settings.paymentMode || "manual",
         sendavapayApiKey: settings.sendavapayApiKey || "",
         sendavapayMerchantId: settings.sendavapayMerchantId || "",
+        appBaseUrl: settings.appBaseUrl || "",
       });
     }
   }, [settings]);
@@ -49,6 +52,7 @@ export default function AdminSettings() {
         vcfLink: form.vcfLink || null,
         sendavapayApiKey: form.sendavapayApiKey || null,
         sendavapayMerchantId: form.sendavapayMerchantId || null,
+        appBaseUrl: form.appBaseUrl || null,
       }
     }, {
       onSuccess: () => {
@@ -63,6 +67,16 @@ export default function AdminSettings() {
     setForm(f => ({ ...f, paymentMode: f.paymentMode === "auto" ? "manual" : "auto" }));
   };
 
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
+  const baseUrl = form.appBaseUrl || window.location.origin;
+  const webhookUrl = `${baseUrl}/api/activate/webhook`;
+  const redirectUrl = `${baseUrl}/payment-status`;
+
   if (isLoading) return <AdminLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Chargement...</div></AdminLayout>;
 
   return (
@@ -72,6 +86,73 @@ export default function AdminSettings() {
           <h1 className="text-2xl font-bold">Paramètres</h1>
           <p className="text-muted-foreground text-sm">Configuration de la plateforme</p>
         </div>
+
+        {/* URL de base */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Globe className="h-4 w-4 text-primary" />
+              Configuration des URLs
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="mb-1.5 block">URL de base de l'application</Label>
+              <Input
+                value={form.appBaseUrl}
+                onChange={e => setForm(f => ({ ...f, appBaseUrl: e.target.value }))}
+                placeholder="https://votre-domaine.com"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Laisser vide pour utiliser le domaine actuel. À mettre à jour quand vous aurez votre domaine personnalisé.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">URLs générées pour Sendavapay</p>
+
+              <div className="bg-muted rounded-lg p-3 space-y-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">URL de redirection (Return URL)</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs flex-1 bg-background rounded px-2 py-1.5 truncate font-mono border">
+                      {redirectUrl}
+                    </code>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => copyToClipboard(redirectUrl, "redirect")}
+                    >
+                      {copied === "redirect" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">URL Webhook</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-xs flex-1 bg-background rounded px-2 py-1.5 truncate font-mono border">
+                      {webhookUrl}
+                    </code>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => copyToClipboard(webhookUrl, "webhook")}
+                    >
+                      {copied === "webhook" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                ⚠️ Copiez ces URLs dans votre tableau de bord Sendavapay. Après changement de domaine, mettez à jour l'URL de base et re-copiez.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Frais d'activation */}
         <Card>
@@ -91,7 +172,6 @@ export default function AdminSettings() {
                 onChange={e => setForm(f => ({ ...f, activationFee: e.target.value }))}
                 placeholder="3000"
                 className="max-w-xs"
-                data-testid="input-activation-fee"
               />
               <p className="text-xs text-muted-foreground mt-1">Montant affiché sur la page d'activation et le dashboard.</p>
             </div>
@@ -120,7 +200,6 @@ export default function AdminSettings() {
               <button
                 onClick={togglePaymentMode}
                 className="shrink-0 text-primary hover:text-primary/80 transition-colors"
-                data-testid="toggle-payment-mode"
               >
                 {form.paymentMode === "auto"
                   ? <ToggleRight className="h-10 w-10 text-emerald-500" />
@@ -140,7 +219,6 @@ export default function AdminSettings() {
                     onChange={e => setForm(f => ({ ...f, sendavapayApiKey: e.target.value }))}
                     placeholder="sk_live_..."
                     type="password"
-                    data-testid="input-sendavapay-api-key"
                   />
                 </div>
                 <div>
@@ -151,11 +229,7 @@ export default function AdminSettings() {
                     value={form.sendavapayMerchantId}
                     onChange={e => setForm(f => ({ ...f, sendavapayMerchantId: e.target.value }))}
                     placeholder="merchant_..."
-                    data-testid="input-sendavapay-merchant-id"
                   />
-                </div>
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl p-3 text-xs text-amber-700 dark:text-amber-300">
-                  ⚠️ Le webhook Sendavapay doit pointer vers : <code className="font-mono font-bold">/api/activate/webhook</code>
                 </div>
               </>
             )}
@@ -176,7 +250,6 @@ export default function AdminSettings() {
                 value={form.supportEmail}
                 onChange={e => setForm(f => ({ ...f, supportEmail: e.target.value }))}
                 placeholder="support@nexarix.com"
-                data-testid="input-support-email"
               />
             </div>
             <div>
@@ -187,7 +260,6 @@ export default function AdminSettings() {
                 value={form.telegramLink}
                 onChange={e => setForm(f => ({ ...f, telegramLink: e.target.value }))}
                 placeholder="https://t.me/nexarix"
-                data-testid="input-telegram-link"
               />
             </div>
             <div>
@@ -198,7 +270,6 @@ export default function AdminSettings() {
                 value={form.whatsappLink}
                 onChange={e => setForm(f => ({ ...f, whatsappLink: e.target.value }))}
                 placeholder="https://wa.me/..."
-                data-testid="input-whatsapp-link"
               />
             </div>
             <div>
@@ -209,13 +280,12 @@ export default function AdminSettings() {
                 value={form.vcfLink}
                 onChange={e => setForm(f => ({ ...f, vcfLink: e.target.value }))}
                 placeholder="https://..."
-                data-testid="input-vcf-link"
               />
             </div>
           </CardContent>
         </Card>
 
-        <Button onClick={handleSave} disabled={updateSettings.isPending} className="w-full" data-testid="button-save-settings">
+        <Button onClick={handleSave} disabled={updateSettings.isPending} className="w-full">
           <Save className="h-4 w-4 mr-2" />
           {updateSettings.isPending ? "Sauvegarde..." : "Sauvegarder tous les paramètres"}
         </Button>

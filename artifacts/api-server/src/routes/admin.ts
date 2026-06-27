@@ -366,7 +366,7 @@ router.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res) 
 });
 
 router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res) => {
-  const { supportEmail, telegramLink, whatsappLink, vcfLink, activationFee, paymentMode, sendavapayApiKey, sendavapayMerchantId } = req.body;
+  const { supportEmail, telegramLink, whatsappLink, vcfLink, activationFee, paymentMode, sendavapayApiKey, sendavapayMerchantId, appBaseUrl } = req.body;
 
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
   const updates: any = {};
@@ -378,6 +378,7 @@ router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res
   if (paymentMode !== undefined) updates.paymentMode = paymentMode;
   if (sendavapayApiKey !== undefined) updates.sendavapayApiKey = sendavapayApiKey;
   if (sendavapayMerchantId !== undefined) updates.sendavapayMerchantId = sendavapayMerchantId;
+  if (appBaseUrl !== undefined) updates.appBaseUrl = appBaseUrl;
 
   if (!settings) {
     [settings] = await db.insert(siteSettingsTable).values(updates).returning();

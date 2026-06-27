@@ -288,6 +288,8 @@ export interface SiteSettings {
   sendavapayApiKey?: string | null;
   /** @nullable */
   sendavapayMerchantId?: string | null;
+  /** @nullable */
+  appBaseUrl?: string | null;
 }
 
 export interface SiteSettingsUpdate {
@@ -302,6 +304,8 @@ export interface SiteSettingsUpdate {
   sendavapayApiKey?: string | null;
   /** @nullable */
   sendavapayMerchantId?: string | null;
+  /** @nullable */
+  appBaseUrl?: string | null;
 }
 
 export type GetAdminUsersParams = {
