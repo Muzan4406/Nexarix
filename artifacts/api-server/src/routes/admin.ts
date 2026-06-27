@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable } from "@workspace/db";
 import { eq, or, ilike, sql, inArray } from "drizzle-orm";
 import { signToken, authMiddleware, adminMiddleware } from "../lib/auth";
+import { sendTelegramNotification } from "../lib/telegram";
 
 const router = Router();
 const ADMIN_EMAIL = "godmuzan42@gmail.com";
@@ -371,6 +372,13 @@ router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMi
     .where(eq(withdrawalsTable.id, withdrawalId))
     .returning();
 
+  sendTelegramNotification(
+    `✅ <b>Retrait approuvé</b>\n` +
+    `👤 Utilisateur: <b>${withdrawal.username}</b>\n` +
+    `💰 Montant net: <b>${parseFloat(updated.amountNet || "0").toLocaleString()} FCFA</b>\n` +
+    `🏦 Opérateur: ${updated.operator} — ${updated.phone}`
+  );
+
   res.json({
     ...formatAdminWithdrawal(updated),
     username: withdrawal.username,
@@ -410,6 +418,13 @@ router.patch("/admin/withdrawals/:withdrawalId/reject", authMiddleware, adminMid
     .set({ status: "rejected", rejectionReason: reason })
     .where(eq(withdrawalsTable.id, withdrawalId))
     .returning();
+
+  sendTelegramNotification(
+    `❌ <b>Retrait rejeté</b>\n` +
+    `👤 Utilisateur: <b>${withUser.username}</b>\n` +
+    `💰 Montant: <b>${parseFloat(updated.amountGross || "0").toLocaleString()} FCFA</b>\n` +
+    `📝 Raison: ${reason}`
+  );
 
   res.json({
     ...formatAdminWithdrawal(updated),

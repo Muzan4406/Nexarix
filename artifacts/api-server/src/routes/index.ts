@@ -7,6 +7,7 @@ import withdrawalsRouter from "./withdrawals";
 import downlineRouter from "./downline";
 import adminRouter from "./admin";
 import activationRouter from "./activation";
+import telegramRouter from "./telegram";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(withdrawalsRouter);
 router.use(downlineRouter);
 router.use(adminRouter);
 router.use(activationRouter);
+router.use(telegramRouter);
 
 export default router;
