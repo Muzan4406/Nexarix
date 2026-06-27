@@ -15,6 +15,8 @@ import Downline from "@/pages/downline";
 import Profile from "@/pages/profile";
 import Community from "@/pages/community";
 import Contact from "@/pages/contact";
+import Bonus from "@/pages/bonus";
+import SpinWheel from "@/pages/spin-wheel";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminUsers from "@/pages/admin-users";
@@ -95,6 +97,8 @@ function Router() {
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
       <Route path="/community" component={() => <ProtectedRoute component={Community} />} />
       <Route path="/contact" component={() => <ProtectedRoute component={Contact} />} />
+      <Route path="/bonus" component={() => <ProtectedRoute component={Bonus} />} />
+      <Route path="/spin" component={() => <ProtectedRoute component={SpinWheel} />} />
 
       <Route path="/admin/login" component={() => <PublicRoute component={AdminLogin} />} />
       <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} adminOnly />} />
