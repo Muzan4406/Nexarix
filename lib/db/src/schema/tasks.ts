@@ -13,6 +13,7 @@ export const tasksTable = pgTable("tasks", {
   question: text("question"),
   correctAnswer: text("correct_answer"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertTaskSchema = createInsertSchema(tasksTable).omit({ id: true, createdAt: true });

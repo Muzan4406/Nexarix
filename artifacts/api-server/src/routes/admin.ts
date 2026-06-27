@@ -270,7 +270,9 @@ router.post("/admin/users/:userId/revoke-referral", authMiddleware, adminMiddlew
 });
 
 router.get("/admin/tasks", authMiddleware, adminMiddleware, async (req, res) => {
-  const tasks = await db.select().from(tasksTable).orderBy(sql`${tasksTable.createdAt} DESC`);
+  const tasks = await db.select().from(tasksTable)
+    .where(sql`${tasksTable.deletedAt} IS NULL`)
+    .orderBy(sql`${tasksTable.createdAt} DESC`);
   res.json(tasks.map(formatTask));
 });
 
@@ -316,8 +318,14 @@ router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req
 
 router.delete("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req, res) => {
   const taskId = parseInt(req.params.taskId as string);
-  await db.delete(taskCompletionsTable).where(eq(taskCompletionsTable.taskId, taskId));
-  await db.delete(tasksTable).where(eq(tasksTable.id, taskId));
+  const [task] = await db.update(tasksTable)
+    .set({ deletedAt: new Date(), isActive: false })
+    .where(eq(tasksTable.id, taskId))
+    .returning();
+  if (!task) {
+    res.status(404).json({ error: "Task not found" });
+    return;
+  }
   res.json({ success: true });
 });
 

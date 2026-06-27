@@ -10,7 +10,7 @@ router.get("/tasks", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
 
   const activeTasks = await db.select().from(tasksTable)
-    .where(eq(tasksTable.isActive, true));
+    .where(and(eq(tasksTable.isActive, true), sql`${tasksTable.deletedAt} IS NULL`));
 
   const completions = await db.select({ taskId: taskCompletionsTable.taskId })
     .from(taskCompletionsTable)
