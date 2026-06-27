@@ -137,9 +137,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
     <div className="flex h-full flex-col bg-white">
       {/* Logo */}
       <div className="flex h-16 items-center px-4 border-b border-gray-100 gap-3 shrink-0">
-        <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-200 shrink-0">
-          <img src={`${BASE}logo.png`} alt="Nexarix" className="h-7 w-7 object-contain" />
-        </div>
+        <img src={`${BASE}logo.png`} alt="Nexarix" className="h-10 w-10 rounded-2xl object-cover shrink-0 shadow-md" />
         <span className="font-black text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight">NEXARIX</span>
       </div>
 
@@ -219,9 +217,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </Sheet>
 
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-sm">
-              <img src={`${BASE}logo.png`} alt="Nexarix" className="h-6 w-6 object-contain" />
-            </div>
+            <img src={`${BASE}logo.png`} alt="Nexarix" className="h-8 w-8 rounded-xl object-cover shadow-sm" />
             <span className="font-black text-base bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">NEXARIX</span>
           </div>
 

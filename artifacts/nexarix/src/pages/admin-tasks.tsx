@@ -12,12 +12,11 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, ExternalLink, Zap, HelpCircle, Video, Megaphone, Star, Users, Play, CheckSquare } from "lucide-react";
+import { Plus, Edit, Trash2, ExternalLink, Zap, Video, Megaphone, Star, Users, Play, CheckSquare } from "lucide-react";
 
-const CATEGORIES = ["Quiz", "TikTok", "YouTube", "Ads", "Sponsored", "Sponsored2"];
+const CATEGORIES = ["TikTok", "YouTube", "Ads", "Sponsored", "Sponsored2"];
 
 const CAT_CONFIG: Record<string, { icon: any; gradient: string; label: string }> = {
-  Quiz:       { icon: HelpCircle, gradient: "from-violet-500 to-purple-600", label: "Quiz" },
   TikTok:     { icon: Play,       gradient: "from-pink-500 to-rose-500",     label: "TikTok" },
   YouTube:    { icon: Video,      gradient: "from-red-500 to-orange-500",    label: "YouTube" },
   Ads:        { icon: Megaphone,  gradient: "from-blue-500 to-cyan-500",     label: "Publicité" },
@@ -25,7 +24,7 @@ const CAT_CONFIG: Record<string, { icon: any; gradient: string; label: string }>
   Sponsored2: { icon: Users,      gradient: "from-emerald-500 to-teal-500",  label: "Partenaire" },
 };
 
-const emptyForm = { category: "", title: "", description: "", targetUrl: "", points: "", isActive: true, question: "", correctAnswer: "" };
+const emptyForm = { category: "", description: "", targetUrl: "", points: "", isActive: true };
 
 const card = {
   hidden: { opacity: 0, y: 12 },
@@ -47,15 +46,15 @@ export default function AdminTasks() {
   const openCreate = () => { setEditTask(null); setForm(emptyForm); setOpen(true); };
   const openEdit = (task: any) => {
     setEditTask(task);
-    setForm({ category: task.category, title: task.title, description: task.description || "", targetUrl: task.targetUrl, points: task.points.toString(), isActive: task.isActive, question: task.question || "", correctAnswer: task.correctAnswer || "" });
+    setForm({ category: task.category, description: task.description || "", targetUrl: task.targetUrl, points: task.points.toString(), isActive: task.isActive });
     setOpen(true);
   };
 
   const handleSave = () => {
-    if (!form.category || !form.title || !form.targetUrl || !form.points) {
+    if (!form.category || !form.targetUrl || !form.points) {
       toast({ title: "Champs requis manquants", variant: "destructive" }); return;
     }
-    const data = { category: form.category, title: form.title, description: form.description || null, targetUrl: form.targetUrl, points: parseInt(form.points), isActive: form.isActive, question: form.question || null, correctAnswer: form.correctAnswer || null };
+    const data: any = { category: form.category, description: form.description || null, targetUrl: form.targetUrl, points: parseInt(form.points), isActive: form.isActive };
     if (editTask) {
       updateTask.mutate({ taskId: editTask.id, data }, {
         onSuccess: () => { queryClient.invalidateQueries({ queryKey: getGetAdminTasksQueryKey() }); toast({ title: "✅ Tâche mise à jour" }); setOpen(false); },
@@ -133,13 +132,7 @@ export default function AdminTasks() {
                           <Zap className="h-2.5 w-2.5 fill-current" />{task.points} pts
                         </span>
                       </div>
-                      <p className="font-bold text-sm text-gray-900 truncate">{task.title}</p>
-                      {task.description && <p className="text-xs text-gray-400 truncate">{task.description}</p>}
-                      {task.question && (
-                        <p className="text-xs text-violet-600 mt-0.5 flex items-center gap-1">
-                          <HelpCircle className="h-3 w-3" />Quiz: {task.question}
-                        </p>
-                      )}
+                      {task.description && <p className="text-sm font-semibold text-gray-800 truncate">{task.description}</p>}
                       <a href={task.targetUrl} target="_blank" rel="noopener noreferrer"
                         className="text-xs text-blue-500 hover:underline flex items-center gap-1 mt-1">
                         <ExternalLink className="h-3 w-3" />{task.targetUrl.substring(0, 45)}{task.targetUrl.length > 45 ? "…" : ""}
@@ -180,33 +173,17 @@ export default function AdminTasks() {
               </Select>
             </div>
             <div>
-              <Label className="text-sm font-bold text-gray-700">Titre</Label>
-              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titre de la tâche" data-testid="input-task-title" />
-            </div>
-            <div>
               <Label className="text-sm font-bold text-gray-700">Description <span className="font-normal text-gray-400">(optionnel)</span></Label>
-              <Textarea className="mt-2 rounded-2xl border-gray-200 resize-none" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description…" rows={2} />
+              <Textarea className="mt-2 rounded-2xl border-gray-200 resize-none" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description de la vidéo…" rows={2} />
             </div>
             <div>
-              <Label className="text-sm font-bold text-gray-700">URL cible</Label>
-              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.targetUrl} onChange={e => setForm(f => ({ ...f, targetUrl: e.target.value }))} placeholder="https://…" data-testid="input-task-url" />
+              <Label className="text-sm font-bold text-gray-700">URL de la vidéo</Label>
+              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.targetUrl} onChange={e => setForm(f => ({ ...f, targetUrl: e.target.value }))} placeholder="https://youtube.com/watch?v=… ou https://tiktok.com/…" data-testid="input-task-url" />
             </div>
             <div>
               <Label className="text-sm font-bold text-gray-700">Points à gagner</Label>
               <Input type="number" className="mt-2 rounded-2xl border-gray-200 h-11" value={form.points} onChange={e => setForm(f => ({ ...f, points: e.target.value }))} placeholder="100" data-testid="input-task-points" />
             </div>
-            {form.category === "Quiz" && (
-              <>
-                <div>
-                  <Label className="text-sm font-bold text-gray-700">Question du quiz</Label>
-                  <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.question} onChange={e => setForm(f => ({ ...f, question: e.target.value }))} placeholder="Quelle est la question ?" />
-                </div>
-                <div>
-                  <Label className="text-sm font-bold text-gray-700">Réponse correcte</Label>
-                  <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.correctAnswer} onChange={e => setForm(f => ({ ...f, correctAnswer: e.target.value }))} placeholder="La bonne réponse" />
-                </div>
-              </>
-            )}
             <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3">
               <Switch checked={form.isActive} onCheckedChange={v => setForm(f => ({ ...f, isActive: v }))} id="task-active" />
               <div>

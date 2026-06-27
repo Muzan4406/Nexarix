@@ -211,22 +211,24 @@ router.get("/admin/tasks", authMiddleware, adminMiddleware, async (req, res) => 
 });
 
 router.post("/admin/tasks", authMiddleware, adminMiddleware, async (req, res) => {
-  const { category, title, description, targetUrl, points, isActive, question, correctAnswer } = req.body;
+  const { category, description, targetUrl, points, isActive } = req.body;
 
-  if (!category || !title || !targetUrl || !points) {
-    res.status(400).json({ error: "category, title, targetUrl and points are required" });
+  if (!category || !targetUrl || !points) {
+    res.status(400).json({ error: "category, targetUrl and points are required" });
     return;
   }
 
+  const autoTitle = description ? description.substring(0, 60) : category;
+
   const [task] = await db.insert(tasksTable).values({
     category,
-    title,
+    title: autoTitle,
     description: description || null,
     targetUrl,
     points,
     isActive: isActive ?? true,
-    question: question || null,
-    correctAnswer: correctAnswer || null,
+    question: null,
+    correctAnswer: null,
   }).returning();
 
   res.status(201).json(formatTask(task));

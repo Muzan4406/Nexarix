@@ -1,36 +1,129 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGetTasks, useCompleteTask, getGetTasksQueryKey, getGetDashboardQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  CheckCircle2, ExternalLink, Zap, Video, Megaphone,
-  HelpCircle, Users, Star, Trophy, Sparkles, Lock, Play
+  CheckCircle2, Zap, Video, Megaphone,
+  Users, Star, Trophy, Sparkles, Lock, Play, Timer
 } from "lucide-react";
 
 const CATEGORY_CONFIG: Record<string, { icon: any; gradient: string; light: string; label: string }> = {
-  Quiz:       { icon: HelpCircle, gradient: "from-violet-500 to-purple-600",   light: "bg-violet-50 text-violet-600 border-violet-200", label: "Quiz" },
-  TikTok:     { icon: Play,       gradient: "from-pink-500 to-rose-500",        light: "bg-pink-50 text-pink-600 border-pink-200",        label: "TikTok" },
-  YouTube:    { icon: Video,      gradient: "from-red-500 to-orange-500",       light: "bg-red-50 text-red-600 border-red-200",           label: "YouTube" },
-  Ads:        { icon: Megaphone,  gradient: "from-blue-500 to-cyan-500",        light: "bg-blue-50 text-blue-600 border-blue-200",        label: "Pub" },
-  Sponsored:  { icon: Star,       gradient: "from-amber-400 to-yellow-500",     light: "bg-amber-50 text-amber-600 border-amber-200",     label: "Sponsorisé" },
-  Sponsored2: { icon: Users,      gradient: "from-emerald-500 to-teal-500",     light: "bg-emerald-50 text-emerald-600 border-emerald-200", label: "Partenaire" },
+  TikTok:     { icon: Play,      gradient: "from-pink-500 to-rose-500",        light: "bg-pink-50 text-pink-600 border-pink-200",        label: "TikTok" },
+  YouTube:    { icon: Video,     gradient: "from-red-500 to-orange-500",       light: "bg-red-50 text-red-600 border-red-200",           label: "YouTube" },
+  Ads:        { icon: Megaphone, gradient: "from-blue-500 to-cyan-500",        light: "bg-blue-50 text-blue-600 border-blue-200",        label: "Pub" },
+  Sponsored:  { icon: Star,      gradient: "from-amber-400 to-yellow-500",     light: "bg-amber-50 text-amber-600 border-amber-200",     label: "Sponsorisé" },
+  Sponsored2: { icon: Users,     gradient: "from-emerald-500 to-teal-500",     light: "bg-emerald-50 text-emerald-600 border-emerald-200", label: "Partenaire" },
 };
+
+function getEmbedUrl(url: string): string | null {
+  // YouTube watch or short
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0`;
+  // TikTok
+  const tt = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
+  if (tt) return `https://www.tiktok.com/embed/v2/${tt[1]}`;
+  return null;
+}
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
+    opacity: 1, y: 0,
     transition: { delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
   }),
 };
 
-function TaskCard({ task, onComplete, isPending, index }: { task: any; onComplete: (t: any) => void; isPending: boolean; index: number }) {
+function VideoWatchModal({ task, onClaim, onClose, isPending }: {
+  task: any; onClaim: () => void; onClose: () => void; isPending: boolean;
+}) {
+  const [secondsLeft, setSecondsLeft] = useState(10);
+  const [canClaim, setCanClaim] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const embedUrl = getEmbedUrl(task.targetUrl);
+  const cfg = CATEGORY_CONFIG[task.category] || { gradient: "from-gray-400 to-gray-600", label: task.category, icon: Play, light: "" };
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft(s => {
+        if (s <= 1) {
+          clearInterval(intervalRef.current!);
+          setCanClaim(true);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, []);
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="rounded-3xl border-0 shadow-2xl max-w-lg mx-auto p-0 overflow-hidden">
+        <DialogHeader className="px-5 pt-5 pb-3">
+          <DialogTitle className="flex items-center gap-2 text-base font-black">
+            <span className={`h-8 w-8 rounded-xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center`}>
+              <cfg.icon className="h-4 w-4 text-white" />
+            </span>
+            {task.description || cfg.label}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Video player */}
+        <div className="relative w-full bg-black" style={{ aspectRatio: "16/9" }}>
+          {embedUrl ? (
+            <iframe
+              src={embedUrl}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-white gap-3">
+              <Play className="h-12 w-12 opacity-40" />
+              <p className="text-sm opacity-60">Aperçu non disponible</p>
+            </div>
+          )}
+        </div>
+
+        {/* Timer + Claim */}
+        <div className="px-5 pb-5 pt-4 space-y-3">
+          {!canClaim ? (
+            <div className="flex items-center justify-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl p-3">
+              <Timer className="h-4 w-4 text-amber-500" />
+              <p className="text-sm font-bold text-amber-700">
+                Regardez encore <span className="font-black text-amber-600 text-base">{secondsLeft}s</span> pour réclamer votre récompense
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 bg-emerald-50 border border-emerald-200 rounded-2xl p-3">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <p className="text-sm font-bold text-emerald-700">Vous pouvez maintenant réclamer votre récompense !</p>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" className="rounded-2xl font-bold h-11" onClick={onClose}>
+              Fermer
+            </Button>
+            <Button
+              disabled={!canClaim || isPending}
+              onClick={onClaim}
+              className={`rounded-2xl h-11 font-bold text-white border-0 bg-gradient-to-r ${cfg.gradient} disabled:opacity-40 disabled:cursor-not-allowed shadow-md`}
+            >
+              <Zap className="h-4 w-4 mr-1.5 fill-current" />
+              {isPending ? "Validation…" : `Réclamer · ${task.points} pts`}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TaskCard({ task, onWatch, index }: { task: any; onWatch: (t: any) => void; index: number }) {
   const cfg = CATEGORY_CONFIG[task.category] || { icon: Zap, gradient: "from-gray-400 to-gray-600", light: "bg-gray-50 text-gray-600 border-gray-200", label: task.category };
   const Icon = cfg.icon;
   const done = !!task.completedAt;
@@ -43,19 +136,14 @@ function TaskCard({ task, onComplete, isPending, index }: { task: any; onComplet
       animate="visible"
       layout
       className={`relative rounded-2xl border overflow-hidden transition-shadow duration-300 ${
-        done
-          ? "opacity-60 bg-gray-50 border-gray-200"
-          : "bg-white border-gray-100 shadow-sm hover:shadow-lg"
+        done ? "opacity-60 bg-gray-50 border-gray-200" : "bg-white border-gray-100 shadow-sm hover:shadow-lg"
       }`}
     >
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${cfg.gradient}`} />
 
       <div className="pl-5 pr-4 py-4 flex items-start gap-4">
         <div className={`shrink-0 h-11 w-11 rounded-2xl bg-gradient-to-br ${cfg.gradient} flex items-center justify-center shadow-md`}>
-          {done
-            ? <CheckCircle2 className="h-5 w-5 text-white" />
-            : <Icon className="h-5 w-5 text-white" />
-          }
+          {done ? <CheckCircle2 className="h-5 w-5 text-white" /> : <Icon className="h-5 w-5 text-white" />}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -63,7 +151,6 @@ function TaskCard({ task, onComplete, isPending, index }: { task: any; onComplet
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.light}`}>{cfg.label}</span>
             {done && <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Complété</span>}
           </div>
-          <p className="font-bold text-sm text-gray-900 leading-snug">{task.title}</p>
           {task.description && (
             <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{task.description}</p>
           )}
@@ -71,34 +158,17 @@ function TaskCard({ task, onComplete, isPending, index }: { task: any; onComplet
             <span className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-xl bg-gradient-to-r ${cfg.gradient} text-white shadow-sm`}>
               <Zap className="h-3 w-3 fill-current" />{task.points} pts
             </span>
-            {task.question && !done && (
-              <span className="text-[11px] text-violet-600 font-semibold flex items-center gap-1">
-                <HelpCircle className="h-3 w-3" />Quiz requis
-              </span>
-            )}
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5 shrink-0">
-          <a
-            href={task.targetUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-400 rounded-xl px-3 py-2 transition-all"
+        {!done && (
+          <button
+            onClick={() => onWatch(task)}
+            className={`shrink-0 flex items-center gap-1.5 text-xs font-bold text-white bg-gradient-to-r ${cfg.gradient} rounded-xl px-3 py-2 shadow-md transition-opacity hover:opacity-90`}
           >
-            <ExternalLink className="h-3 w-3" />Voir
-          </a>
-          {!done && (
-            <Button
-              size="sm"
-              disabled={isPending}
-              onClick={() => onComplete(task)}
-              className={`text-xs h-8 px-3 bg-gradient-to-r ${cfg.gradient} hover:opacity-90 text-white border-0 rounded-xl shadow-sm font-bold`}
-            >
-              Valider
-            </Button>
-          )}
-        </div>
+            <Play className="h-3.5 w-3.5 fill-current" />Regarder
+          </button>
+        )}
       </div>
     </motion.div>
   );
@@ -109,22 +179,21 @@ export default function Tasks() {
   const completeTask = useCompleteTask();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [quizTask, setQuizTask] = useState<any>(null);
-  const [answer, setAnswer] = useState("");
+  const [watchTask, setWatchTask] = useState<any>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
-  const handleComplete = (task: any, ans?: string) => {
-    completeTask.mutate({ taskId: task.id, data: { answer: ans || null } }, {
+  const handleClaim = () => {
+    if (!watchTask) return;
+    completeTask.mutate({ taskId: watchTask.id, data: { answer: null } }, {
       onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: getGetTasksQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-        toast({ title: "🎉 Tâche complétée !", description: `+${res.pointsEarned} points crédités sur votre compte` });
-        setQuizTask(null);
-        setAnswer("");
+        toast({ title: "🎉 Récompense reçue !", description: `+${res.pointsEarned} points crédités sur votre compte` });
+        setWatchTask(null);
       },
       onError: (err: any) => {
         toast({ title: "Erreur", description: err?.data?.error || "Impossible de compléter", variant: "destructive" });
-        setQuizTask(null);
+        setWatchTask(null);
       },
     });
   };
@@ -164,7 +233,7 @@ export default function Tasks() {
               <Trophy className="h-7 w-7 text-yellow-300" />
             </div>
             <h1 className="font-black text-2xl tracking-tight mb-1">Tâches rémunérées</h1>
-            <p className="text-blue-200 text-sm mb-5">Complète des tâches et gagne des points convertibles en FCFA</p>
+            <p className="text-blue-200 text-sm mb-5">Regarde des vidéos et gagne des points convertibles en FCFA</p>
             <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto">
               <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3">
                 <p className="text-3xl font-black tabular-nums">{pending.length}</p>
@@ -227,7 +296,7 @@ export default function Tasks() {
               <Sparkles className="h-9 w-9 text-gray-300" />
             </div>
             <p className="font-black text-gray-900 text-lg mb-1">Aucune tâche disponible</p>
-            <p className="text-sm text-gray-400">De nouvelles tâches arriveront bientôt.</p>
+            <p className="text-sm text-gray-400">De nouvelles vidéos arriveront bientôt.</p>
           </motion.div>
         )}
 
@@ -236,13 +305,7 @@ export default function Tasks() {
           <div className="space-y-3">
             <AnimatePresence>
               {filtered.filter((t: any) => !t.completedAt).map((task: any, i: number) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  index={i}
-                  onComplete={(t) => t.question ? setQuizTask(t) : handleComplete(t)}
-                  isPending={completeTask.isPending}
-                />
+                <TaskCard key={task.id} task={task} index={i} onWatch={setWatchTask} />
               ))}
             </AnimatePresence>
 
@@ -262,13 +325,7 @@ export default function Tasks() {
                 </motion.div>
                 <AnimatePresence>
                   {filtered.filter((t: any) => t.completedAt).map((task: any, i: number) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      index={i + pending.length}
-                      onComplete={() => {}}
-                      isPending={false}
-                    />
+                    <TaskCard key={task.id} task={task} index={i + pending.length} onWatch={() => {}} />
                   ))}
                 </AnimatePresence>
               </>
@@ -277,46 +334,15 @@ export default function Tasks() {
         )}
       </div>
 
-      {/* Quiz Dialog */}
-      <Dialog open={!!quizTask} onOpenChange={() => { setQuizTask(null); setAnswer(""); }}>
-        <DialogContent className="rounded-3xl border-0 shadow-2xl max-w-sm mx-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-black">
-              <span className="h-8 w-8 rounded-xl bg-violet-100 flex items-center justify-center">
-                <HelpCircle className="h-4 w-4 text-violet-600" />
-              </span>
-              Question requise
-            </DialogTitle>
-          </DialogHeader>
-          {quizTask && (
-            <div className="space-y-4">
-              <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4">
-                <p className="text-sm font-semibold text-gray-900 leading-relaxed">{quizTask.question}</p>
-              </div>
-              <Input
-                value={answer}
-                onChange={e => setAnswer(e.target.value)}
-                placeholder="Votre réponse…"
-                className="rounded-2xl border-gray-200 h-11 font-medium"
-                onKeyDown={e => e.key === "Enter" && answer && handleComplete(quizTask, answer)}
-                autoFocus
-              />
-            </div>
-          )}
-          <DialogFooter className="gap-2">
-            <Button variant="outline" className="rounded-2xl flex-1" onClick={() => { setQuizTask(null); setAnswer(""); }}>
-              Annuler
-            </Button>
-            <Button
-              onClick={() => handleComplete(quizTask, answer)}
-              disabled={!answer || completeTask.isPending}
-              className="rounded-2xl flex-1 bg-gradient-to-r from-violet-500 to-purple-600 text-white border-0 font-bold"
-            >
-              {completeTask.isPending ? "Validation…" : "Valider"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Video Watch Modal */}
+      {watchTask && (
+        <VideoWatchModal
+          task={watchTask}
+          onClaim={handleClaim}
+          onClose={() => setWatchTask(null)}
+          isPending={completeTask.isPending}
+        />
+      )}
     </AppLayout>
   );
 }

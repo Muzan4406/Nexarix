@@ -24,9 +24,7 @@ function NavContent({ onNav }: { onNav?: () => void }) {
       {/* Brand */}
       <div className="px-5 pt-6 pb-5 border-b border-white/5">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-600/30 shrink-0">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
+          <img src="/logo.png" alt="Nexarix" className="h-10 w-10 rounded-2xl object-cover shrink-0 shadow-lg" />
           <div>
             <p className="text-white font-black text-base tracking-tight leading-none">NEXARIX</p>
             <p className="text-blue-400 text-xs font-semibold mt-0.5">Administration</p>
