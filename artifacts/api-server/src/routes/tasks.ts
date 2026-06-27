@@ -37,7 +37,7 @@ router.get("/tasks", authMiddleware, async (req, res) => {
 
 router.post("/tasks/:taskId/complete", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
-  const taskId = parseInt(req.params.taskId);
+  const taskId = parseInt(req.params.taskId as string);
   const { answer } = req.body || {};
 
   const [task] = await db.select().from(tasksTable)

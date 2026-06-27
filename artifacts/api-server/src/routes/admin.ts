@@ -128,7 +128,7 @@ router.get("/admin/users", authMiddleware, adminMiddleware, async (req, res) => 
 });
 
 router.get("/admin/users/:userId", authMiddleware, adminMiddleware, async (req, res) => {
-  const userId = parseInt(req.params.userId);
+  const userId = parseInt(req.params.userId as string);
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) {
     res.status(404).json({ error: "User not found" });
@@ -140,7 +140,7 @@ router.get("/admin/users/:userId", authMiddleware, adminMiddleware, async (req, 
 });
 
 router.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (req, res) => {
-  const userId = parseInt(req.params.userId);
+  const userId = parseInt(req.params.userId as string);
   const { balance, points, status, upline, password, isBanned } = req.body;
 
   const updates: any = {};
@@ -233,7 +233,7 @@ router.post("/admin/tasks", authMiddleware, adminMiddleware, async (req, res) =>
 });
 
 router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req, res) => {
-  const taskId = parseInt(req.params.taskId);
+  const taskId = parseInt(req.params.taskId as string);
   const updates: any = {};
   const fields = ["category", "title", "description", "targetUrl", "points", "isActive", "question", "correctAnswer"];
   for (const f of fields) {
@@ -249,7 +249,7 @@ router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req
 });
 
 router.delete("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req, res) => {
-  const taskId = parseInt(req.params.taskId);
+  const taskId = parseInt(req.params.taskId as string);
   await db.delete(taskCompletionsTable).where(eq(taskCompletionsTable.taskId, taskId));
   await db.delete(tasksTable).where(eq(tasksTable.id, taskId));
   res.json({ success: true });
@@ -287,7 +287,7 @@ router.get("/admin/withdrawals", authMiddleware, adminMiddleware, async (req, re
 });
 
 router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMiddleware, async (req, res) => {
-  const withdrawalId = parseInt(req.params.withdrawalId);
+  const withdrawalId = parseInt(req.params.withdrawalId as string);
 
   const [withdrawal] = await db.select({
     withdrawal: withdrawalsTable,
@@ -315,7 +315,7 @@ router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMi
 });
 
 router.patch("/admin/withdrawals/:withdrawalId/reject", authMiddleware, adminMiddleware, async (req, res) => {
-  const withdrawalId = parseInt(req.params.withdrawalId);
+  const withdrawalId = parseInt(req.params.withdrawalId as string);
   const { reason } = req.body;
 
   if (!reason) {
