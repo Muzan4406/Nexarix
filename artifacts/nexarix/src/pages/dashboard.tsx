@@ -100,7 +100,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-blue-200 text-xs font-semibold">Bienvenue sur Nexarix</p>
-                <p className="font-black text-xl leading-tight">{user?.username} 🎉</p>
+                <p className="font-black text-xl leading-tight">{user?.username}</p>
               </div>
               <div className="ml-auto flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-1.5">
                 <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
