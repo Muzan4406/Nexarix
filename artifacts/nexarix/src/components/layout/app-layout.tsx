@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
   LogOut, Menu, LayoutDashboard, CheckSquare, Wallet,
-  MessageCircle, Phone, User, Gift, Star, History,
+  MessageCircle, Phone, User, Star, History,
   Users, Zap, ChevronDown,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -28,7 +28,6 @@ const SECTIONS: Section[] = [
       items: [
         { name: "Tâches",          href: "/tasks",  icon: CheckSquare },
         { name: "Mes Points",      href: "/points", icon: Zap },
-        { name: "Bonus",           href: "/bonus",  icon: Gift },
         { name: "Roue de Fortune", href: "/spin",   icon: Star },
       ],
     },

@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Wallet, ArrowDownCircle, Gift, Copy, CheckCircle, Users, Zap, Sparkles } from "lucide-react";
+import { Wallet, ArrowDownCircle, Copy, CheckCircle, Users, Zap, Sparkles } from "lucide-react";
 
 function formatFcfa(amount: number) {
   return `${amount.toLocaleString("fr-FR")} XOF`;
@@ -66,14 +66,6 @@ export default function Dashboard() {
       gradient: "from-orange-500 to-amber-500",
       bg: "bg-orange-50",
       shadow: "shadow-orange-200/60",
-    },
-    {
-      label: "Bonus de bienvenue",
-      value: formatFcfa(stats?.welcomeBonus || 0),
-      icon: Gift,
-      gradient: "from-violet-500 to-purple-500",
-      bg: "bg-violet-50",
-      shadow: "shadow-violet-200/60",
     },
     {
       label: "Mes points",

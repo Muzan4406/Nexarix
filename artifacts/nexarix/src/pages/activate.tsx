@@ -20,7 +20,6 @@ const PAYMENT_METHODS: Record<string, { name: string; color: string }[]> = {
 
 const BENEFITS = [
   "Accès complet au tableau de bord",
-  "Bonus de bienvenue crédité immédiatement",
   "Commissions MLM sur 3 niveaux",
   "Participation aux tâches rémunérées",
   "Retrait de vos gains à tout moment",
