@@ -261,6 +261,20 @@ export interface RejectInput {
   reason: string;
 }
 
+export interface PublicSettings {
+  activationFee: number;
+  paymentMode: string;
+}
+
+export interface ActivateInitiateResponse {
+  paymentUrl: string;
+  paymentId: string;
+}
+
+export interface ActivateStatusResponse {
+  status: string;
+}
+
 export interface SiteSettings {
   id: number;
   supportEmail: string;
@@ -268,6 +282,12 @@ export interface SiteSettings {
   whatsappLink: string;
   /** @nullable */
   vcfLink?: string | null;
+  activationFee: number;
+  paymentMode: string;
+  /** @nullable */
+  sendavapayApiKey?: string | null;
+  /** @nullable */
+  sendavapayMerchantId?: string | null;
 }
 
 export interface SiteSettingsUpdate {
@@ -276,6 +296,12 @@ export interface SiteSettingsUpdate {
   whatsappLink?: string;
   /** @nullable */
   vcfLink?: string | null;
+  activationFee?: number;
+  paymentMode?: string;
+  /** @nullable */
+  sendavapayApiKey?: string | null;
+  /** @nullable */
+  sendavapayMerchantId?: string | null;
 }
 
 export type GetAdminUsersParams = {

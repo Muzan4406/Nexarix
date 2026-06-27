@@ -13,4 +13,10 @@ export interface SiteSettings {
   whatsappLink: string;
   /** @nullable */
   vcfLink?: string | null;
+  activationFee: number;
+  paymentMode: string;
+  /** @nullable */
+  sendavapayApiKey?: string | null;
+  /** @nullable */
+  sendavapayMerchantId?: string | null;
 }

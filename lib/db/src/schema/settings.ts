@@ -1,4 +1,4 @@
-import { pgTable, serial, text } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric } from "drizzle-orm/pg-core";
 
 export const siteSettingsTable = pgTable("site_settings", {
   id: serial("id").primaryKey(),
@@ -6,6 +6,10 @@ export const siteSettingsTable = pgTable("site_settings", {
   telegramLink: text("telegram_link").notNull().default("https://t.me/nexarix"),
   whatsappLink: text("whatsapp_link").notNull().default("https://wa.me/nexarix"),
   vcfLink: text("vcf_link"),
+  activationFee: numeric("activation_fee", { precision: 12, scale: 2 }).notNull().default("3000"),
+  paymentMode: text("payment_mode").notNull().default("manual"),
+  sendavapayApiKey: text("sendavapay_api_key"),
+  sendavapayMerchantId: text("sendavapay_merchant_id"),
 });
 
 export type SiteSettings = typeof siteSettingsTable.$inferSelect;

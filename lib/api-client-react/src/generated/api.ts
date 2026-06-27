@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActivateInitiateResponse,
+  ActivateStatusResponse,
   AdminDashboard,
   AdminLoginInput,
   AdminUser,
@@ -35,6 +37,7 @@ import type {
   HealthStatus,
   LoginInput,
   ProfileUpdate,
+  PublicSettings,
   RegisterInput,
   RejectInput,
   SiteSettings,
@@ -1929,6 +1932,230 @@ export const useRejectWithdrawal = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getRejectWithdrawalMutationOptions(options));
     }
+
+export const getGetPublicSettingsUrl = () => {
+
+
+
+
+  return `/api/settings/public`
+}
+
+/**
+ * @summary Get public platform settings (activation fee, payment mode)
+ */
+export const getPublicSettings = async ( options?: RequestInit): Promise<PublicSettings> => {
+
+  return customFetch<PublicSettings>(getGetPublicSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPublicSettingsQueryKey = () => {
+    return [
+    `/api/settings/public`
+    ] as const;
+    }
+
+
+export const getGetPublicSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getPublicSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPublicSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicSettings>>> = ({ signal }) => getPublicSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPublicSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPublicSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getPublicSettings>>>
+export type GetPublicSettingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get public platform settings (activation fee, payment mode)
+ */
+
+export function useGetPublicSettings<TData = Awaited<ReturnType<typeof getPublicSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPublicSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getInitiateActivationUrl = () => {
+
+
+
+
+  return `/api/activate/initiate`
+}
+
+/**
+ * @summary Initiate Sendavapay payment for account activation
+ */
+export const initiateActivation = async ( options?: RequestInit): Promise<ActivateInitiateResponse> => {
+
+  return customFetch<ActivateInitiateResponse>(getInitiateActivationUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getInitiateActivationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initiateActivation>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof initiateActivation>>, TError,void, TContext> => {
+
+const mutationKey = ['initiateActivation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof initiateActivation>>, void> = () => {
+
+
+          return  initiateActivation(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InitiateActivationMutationResult = NonNullable<Awaited<ReturnType<typeof initiateActivation>>>
+
+    export type InitiateActivationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Initiate Sendavapay payment for account activation
+ */
+export const useInitiateActivation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof initiateActivation>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof initiateActivation>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getInitiateActivationMutationOptions(options));
+    }
+
+export const getCheckActivationStatusUrl = () => {
+
+
+
+
+  return `/api/activate/check`
+}
+
+/**
+ * @summary Check current activation status
+ */
+export const checkActivationStatus = async ( options?: RequestInit): Promise<ActivateStatusResponse> => {
+
+  return customFetch<ActivateStatusResponse>(getCheckActivationStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckActivationStatusQueryKey = () => {
+    return [
+    `/api/activate/check`
+    ] as const;
+    }
+
+
+export const getCheckActivationStatusQueryOptions = <TData = Awaited<ReturnType<typeof checkActivationStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkActivationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCheckActivationStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkActivationStatus>>> = ({ signal }) => checkActivationStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof checkActivationStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CheckActivationStatusQueryResult = NonNullable<Awaited<ReturnType<typeof checkActivationStatus>>>
+export type CheckActivationStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Check current activation status
+ */
+
+export function useCheckActivationStatus<TData = Awaited<ReturnType<typeof checkActivationStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkActivationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCheckActivationStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetAdminSettingsUrl = () => {
 

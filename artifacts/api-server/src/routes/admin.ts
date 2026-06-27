@@ -359,25 +359,36 @@ router.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res) 
   if (!settings) {
     [settings] = await db.insert(siteSettingsTable).values({}).returning();
   }
-  res.json(settings);
+  res.json({
+    ...settings,
+    activationFee: parseFloat(settings.activationFee || "3000"),
+  });
 });
 
 router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res) => {
-  const { supportEmail, telegramLink, whatsappLink, vcfLink } = req.body;
+  const { supportEmail, telegramLink, whatsappLink, vcfLink, activationFee, paymentMode, sendavapayApiKey, sendavapayMerchantId } = req.body;
 
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
+  const updates: any = {};
+  if (supportEmail !== undefined) updates.supportEmail = supportEmail;
+  if (telegramLink !== undefined) updates.telegramLink = telegramLink;
+  if (whatsappLink !== undefined) updates.whatsappLink = whatsappLink;
+  if (vcfLink !== undefined) updates.vcfLink = vcfLink;
+  if (activationFee !== undefined) updates.activationFee = activationFee.toString();
+  if (paymentMode !== undefined) updates.paymentMode = paymentMode;
+  if (sendavapayApiKey !== undefined) updates.sendavapayApiKey = sendavapayApiKey;
+  if (sendavapayMerchantId !== undefined) updates.sendavapayMerchantId = sendavapayMerchantId;
+
   if (!settings) {
-    [settings] = await db.insert(siteSettingsTable).values({ supportEmail, telegramLink, whatsappLink, vcfLink }).returning();
+    [settings] = await db.insert(siteSettingsTable).values(updates).returning();
   } else {
-    const updates: any = {};
-    if (supportEmail !== undefined) updates.supportEmail = supportEmail;
-    if (telegramLink !== undefined) updates.telegramLink = telegramLink;
-    if (whatsappLink !== undefined) updates.whatsappLink = whatsappLink;
-    if (vcfLink !== undefined) updates.vcfLink = vcfLink;
     [settings] = await db.update(siteSettingsTable).set(updates).where(eq(siteSettingsTable.id, settings.id)).returning();
   }
 
-  res.json(settings);
+  res.json({
+    ...settings,
+    activationFee: parseFloat(settings.activationFee || "3000"),
+  });
 });
 
 function formatUser(user: any) {

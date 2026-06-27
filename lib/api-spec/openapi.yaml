@@ -547,6 +547,49 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminWithdrawal"
 
+  /settings/public:
+    get:
+      operationId: getPublicSettings
+      tags: [users]
+      summary: Get public platform settings (activation fee, payment mode)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicSettings"
+
+  /activate/initiate:
+    post:
+      operationId: initiateActivation
+      tags: [users]
+      summary: Initiate Sendavapay payment for account activation
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Payment URL returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivateInitiateResponse"
+
+  /activate/check:
+    get:
+      operationId: checkActivationStatus
+      tags: [users]
+      summary: Check current activation status
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivateStatusResponse"
+
   /admin/settings:
     get:
       operationId: getAdminSettings
@@ -1032,6 +1075,31 @@ components:
           type: string
       required: [reason]
 
+    PublicSettings:
+      type: object
+      properties:
+        activationFee:
+          type: number
+        paymentMode:
+          type: string
+      required: [activationFee, paymentMode]
+
+    ActivateInitiateResponse:
+      type: object
+      properties:
+        paymentUrl:
+          type: string
+        paymentId:
+          type: string
+      required: [paymentUrl, paymentId]
+
+    ActivateStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
     SiteSettings:
       type: object
       properties:
@@ -1045,7 +1113,15 @@ components:
           type: string
         vcfLink:
           type: ["string", "null"]
-      required: [id, supportEmail, telegramLink, whatsappLink]
+        activationFee:
+          type: number
+        paymentMode:
+          type: string
+        sendavapayApiKey:
+          type: ["string", "null"]
+        sendavapayMerchantId:
+          type: ["string", "null"]
+      required: [id, supportEmail, telegramLink, whatsappLink, activationFee, paymentMode]
 
     SiteSettingsUpdate:
       type: object
@@ -1057,4 +1133,12 @@ components:
         whatsappLink:
           type: string
         vcfLink:
+          type: ["string", "null"]
+        activationFee:
+          type: number
+        paymentMode:
+          type: string
+        sendavapayApiKey:
+          type: ["string", "null"]
+        sendavapayMerchantId:
           type: ["string", "null"]

@@ -584,6 +584,32 @@ export const RejectWithdrawalResponse = zod.object({
 
 
 /**
+ * @summary Get public platform settings (activation fee, payment mode)
+ */
+export const GetPublicSettingsResponse = zod.object({
+  "activationFee": zod.number(),
+  "paymentMode": zod.string()
+})
+
+
+/**
+ * @summary Initiate Sendavapay payment for account activation
+ */
+export const InitiateActivationResponse = zod.object({
+  "paymentUrl": zod.string(),
+  "paymentId": zod.string()
+})
+
+
+/**
+ * @summary Check current activation status
+ */
+export const CheckActivationStatusResponse = zod.object({
+  "status": zod.string()
+})
+
+
+/**
  * @summary Get support/contact settings
  */
 export const GetAdminSettingsResponse = zod.object({
@@ -591,7 +617,11 @@ export const GetAdminSettingsResponse = zod.object({
   "supportEmail": zod.string(),
   "telegramLink": zod.string(),
   "whatsappLink": zod.string(),
-  "vcfLink": zod.string().nullish()
+  "vcfLink": zod.string().nullish(),
+  "activationFee": zod.number(),
+  "paymentMode": zod.string(),
+  "sendavapayApiKey": zod.string().nullish(),
+  "sendavapayMerchantId": zod.string().nullish()
 })
 
 
@@ -602,7 +632,11 @@ export const UpdateAdminSettingsBody = zod.object({
   "supportEmail": zod.string().optional(),
   "telegramLink": zod.string().optional(),
   "whatsappLink": zod.string().optional(),
-  "vcfLink": zod.string().nullish()
+  "vcfLink": zod.string().nullish(),
+  "activationFee": zod.number().optional(),
+  "paymentMode": zod.string().optional(),
+  "sendavapayApiKey": zod.string().nullish(),
+  "sendavapayMerchantId": zod.string().nullish()
 })
 
 export const UpdateAdminSettingsResponse = zod.object({
@@ -610,7 +644,11 @@ export const UpdateAdminSettingsResponse = zod.object({
   "supportEmail": zod.string(),
   "telegramLink": zod.string(),
   "whatsappLink": zod.string(),
-  "vcfLink": zod.string().nullish()
+  "vcfLink": zod.string().nullish(),
+  "activationFee": zod.number(),
+  "paymentMode": zod.string(),
+  "sendavapayApiKey": zod.string().nullish(),
+  "sendavapayMerchantId": zod.string().nullish()
 })
 
 
