@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetPublicSettings, useInitiateActivation, useCheckActivationStatus } from "@workspace/api-client-react";
 import { Phone, Zap, CheckCircle, LogOut, MessageCircle, CreditCard, Loader, RefreshCw, RotateCcw } from "lucide-react";
+import { getCurrencyCode } from "@/lib/currency";
 import { motion, AnimatePresence } from "framer-motion";
 
 const BASE = import.meta.env.BASE_URL;
@@ -133,7 +134,7 @@ export default function Activate() {
             <div className="bg-gradient-to-r from-[#1565C0] to-[#1E88E5] rounded-2xl p-4 text-center text-white mb-4">
               <p className="text-blue-100 text-xs mb-1">Frais d'activation</p>
               <p className="text-4xl font-black">{activationFee.toLocaleString("fr-FR")}</p>
-              <p className="text-blue-200 text-sm font-semibold">XOF (FCFA)</p>
+              <p className="text-blue-200 text-sm font-semibold">{getCurrencyCode(user?.country)} (FCFA)</p>
             </div>
 
             <div className="space-y-2">
@@ -241,7 +242,7 @@ export default function Activate() {
                       >
                         {initiatePayment.isPending
                           ? <><Loader className="h-4 w-4 animate-spin" />Initialisation…</>
-                          : <><CreditCard className="h-4 w-4" />Payer {activationFee.toLocaleString("fr-FR")} XOF</>
+                          : <><CreditCard className="h-4 w-4" />Payer {activationFee.toLocaleString("fr-FR")} {getCurrencyCode(user?.country)}</>
                         }
                       </button>
                       {initiatePayment.isError && (

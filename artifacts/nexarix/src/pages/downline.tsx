@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useGetDashboard } from "@workspace/api-client-react";
+import { useAuth } from "@/hooks/use-auth";
+import { formatCurrency, getCurrencyCode } from "@/lib/currency";
 
 const LEVEL_CONFIG = [
   {
@@ -81,7 +83,7 @@ function ReferralBonusBanner({ activeDirectCount }: { activeDirectCount: number 
           <div className="flex-1">
             <p className="text-yellow-200 text-[10px] font-bold uppercase tracking-widest">Bonus Parrainage</p>
             <p className="text-white font-black text-base leading-tight">
-              +{REFERRAL_BONUS_AMOUNT.toLocaleString()} FCFA tous les {REFERRAL_BONUS_STEP} filleuls actifs
+              +{REFERRAL_BONUS_AMOUNT.toLocaleString()} F tous les {REFERRAL_BONUS_STEP} filleuls actifs
             </p>
           </div>
           {bonusesEarned > 0 && (
@@ -111,7 +113,7 @@ function ReferralBonusBanner({ activeDirectCount }: { activeDirectCount: number 
             />
           </div>
           <p className="text-white/70 text-[10px] font-medium">
-            {REFERRAL_BONUS_STEP - progress} filleul{REFERRAL_BONUS_STEP - progress > 1 ? "s" : ""} actif{REFERRAL_BONUS_STEP - progress > 1 ? "s" : ""} de plus pour débloquer <span className="font-black text-yellow-200">{REFERRAL_BONUS_AMOUNT.toLocaleString()} FCFA</span>
+            {REFERRAL_BONUS_STEP - progress} filleul{REFERRAL_BONUS_STEP - progress > 1 ? "s" : ""} actif{REFERRAL_BONUS_STEP - progress > 1 ? "s" : ""} de plus pour débloquer <span className="font-black text-yellow-200">{REFERRAL_BONUS_AMOUNT.toLocaleString()} F</span>
           </p>
         </div>
       </div>
@@ -129,6 +131,7 @@ const item = {
 };
 
 export default function Downline() {
+  const { user } = useAuth();
   const { data: downline, isLoading } = useGetDownline();
   const { data: dashboard } = useGetDashboard();
   const [activeLevel, setActiveLevel] = useState<"level1" | "level2" | "level3" | "inactive">("level1");
@@ -221,7 +224,7 @@ export default function Downline() {
                 <Award className="h-4 w-4 text-yellow-300" />
                 <p className="text-sm font-bold text-white/90">Total commissions MLM</p>
               </div>
-              <p className="font-black text-yellow-300 text-base">{totalEarnings.toLocaleString()} FCFA</p>
+              <p className="font-black text-yellow-300 text-base">{totalEarnings.toLocaleString()} {getCurrencyCode(user?.country)}</p>
             </div>
           </div>
         </motion.div>
@@ -265,7 +268,7 @@ export default function Downline() {
             >
               <div className={cn("h-1.5 w-6 rounded-full bg-gradient-to-r mx-auto mb-2", lv.gradient)} />
               <p className={cn("text-lg font-black", lv.text)}>{lv.commission.toLocaleString()}</p>
-              <p className="text-[10px] font-bold text-gray-500">FCFA / {lv.short}</p>
+              <p className="text-[10px] font-bold text-gray-500">{getCurrencyCode(user?.country)} / {lv.short}</p>
             </motion.div>
           ))}
         </div>
@@ -387,7 +390,7 @@ export default function Downline() {
           >
             <ChevronRight className="h-5 w-5 text-blue-400 shrink-0" />
             <p className="text-xs text-blue-700 font-semibold">
-              Vous avez <span className="font-black">{totalActive}</span> membre{totalActive > 1 ? "s" : ""} actif{totalActive > 1 ? "s" : ""} dans votre réseau et avez généré <span className="font-black">{totalEarnings.toLocaleString()} FCFA</span> de commissions MLM.
+              Vous avez <span className="font-black">{totalActive}</span> membre{totalActive > 1 ? "s" : ""} actif{totalActive > 1 ? "s" : ""} dans votre réseau et avez généré <span className="font-black">{totalEarnings.toLocaleString()} {getCurrencyCode(user?.country)}</span> de commissions MLM.
             </p>
           </motion.div>
         )}

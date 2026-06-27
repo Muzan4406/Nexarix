@@ -4,8 +4,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { User, Phone, Mail, Calendar, MapPin, Link, Wallet, Users, Star, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
-function formatFcfa(v: number) { return `${v.toLocaleString("fr-FR")} XOF`; }
+import { formatCurrency } from "@/lib/currency";
 
 const item = {
   hidden: { opacity: 0, y: 18 },
@@ -31,10 +30,10 @@ export default function Profile() {
   const isActive = profile.status === "active";
 
   const stats = [
-    { label: "Solde",    value: formatFcfa(profile.balance),         icon: Wallet, gradient: "from-emerald-400 to-teal-500" },
+    { label: "Solde",    value: formatCurrency(profile.balance, profile.country),         icon: Wallet, gradient: "from-emerald-400 to-teal-500" },
     { label: "Filleuls", value: String(profile.totalDownlines),       icon: Users,  gradient: "from-blue-400 to-indigo-500" },
     { label: "Adhésion", value: profile.membership,                  icon: Star,   gradient: "from-amber-400 to-orange-500" },
-    { label: "Retiré",  value: formatFcfa(profile.totalWithdrawn),   icon: Wallet, gradient: "from-violet-400 to-purple-500" },
+    { label: "Retiré",  value: formatCurrency(profile.totalWithdrawn, profile.country),   icon: Wallet, gradient: "from-violet-400 to-purple-500" },
   ];
 
   const infos = [

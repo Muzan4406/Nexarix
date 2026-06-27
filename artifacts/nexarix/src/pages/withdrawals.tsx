@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Wallet, Info, Send, CheckCircle, ArrowRight, Smartphone } from "lucide-react";
+import { formatCurrency, getCurrencyCode } from "@/lib/currency";
 
 const OPERATORS_BY_COUNTRY: Record<string, string[]> = {
   "Togo":          ["TMoney", "Moov Money"],
@@ -18,8 +19,6 @@ const OPERATORS_BY_COUNTRY: Record<string, string[]> = {
   "Niger":         ["Airtel Money", "Moov"],
   "Sénégal":       ["Wave", "Orange Money", "Free Money"],
 };
-
-function formatFcfa(amount: number) { return `${amount.toLocaleString("fr-FR")} XOF`; }
 
 export default function Withdrawals() {
   const { user } = useAuth();
@@ -41,7 +40,7 @@ export default function Withdrawals() {
       return;
     }
     if (!validAmount) {
-      toast({ title: "Montant insuffisant", description: "Minimum 3 000 XOF.", variant: "destructive" });
+      toast({ title: "Montant insuffisant", description: `Minimum 3 000 ${getCurrencyCode(user?.country)}.`, variant: "destructive" });
       return;
     }
     requestWithdrawal.mutate(
@@ -86,7 +85,7 @@ export default function Withdrawals() {
               </div>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Min: 3 000 XOF</div>
+              <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Min: 3 000 {getCurrencyCode(user?.country)}</div>
               <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Frais: 5%</div>
               <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Délai: 24h</div>
             </div>
@@ -102,7 +101,7 @@ export default function Withdrawals() {
         >
           <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
           <p className="text-xs text-blue-700 font-semibold leading-relaxed">
-            Seul le solde XOF disponible peut être retiré. Convertissez d'abord vos points via <strong>Mes Points</strong>.
+            Seul le solde {getCurrencyCode(user?.country)} disponible peut être retiré. Convertissez d'abord vos points via <strong>Mes Points</strong>.
           </p>
         </motion.div>
 
@@ -163,7 +162,7 @@ export default function Withdrawals() {
             {/* Montant */}
             <div>
               <label className="text-xs font-black text-gray-500 uppercase tracking-wider mb-2 block">
-                Montant (XOF)
+                Montant ({getCurrencyCode(user?.country)})
               </label>
               <div className="relative">
                 <Wallet className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -173,7 +172,7 @@ export default function Withdrawals() {
                   className="w-full h-12 pl-10 pr-4 rounded-2xl border border-gray-200 bg-gray-50 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   value={form.amount}
                   onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                  placeholder="Minimum 3 000 XOF"
+                  placeholder={`Minimum 3 000 ${getCurrencyCode(user?.country)}`}
                   data-testid="input-withdrawal-amount"
                 />
               </div>
@@ -188,17 +187,17 @@ export default function Withdrawals() {
               >
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500 font-semibold">Montant brut</span>
-                  <span className="font-black">{formatFcfa(amountNum)}</span>
+                  <span className="font-black">{formatCurrency(amountNum, user?.country)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500 font-semibold">Frais (5%)</span>
-                  <span className="font-black text-red-500">- {formatFcfa(feeEstimate)}</span>
+                  <span className="font-black text-red-500">- {formatCurrency(feeEstimate, user?.country)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">
                   <span className="font-black text-gray-900">Vous recevez</span>
                   <div className="flex items-center gap-1.5">
                     <ArrowRight className="h-4 w-4 text-emerald-500" />
-                    <span className="font-black text-emerald-600 text-lg">{formatFcfa(netEstimate)}</span>
+                    <span className="font-black text-emerald-600 text-lg">{formatCurrency(netEstimate, user?.country)}</span>
                   </div>
                 </div>
               </motion.div>

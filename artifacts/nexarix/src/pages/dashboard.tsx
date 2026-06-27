@@ -6,10 +6,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Wallet, ArrowDownCircle, Copy, CheckCircle, Users, Zap, Sparkles, CheckSquare } from "lucide-react";
-
-function formatFcfa(amount: number) {
-  return `${amount.toLocaleString("fr-FR")} XOF`;
-}
+import { formatCurrency } from "@/lib/currency";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -53,7 +50,7 @@ export default function Dashboard() {
   const statCards = [
     {
       label: "Solde disponible",
-      value: formatFcfa(stats?.balance || 0),
+      value: formatCurrency(stats?.balance || 0, user?.country),
       icon: Wallet,
       gradient: "from-emerald-500 to-teal-500",
       bg: "bg-emerald-50",
@@ -61,7 +58,7 @@ export default function Dashboard() {
     },
     {
       label: "Total retiré",
-      value: formatFcfa(stats?.totalWithdrawn || 0),
+      value: formatCurrency(stats?.totalWithdrawn || 0, user?.country),
       icon: ArrowDownCircle,
       gradient: "from-orange-500 to-amber-500",
       bg: "bg-orange-50",
@@ -119,11 +116,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white/15 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
                 <p className="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Frais d'activation</p>
-                <p className="font-black text-lg">{formatFcfa(activationFee)}</p>
+                <p className="font-black text-lg">{formatCurrency(activationFee, user?.country)}</p>
               </div>
               <div className="bg-white/15 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
                 <p className="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Solde Total</p>
-                <p className="font-black text-lg">{formatFcfa(totalBalance)}</p>
+                <p className="font-black text-lg">{formatCurrency(totalBalance, user?.country)}</p>
               </div>
             </div>
           </div>

@@ -4,8 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useToast } from "@/hooks/use-toast";
 import { Zap, Star, TrendingUp, ArrowRight, Sparkles } from "lucide-react";
-
-function formatFcfa(amount: number) { return `${amount.toLocaleString("fr-FR")} XOF`; }
+import { useAuth } from "@/hooks/use-auth";
+import { formatCurrency, getCurrencyCode } from "@/lib/currency";
 
 const item = {
   hidden: { opacity: 0, y: 18 },
@@ -16,6 +16,7 @@ const item = {
 };
 
 export default function Points() {
+  const { user } = useAuth();
   const { data: stats, isLoading } = useGetDashboard();
   const convertPoints = useConvertPoints();
   const queryClient = useQueryClient();
@@ -25,7 +26,7 @@ export default function Points() {
     convertPoints.mutate(undefined, {
       onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-        toast({ title: "✅ Conversion réussie !", description: `${res.pointsConverted} pts → ${formatFcfa(res.fcfaAdded)}` });
+        toast({ title: "✅ Conversion réussie !", description: `${res.pointsConverted} pts → ${formatCurrency(res.fcfaAdded, user?.country)}` });
       },
       onError: (err: any) => {
         toast({ title: "Erreur", description: err?.data?.error || "Minimum 1 000 points requis", variant: "destructive" });
@@ -90,7 +91,7 @@ export default function Points() {
                   <p className="text-sm font-bold">Convertissable maintenant !</p>
                 </div>
                 <p className="text-amber-100 text-xs mt-1">
-                  {(setsOf1000 * 1000).toLocaleString()} pts → {formatFcfa(estimatedFcfa)}
+                  {(setsOf1000 * 1000).toLocaleString()} pts → {formatCurrency(estimatedFcfa, user?.country)}
                 </p>
               </div>
             ) : (
@@ -136,7 +137,7 @@ export default function Points() {
             </div>
             <ArrowRight className="h-5 w-5 text-gray-400" />
             <div className="text-right">
-              <p className="font-black text-emerald-600 text-lg">500 XOF</p>
+              <p className="font-black text-emerald-600 text-lg">500 {getCurrencyCode(user?.country)}</p>
               <p className="text-xs text-gray-500">sur votre solde</p>
             </div>
           </div>
@@ -160,7 +161,7 @@ export default function Points() {
             {convertPoints.isPending
               ? "Conversion en cours…"
               : canConvert
-                ? `Convertir ${(setsOf1000 * 1000).toLocaleString()} pts → ${formatFcfa(estimatedFcfa)}`
+                ? `Convertir ${(setsOf1000 * 1000).toLocaleString()} pts → ${formatCurrency(estimatedFcfa, user?.country)}`
                 : `Minimum 1 000 pts requis`
             }
           </button>
