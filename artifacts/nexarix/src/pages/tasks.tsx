@@ -40,7 +40,7 @@ const cardVariants = {
 function VideoWatchModal({ task, onClaim, onClose, isPending }: {
   task: any; onClaim: () => void; onClose: () => void; isPending: boolean;
 }) {
-  const [secondsLeft, setSecondsLeft] = useState(10);
+  const [secondsLeft, setSecondsLeft] = useState(30);
   const [canClaim, setCanClaim] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const embedUrl = getEmbedUrl(task.targetUrl);
