@@ -287,7 +287,7 @@ export interface SiteSettings {
   /** @nullable */
   sendavapayApiKey?: string | null;
   /** @nullable */
-  sendavapayMerchantId?: string | null;
+  sendavapayWebhookSecret?: string | null;
   /** @nullable */
   appBaseUrl?: string | null;
 }
@@ -303,7 +303,7 @@ export interface SiteSettingsUpdate {
   /** @nullable */
   sendavapayApiKey?: string | null;
   /** @nullable */
-  sendavapayMerchantId?: string | null;
+  sendavapayWebhookSecret?: string | null;
   /** @nullable */
   appBaseUrl?: string | null;
 }

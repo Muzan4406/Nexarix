@@ -1,0 +1,1 @@
+- [Sendavapay integration](sendavapay-integration.md) — correct endpoints, payload fields, webhook HMAC-SHA256 format; no merchant_id needed, webhook URL configured in dashboard

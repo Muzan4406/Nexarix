@@ -621,7 +621,7 @@ export const GetAdminSettingsResponse = zod.object({
   "activationFee": zod.number(),
   "paymentMode": zod.string(),
   "sendavapayApiKey": zod.string().nullish(),
-  "sendavapayMerchantId": zod.string().nullish(),
+  "sendavapayWebhookSecret": zod.string().nullish(),
   "appBaseUrl": zod.string().nullish()
 })
 
@@ -637,7 +637,7 @@ export const UpdateAdminSettingsBody = zod.object({
   "activationFee": zod.number().optional(),
   "paymentMode": zod.string().optional(),
   "sendavapayApiKey": zod.string().nullish(),
-  "sendavapayMerchantId": zod.string().nullish(),
+  "sendavapayWebhookSecret": zod.string().nullish(),
   "appBaseUrl": zod.string().nullish()
 })
 
@@ -650,7 +650,7 @@ export const UpdateAdminSettingsResponse = zod.object({
   "activationFee": zod.number(),
   "paymentMode": zod.string(),
   "sendavapayApiKey": zod.string().nullish(),
-  "sendavapayMerchantId": zod.string().nullish(),
+  "sendavapayWebhookSecret": zod.string().nullish(),
   "appBaseUrl": zod.string().nullish()
 })
 

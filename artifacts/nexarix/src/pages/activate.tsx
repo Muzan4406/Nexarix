@@ -64,9 +64,10 @@ export default function Activate() {
     initiatePayment.mutate(undefined, {
       onSuccess: (data) => {
         if (data.paymentUrl) {
-          setPaymentInitiated(true);
-          setPolling(true);
-          window.open(data.paymentUrl, "_blank");
+          if (data.reference) {
+            sessionStorage.setItem("nexarix_pay_ref", data.reference);
+          }
+          window.location.href = data.paymentUrl;
         }
       },
       onError: () => {},

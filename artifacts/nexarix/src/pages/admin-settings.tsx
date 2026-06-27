@@ -24,7 +24,7 @@ export default function AdminSettings() {
     activationFee: "3000",
     paymentMode: "manual",
     sendavapayApiKey: "",
-    sendavapayMerchantId: "",
+    sendavapayWebhookSecret: "",
     appBaseUrl: "",
   });
 
@@ -38,7 +38,7 @@ export default function AdminSettings() {
         activationFee: String(settings.activationFee ?? 3000),
         paymentMode: settings.paymentMode || "manual",
         sendavapayApiKey: settings.sendavapayApiKey || "",
-        sendavapayMerchantId: settings.sendavapayMerchantId || "",
+        sendavapayWebhookSecret: settings.sendavapayWebhookSecret || "",
         appBaseUrl: settings.appBaseUrl || "",
       });
     }
@@ -51,7 +51,7 @@ export default function AdminSettings() {
         activationFee: parseFloat(form.activationFee) || 3000,
         vcfLink: form.vcfLink || null,
         sendavapayApiKey: form.sendavapayApiKey || null,
-        sendavapayMerchantId: form.sendavapayMerchantId || null,
+        sendavapayWebhookSecret: form.sendavapayWebhookSecret || null,
         appBaseUrl: form.appBaseUrl || null,
       }
     }, {
@@ -223,13 +223,15 @@ export default function AdminSettings() {
                 </div>
                 <div>
                   <Label className="flex items-center gap-2 mb-1.5">
-                    <Key className="h-4 w-4 text-blue-500" />Merchant ID Sendavapay
+                    <Key className="h-4 w-4 text-purple-500" />Secret Webhook Sendavapay
                   </Label>
                   <Input
-                    value={form.sendavapayMerchantId}
-                    onChange={e => setForm(f => ({ ...f, sendavapayMerchantId: e.target.value }))}
-                    placeholder="merchant_..."
+                    value={form.sendavapayWebhookSecret}
+                    onChange={e => setForm(f => ({ ...f, sendavapayWebhookSecret: e.target.value }))}
+                    placeholder="whsec_..."
+                    type="password"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Disponible dans votre tableau de bord Sendavapay sous "Webhooks".</p>
                 </div>
               </>
             )}

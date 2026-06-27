@@ -10,7 +10,8 @@ export default function PaymentStatus() {
   const [, navigate] = useLocation();
   const [urlStatus, setUrlStatus] = useState<"success" | "failed" | "pending">("pending");
   const [attempts, setAttempts] = useState(0);
-  const { data: activationData, refetch } = useCheckActivationStatus();
+  const payRef = sessionStorage.getItem("nexarix_pay_ref") || undefined;
+  const { data: activationData, refetch } = useCheckActivationStatus({ reference: payRef });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

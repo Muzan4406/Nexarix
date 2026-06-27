@@ -9,7 +9,7 @@ export const siteSettingsTable = pgTable("site_settings", {
   activationFee: numeric("activation_fee", { precision: 12, scale: 2 }).notNull().default("3000"),
   paymentMode: text("payment_mode").notNull().default("manual"),
   sendavapayApiKey: text("sendavapay_api_key"),
-  sendavapayMerchantId: text("sendavapay_merchant_id"),
+  sendavapayWebhookSecret: text("sendavapay_webhook_secret"),
   appBaseUrl: text("app_base_url"),
 });
 

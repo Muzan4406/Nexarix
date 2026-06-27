@@ -1119,7 +1119,7 @@ components:
           type: string
         sendavapayApiKey:
           type: ["string", "null"]
-        sendavapayMerchantId:
+        sendavapayWebhookSecret:
           type: ["string", "null"]
         appBaseUrl:
           type: ["string", "null"]
@@ -1142,7 +1142,7 @@ components:
           type: string
         sendavapayApiKey:
           type: ["string", "null"]
-        sendavapayMerchantId:
+        sendavapayWebhookSecret:
           type: ["string", "null"]
         appBaseUrl:
           type: ["string", "null"]
