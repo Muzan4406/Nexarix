@@ -1,94 +1,143 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Phone, Zap } from "lucide-react";
+import { Phone, Zap, CheckCircle, LogOut, MessageCircle } from "lucide-react";
 
-const PAYMENT_METHODS: Record<string, string[]> = {
-  "Togo": ["TMoney", "Moov Money"],
-  "Bénin": ["MTN Mobile Money", "Moov Money"],
-  "Côte d'Ivoire": ["Orange Money", "MTN", "Moov", "Wave"],
-  "Cameroun": ["MTN MoMo", "Orange Money"],
-  "Burkina Faso": ["Orange Money", "Moov Money"],
-  "Mali": ["Orange Money", "Moov"],
-  "Niger": ["Airtel Money", "Moov"],
-  "Sénégal": ["Wave", "Orange Money", "Free Money"],
+const BASE = import.meta.env.BASE_URL;
+
+const PAYMENT_METHODS: Record<string, { name: string; color: string }[]> = {
+  "Togo":          [{ name: "TMoney", color: "bg-yellow-100 text-yellow-700 border-yellow-200" }, { name: "Moov Money", color: "bg-blue-100 text-blue-700 border-blue-200" }],
+  "Bénin":         [{ name: "MTN Mobile Money", color: "bg-yellow-100 text-yellow-700 border-yellow-200" }, { name: "Moov Money", color: "bg-blue-100 text-blue-700 border-blue-200" }],
+  "Côte d'Ivoire": [{ name: "Orange Money", color: "bg-orange-100 text-orange-700 border-orange-200" }, { name: "MTN", color: "bg-yellow-100 text-yellow-700 border-yellow-200" }, { name: "Wave", color: "bg-sky-100 text-sky-700 border-sky-200" }],
+  "Cameroun":      [{ name: "MTN MoMo", color: "bg-yellow-100 text-yellow-700 border-yellow-200" }, { name: "Orange Money", color: "bg-orange-100 text-orange-700 border-orange-200" }],
+  "Burkina Faso":  [{ name: "Orange Money", color: "bg-orange-100 text-orange-700 border-orange-200" }, { name: "Moov Money", color: "bg-blue-100 text-blue-700 border-blue-200" }],
+  "Mali":          [{ name: "Orange Money", color: "bg-orange-100 text-orange-700 border-orange-200" }, { name: "Moov", color: "bg-blue-100 text-blue-700 border-blue-200" }],
+  "Niger":         [{ name: "Airtel Money", color: "bg-red-100 text-red-700 border-red-200" }, { name: "Moov", color: "bg-blue-100 text-blue-700 border-blue-200" }],
+  "Sénégal":       [{ name: "Wave", color: "bg-sky-100 text-sky-700 border-sky-200" }, { name: "Orange Money", color: "bg-orange-100 text-orange-700 border-orange-200" }, { name: "Free Money", color: "bg-red-100 text-red-700 border-red-200" }],
 };
+
+const BENEFITS = [
+  "Accès complet au tableau de bord",
+  "Bonus de bienvenue crédité",
+  "Commissions MLM sur 3 niveaux",
+  "Participation aux tâches rémunérées",
+  "Retrait de vos gains à tout moment",
+];
 
 export default function Activate() {
   const { user, logout } = useAuth();
   const operators = user?.country ? (PAYMENT_METHODS[user.country] || []) : [];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary tracking-tight">NEXARIX</h1>
-        </div>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              <CardTitle>Activation du compte requise</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                Votre compte est en attente d'activation. Un paiement unique de{" "}
-                <span className="font-bold text-lg">3 000 XOF</span> est requis pour acceder a la plateforme.
-              </p>
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-br from-[#0D1B3E] via-[#1565C0] to-[#0D1B3E] p-4 py-8">
+
+      {/* Logo */}
+      <div className="mb-6 flex flex-col items-center">
+        <img
+          src={`${BASE}logo.png`}
+          alt="Nexarix"
+          className="h-20 w-auto object-contain drop-shadow-2xl"
+        />
+        <p className="text-blue-200 text-sm mt-2 font-medium tracking-wide">Activation du compte</p>
+      </div>
+
+      <div className="w-full max-w-sm space-y-4">
+
+        {/* Carte principale — montant */}
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden">
+          <div className="h-1.5 bg-gradient-to-r from-amber-400 to-orange-500" />
+          <div className="p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-11 w-11 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <Zap className="h-6 w-6 text-amber-500" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">Activez votre compte</h2>
+                <p className="text-sm text-gray-500">Paiement unique requis</p>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Zap className="h-4 w-4 text-primary" />
-                Avantages apres activation
-              </h3>
-              <ul className="text-sm text-muted-foreground space-y-1 ml-6">
-                <li>• Acces complet au tableau de bord</li>
-                <li>• Bonus de bienvenue credite</li>
-                <li>• Gain de commissions MLM (3 niveaux)</li>
-                <li>• Participation aux taches remunererees</li>
-                <li>• Retrait de vos gains</li>
-              </ul>
+            {/* Prix mis en avant */}
+            <div className="bg-gradient-to-r from-[#1565C0] to-[#1E88E5] rounded-2xl p-4 text-center text-white mb-4">
+              <p className="text-blue-100 text-xs mb-1">Frais d'activation</p>
+              <p className="text-4xl font-black">3 000</p>
+              <p className="text-blue-200 text-sm font-medium">XOF (FCFA)</p>
             </div>
 
-            <div className="space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Phone className="h-4 w-4 text-primary" />
-                Instructions de paiement
-                {user?.country && <Badge variant="outline">{user.country}</Badge>}
-              </h3>
-              {operators.length > 0 ? (
-                <div className="space-y-2">
-                  {operators.map(op => (
-                    <div key={op} className="flex items-center justify-between bg-muted rounded-lg px-4 py-3">
-                      <span className="font-medium text-sm">{op}</span>
-                      <span className="text-sm text-muted-foreground">Contactez le support</span>
-                    </div>
-                  ))}
+            {/* Avantages */}
+            <div className="space-y-2">
+              {BENEFITS.map(b => (
+                <div key={b} className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{b}</p>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Contactez le support pour les instructions de paiement.</p>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Carte paiement */}
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden">
+          <div className="h-1.5 bg-gradient-to-r from-emerald-400 to-teal-500" />
+          <div className="p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Phone className="h-5 w-5 text-emerald-500" />
+              <h3 className="font-bold text-gray-900 dark:text-white">Instructions de paiement</h3>
+              {user?.country && (
+                <Badge variant="outline" className="ml-auto text-xs">{user.country}</Badge>
               )}
             </div>
 
-            <div className="bg-muted rounded-lg p-4 text-sm text-muted-foreground">
-              <p>Apres votre paiement, envoyez une capture d'ecran a notre support. Votre compte sera active sous 24h.</p>
-            </div>
+            {operators.length > 0 ? (
+              <div className="space-y-2">
+                {operators.map(op => (
+                  <div
+                    key={op.name}
+                    className={`flex items-center justify-between rounded-xl px-4 py-3 border ${op.color}`}
+                  >
+                    <span className="font-semibold text-sm">{op.name}</span>
+                    <span className="text-xs opacity-70">Contactez le support</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+                Contactez le support pour les instructions.
+              </p>
+            )}
 
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1" onClick={logout} data-testid="button-logout">
-                Deconnexion
-              </Button>
-              <Button className="flex-1" asChild data-testid="button-contact-support">
-                <a href="https://wa.me/nexarix" target="_blank" rel="noopener noreferrer">Contacter le support</a>
-              </Button>
+            <div className="mt-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl p-3 text-xs text-blue-700 dark:text-blue-300 text-center">
+              Après paiement, envoyez la capture d'écran au support.<br />
+              <span className="font-semibold">Activation sous 24h.</span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1 rounded-xl h-11 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white font-medium backdrop-blur-sm"
+            onClick={logout}
+            data-testid="button-logout"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Déconnexion
+          </Button>
+          <Button
+            className="flex-1 rounded-xl h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-lg"
+            asChild
+            data-testid="button-contact-support"
+          >
+            <a href="https://wa.me/nexarix" target="_blank" rel="noopener noreferrer">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              WhatsApp
+            </a>
+          </Button>
+        </div>
       </div>
+
+      <p className="mt-8 text-blue-300/60 text-xs text-center">© 2025 Nexarix · Tous droits réservés</p>
     </div>
   );
 }
