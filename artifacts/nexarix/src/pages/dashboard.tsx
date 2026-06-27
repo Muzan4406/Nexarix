@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Wallet, ArrowDownCircle, Gift, Copy, CheckCircle, TrendingUp, Users, Zap, Sparkles } from "lucide-react";
+import { Wallet, ArrowDownCircle, Gift, Copy, CheckCircle, Users, Zap, Sparkles } from "lucide-react";
 
 function formatFcfa(amount: number) {
   return `${amount.toLocaleString("fr-FR")} XOF`;
@@ -148,51 +148,6 @@ export default function Dashboard() {
             </motion.div>
           ))}
         </div>
-
-        {/* MLM earnings summary */}
-        {stats?.earnings && (
-          <motion.div
-            custom={4}
-            variants={item}
-            initial="hidden"
-            animate="visible"
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
-                <TrendingUp className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-black text-gray-900">Mes gains par source</span>
-            </div>
-            <div className="space-y-2">
-              {[
-                { label: "Filleuls Niv. 1", value: stats.earnings.mlmLevel1, color: "from-emerald-400 to-teal-500" },
-                { label: "Filleuls Niv. 2", value: stats.earnings.mlmLevel2, color: "from-blue-400 to-indigo-500" },
-                { label: "Filleuls Niv. 3", value: stats.earnings.mlmLevel3, color: "from-violet-400 to-purple-500" },
-                { label: "Tâches",          value: stats.earnings.tasks,    color: "from-amber-400 to-orange-500" },
-              ].map(row => {
-                const total = (stats.earnings.mlmLevel1 || 0) + (stats.earnings.mlmLevel2 || 0) + (stats.earnings.mlmLevel3 || 0) + (stats.earnings.tasks || 0);
-                const pct = total > 0 ? Math.round(((row.value || 0) / total) * 100) : 0;
-                return (
-                  <div key={row.label}>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-500 font-semibold">{row.label}</span>
-                      <span className="font-black text-gray-800">{formatFcfa(row.value || 0)}</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                        className={`h-full rounded-full bg-gradient-to-r ${row.color}`}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
 
         {/* Referral link */}
         <motion.div
