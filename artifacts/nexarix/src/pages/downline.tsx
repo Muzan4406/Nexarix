@@ -4,7 +4,7 @@ import { useGetDownline } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import {
   Users, CheckCircle, XCircle, TrendingUp, Award,
-  Copy, Share2, ChevronRight, Zap
+  Copy, Share2, ChevronRight, Zap, Gift, Trophy
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,69 @@ const LEVEL_CONFIG = [
     earningsKey: "mlmEarningsL3" as const,
   },
 ];
+
+const REFERRAL_BONUS_STEP = 10;
+const REFERRAL_BONUS_AMOUNT = 1500;
+
+function ReferralBonusBanner({ activeDirectCount }: { activeDirectCount: number }) {
+  const bonusesEarned = Math.floor(activeDirectCount / REFERRAL_BONUS_STEP);
+  const progress = activeDirectCount % REFERRAL_BONUS_STEP;
+  const nextMilestone = (bonusesEarned + 1) * REFERRAL_BONUS_STEP;
+  const totalBonusEarned = bonusesEarned * REFERRAL_BONUS_AMOUNT;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+      className="rounded-2xl overflow-hidden border border-amber-200 shadow-sm"
+      style={{ background: "linear-gradient(135deg, #78350f 0%, #b45309 50%, #d97706 100%)" }}
+    >
+      <div className="p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 shadow-inner shrink-0">
+            <Gift className="h-5 w-5 text-yellow-200" />
+          </div>
+          <div className="flex-1">
+            <p className="text-yellow-200 text-[10px] font-bold uppercase tracking-widest">Bonus Parrainage</p>
+            <p className="text-white font-black text-base leading-tight">
+              +{REFERRAL_BONUS_AMOUNT.toLocaleString()} FCFA tous les {REFERRAL_BONUS_STEP} filleuls actifs
+            </p>
+          </div>
+          {bonusesEarned > 0 && (
+            <div className="flex items-center gap-1.5 rounded-xl bg-white/20 px-3 py-1.5 border border-white/20 shrink-0">
+              <Trophy className="h-3.5 w-3.5 text-yellow-200" />
+              <span className="text-white font-black text-sm">{totalBonusEarned.toLocaleString()} F</span>
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center">
+            <p className="text-white/80 text-xs font-semibold">
+              {progress}/{REFERRAL_BONUS_STEP} filleuls → prochain bonus
+            </p>
+            <p className="text-yellow-200 text-xs font-black">
+              Palier {nextMilestone}
+            </p>
+          </div>
+          <div className="h-2.5 rounded-full bg-white/20 overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${(progress / REFERRAL_BONUS_STEP) * 100}%` }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+              className="h-full rounded-full bg-gradient-to-r from-yellow-300 to-amber-200 shadow-inner"
+            />
+          </div>
+          <p className="text-white/70 text-[10px] font-medium">
+            {REFERRAL_BONUS_STEP - progress} filleul{REFERRAL_BONUS_STEP - progress > 1 ? "s" : ""} actif{REFERRAL_BONUS_STEP - progress > 1 ? "s" : ""} de plus pour débloquer <span className="font-black text-yellow-200">{REFERRAL_BONUS_AMOUNT.toLocaleString()} FCFA</span>
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 const stagger = {
   hidden: {},
@@ -310,6 +373,9 @@ export default function Downline() {
             })}
           </motion.div>
         )}
+
+        {/* ── Referral Bonus Banner ──────────────────────────── */}
+        <ReferralBonusBanner activeDirectCount={counts.level1} />
 
         {/* Footer info */}
         {totalActive > 0 && (

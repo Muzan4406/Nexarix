@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { withdrawalsTable, usersTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
+import { sendTelegramNotification } from "../lib/telegram";
 
 const router = Router();
 const MIN_WITHDRAWAL = 3000;
@@ -64,6 +65,16 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     amountNet: amountNet.toString(),
     status: "pending",
   }).returning();
+
+  sendTelegramNotification(
+    `💸 <b>Nouvelle demande de retrait</b>\n` +
+    `👤 Utilisateur: <b>${user.username}</b>\n` +
+    `📱 Téléphone: ${phone}\n` +
+    `🏦 Opérateur: ${operator}\n` +
+    `💰 Montant brut: <b>${amount.toLocaleString()} FCFA</b>\n` +
+    `📉 Frais (5%): ${fee.toLocaleString()} FCFA\n` +
+    `✅ Montant net: <b>${amountNet.toLocaleString()} FCFA</b>`
+  );
 
   res.status(201).json(formatWithdrawal(withdrawal));
 });

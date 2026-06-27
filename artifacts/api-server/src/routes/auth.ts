@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { signToken, authMiddleware } from "../lib/auth";
+import { sendTelegramNotification } from "../lib/telegram";
 
 const router = Router();
 
@@ -42,6 +43,15 @@ router.post("/auth/register", async (req, res) => {
   }).returning();
 
   const token = signToken({ userId: user.id, isAdmin: false });
+
+  sendTelegramNotification(
+    `🆕 <b>Nouveau membre inscrit</b>\n` +
+    `👤 Username: <b>${username}</b>\n` +
+    `📧 Email: ${email}\n` +
+    `📱 Téléphone: ${phone}\n` +
+    `🌍 Pays: ${country}\n` +
+    `🔗 Parrain: ${upline || "Aucun"}`
+  );
 
   res.status(201).json({
     token,

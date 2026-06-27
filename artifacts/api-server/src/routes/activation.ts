@@ -2,12 +2,15 @@ import { Router } from "express";
 import { createHmac } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable, siteSettingsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
+import { sendTelegramNotification } from "../lib/telegram";
 
 const router = Router();
 const SENDAVAPAY_BASE = "https://sendavapay.com/api";
 const WELCOME_BONUS = 50;
+const REFERRAL_BONUS_AMOUNT = 1500;
+const REFERRAL_BONUS_STEP = 10;
 
 // ─── Public settings ─────────────────────────────────────────────────────────
 router.get("/settings/public", async (_req, res) => {
@@ -153,6 +156,16 @@ async function activateUser(user: any) {
     balance: sql`${usersTable.balance} + ${WELCOME_BONUS}`,
     welcomeBonus: sql`${usersTable.welcomeBonus} + ${WELCOME_BONUS}`,
   }).where(eq(usersTable.id, user.id));
+
+  await sendTelegramNotification(
+    `💰 <b>Nouveau dépôt / Activation</b>\n` +
+    `👤 Utilisateur: <b>${user.username}</b>\n` +
+    `📧 Email: ${user.email}\n` +
+    `📱 Téléphone: ${user.phone || "—"}\n` +
+    `🌍 Pays: ${user.country || "—"}\n` +
+    `✅ Compte activé avec succès`
+  );
+
   await distributeMLMCommissions(user);
 }
 
@@ -165,6 +178,8 @@ async function distributeMLMCommissions(user: any) {
     { field: "mlmEarningsL3", amount: 400 },
   ];
   let currentUplineUsername = user.upline;
+  let isLevel1 = true;
+
   for (const { field, amount } of commissions) {
     if (!currentUplineUsername) break;
     const [uplineUser] = await db.select().from(usersTable)
@@ -175,7 +190,38 @@ async function distributeMLMCommissions(user: any) {
       balance: sql`${usersTable.balance} + ${amount}`,
       [field]: sql`${mlmField} + ${amount}`,
     }).where(eq(usersTable.id, uplineUser.id));
+
+    if (isLevel1) {
+      await checkAndGrantReferralBonus(uplineUser);
+      isLevel1 = false;
+    }
     currentUplineUsername = uplineUser.upline;
+  }
+}
+
+// ─── Referral bonus: 1500F every 10 active direct referrals ──────────────────
+async function checkAndGrantReferralBonus(uplineUser: any) {
+  const activeReferrals = await db
+    .select()
+    .from(usersTable)
+    .where(and(
+      eq(usersTable.upline, uplineUser.username),
+      eq(usersTable.status, "active")
+    ));
+
+  const activeCount = activeReferrals.length;
+
+  if (activeCount > 0 && activeCount % REFERRAL_BONUS_STEP === 0) {
+    await db.update(usersTable).set({
+      balance: sql`${usersTable.balance} + ${REFERRAL_BONUS_AMOUNT}`,
+    }).where(eq(usersTable.id, uplineUser.id));
+
+    await sendTelegramNotification(
+      `🎉 <b>Bonus filleuls débloqué !</b>\n` +
+      `👤 Utilisateur: <b>${uplineUser.username}</b>\n` +
+      `🏆 Palier atteint: <b>${activeCount} filleuls actifs directs</b>\n` +
+      `💵 Bonus crédité: <b>${REFERRAL_BONUS_AMOUNT} FCFA</b>`
+    );
   }
 }
 
