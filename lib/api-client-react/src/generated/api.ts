@@ -42,6 +42,7 @@ import type {
   RejectInput,
   SiteSettings,
   SiteSettingsUpdate,
+  SpinResult,
   SuccessResponse,
   Task,
   TaskCompleteInput,
@@ -667,6 +668,76 @@ export const useConvertPoints = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getConvertPointsMutationOptions(options));
+    }
+
+export const getSpinWheelUrl = () => {
+
+
+
+
+  return `/api/spin`
+}
+
+/**
+ * @summary Spin the fortune wheel (one-time after activation)
+ */
+export const spinWheel = async ( options?: RequestInit): Promise<SpinResult> => {
+
+  return customFetch<SpinResult>(getSpinWheelUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSpinWheelMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof spinWheel>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof spinWheel>>, TError,void, TContext> => {
+
+const mutationKey = ['spinWheel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof spinWheel>>, void> = () => {
+
+
+          return  spinWheel(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SpinWheelMutationResult = NonNullable<Awaited<ReturnType<typeof spinWheel>>>
+
+    export type SpinWheelMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Spin the fortune wheel (one-time after activation)
+ */
+export const useSpinWheel = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof spinWheel>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof spinWheel>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSpinWheelMutationOptions(options));
     }
 
 export const getGetTasksUrl = () => {

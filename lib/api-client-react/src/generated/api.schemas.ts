@@ -275,6 +275,11 @@ export interface ActivateStatusResponse {
   status: string;
 }
 
+export interface SpinResult {
+  pointsEarned: number;
+  totalPoints: number;
+}
+
 export interface SiteSettings {
   id: number;
   supportEmail: string;

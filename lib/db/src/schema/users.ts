@@ -25,6 +25,7 @@ export const usersTable = pgTable("users", {
   mlmEarningsL2: numeric("mlm_earnings_l2", { precision: 12, scale: 2 }).notNull().default("0"),
   mlmEarningsL3: numeric("mlm_earnings_l3", { precision: 12, scale: 2 }).notNull().default("0"),
   taskEarnings: numeric("task_earnings", { precision: 12, scale: 2 }).notNull().default("0"),
+  hasSpun: boolean("has_spun").notNull().default(false),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 

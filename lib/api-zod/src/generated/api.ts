@@ -180,6 +180,15 @@ export const ConvertPointsResponse = zod.object({
 
 
 /**
+ * @summary Spin the fortune wheel (one-time after activation)
+ */
+export const SpinWheelResponse = zod.object({
+  "pointsEarned": zod.number(),
+  "totalPoints": zod.number()
+})
+
+
+/**
  * @summary Get active tasks
  */
 export const GetTasksResponseItem = zod.object({

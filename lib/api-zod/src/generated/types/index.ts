@@ -30,6 +30,7 @@ export * from './registerInput';
 export * from './rejectInput';
 export * from './siteSettings';
 export * from './siteSettingsUpdate';
+export * from './spinResult';
 export * from './successResponse';
 export * from './task';
 export * from './taskCompleteInput';
