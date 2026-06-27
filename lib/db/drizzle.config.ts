@@ -4,13 +4,10 @@ import path from "path";
 function getConnectionString(): string {
   const ref = process.env.SUPABASE_PROJECT_REF;
   const pass = process.env.SUPABASE_DB_PASSWORD;
-  if (ref && pass) {
-    return `postgresql://postgres.${ref}:${pass}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`;
+  if (!ref || !pass) {
+    throw new Error("SUPABASE_PROJECT_REF and SUPABASE_DB_PASSWORD must be set.");
   }
-  if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
-  }
-  throw new Error("No database connection configured.");
+  return `postgresql://postgres.${ref}:${pass}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`;
 }
 
 export default defineConfig({
