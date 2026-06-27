@@ -272,8 +272,8 @@ export interface PublicSettings {
 }
 
 export interface ActivateInitiateResponse {
-  paymentUrl: string;
-  paymentId: string;
+  paymentToken: string;
+  reference: string;
 }
 
 export interface ActivateStatusResponse {

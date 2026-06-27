@@ -11,11 +11,14 @@ export const withdrawalsTable = pgTable("withdrawals", {
   type: text("type").notNull(),
   operator: text("operator").notNull(),
   phone: text("phone").notNull(),
+  country: text("country"),
   amountGross: numeric("amount_gross", { precision: 12, scale: 2 }).notNull(),
   fee: numeric("fee", { precision: 12, scale: 2 }).notNull(),
   amountNet: numeric("amount_net", { precision: 12, scale: 2 }).notNull(),
   status: withdrawalStatusEnum("status").notNull().default("pending"),
   rejectionReason: text("rejection_reason"),
+  sendavapayReference: text("sendavapay_reference"),
+  sendavapayStatus: text("sendavapay_status"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

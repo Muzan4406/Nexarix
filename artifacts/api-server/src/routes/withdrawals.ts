@@ -24,24 +24,24 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
   const { type, operator, phone, amount } = req.body;
 
   if (!type || !operator || !phone || !amount) {
-    res.status(400).json({ error: "All fields are required" });
+    res.status(400).json({ error: "Tous les champs sont requis" });
     return;
   }
 
   if (amount < MIN_WITHDRAWAL) {
-    res.status(400).json({ error: `Minimum withdrawal is ${MIN_WITHDRAWAL} FCFA` });
+    res.status(400).json({ error: `Minimum de retrait : ${MIN_WITHDRAWAL} FCFA` });
     return;
   }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) {
-    res.status(404).json({ error: "User not found" });
+    res.status(404).json({ error: "Utilisateur introuvable" });
     return;
   }
 
   const currentBalance = parseFloat(user.balance || "0");
   if (currentBalance < amount) {
-    res.status(400).json({ error: "Insufficient balance" });
+    res.status(400).json({ error: "Solde insuffisant" });
     return;
   }
 
@@ -60,6 +60,7 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     type,
     operator,
     phone,
+    country: user.country || null,
     amountGross: amount.toString(),
     fee: fee.toString(),
     amountNet: amountNet.toString(),
@@ -69,6 +70,7 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
   sendTelegramNotification(
     `💸 <b>Nouvelle demande de retrait</b>\n` +
     `👤 Utilisateur: <b>${user.username}</b>\n` +
+    `🌍 Pays: ${user.country || "—"}\n` +
     `📱 Téléphone: ${phone}\n` +
     `🏦 Opérateur: ${operator}\n` +
     `💰 Montant brut: <b>${amount.toLocaleString()} FCFA</b>\n` +
@@ -85,11 +87,14 @@ function formatWithdrawal(w: any) {
     type: w.type,
     operator: w.operator,
     phone: w.phone,
+    country: w.country,
     amountGross: parseFloat(w.amountGross || "0"),
     fee: parseFloat(w.fee || "0"),
     amountNet: parseFloat(w.amountNet || "0"),
     status: w.status,
     rejectionReason: w.rejectionReason,
+    sendavapayReference: w.sendavapayReference,
+    sendavapayStatus: w.sendavapayStatus,
     createdAt: w.createdAt?.toISOString(),
   };
 }

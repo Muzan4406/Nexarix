@@ -1,16 +1,31 @@
 import { Router } from "express";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { db } from "@workspace/db";
-import { usersTable, siteSettingsTable } from "@workspace/db";
+import { usersTable, siteSettingsTable, withdrawalsTable } from "@workspace/db";
 import { eq, sql, and } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
 
 const router = Router();
-const SENDAVAPAY_BASE = "https://sendavapay.com/api";
+const SENDAVAPAY_BASE = "https://sendavapay.com/api/sdk/v1";
 const WELCOME_BONUS = 50;
 const REFERRAL_BONUS_AMOUNT = 1500;
 const REFERRAL_BONUS_STEP = 10;
+
+const COUNTRY_ISO: Record<string, string> = {
+  "Togo": "TG", "Bénin": "BJ", "Côte d'Ivoire": "CI",
+  "Cameroun": "CM", "Burkina Faso": "BF", "Mali": "ML",
+  "Niger": "NE", "Sénégal": "SN", "Guinée": "GN",
+  "Gabon": "GA", "Tchad": "TD", "Congo": "COG",
+  "République centrafricaine": "CF", "Guinée Équatoriale": "GQ", "RD Congo": "COD",
+};
+
+const CURRENCY_BY_ISO: Record<string, string> = {
+  "TG": "XOF", "BJ": "XOF", "CI": "XOF", "ML": "XOF",
+  "BF": "XOF", "NE": "XOF", "SN": "XOF", "GN": "GNF",
+  "CM": "XAF", "COG": "XAF", "CF": "XAF", "GQ": "XAF", "GA": "XAF", "TD": "XAF",
+  "COD": "CDF",
+};
 
 // ─── Public settings ─────────────────────────────────────────────────────────
 router.get("/settings/public", async (_req, res) => {
@@ -19,10 +34,11 @@ router.get("/settings/public", async (_req, res) => {
   res.json({
     activationFee: parseFloat(settings.activationFee || "3000"),
     paymentMode: settings.paymentMode || "manual",
+    telegramLink: settings.telegramLink,
   });
 });
 
-// ─── Initiate Sendavapay payment ──────────────────────────────────────────────
+// ─── Initiate Sendavapay payment (server-side create-payment) ─────────────────
 router.post("/activate/initiate", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
@@ -38,24 +54,37 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
   const activationFee = parseFloat(settings.activationFee || "3000");
   const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
 
+  const countryIso = COUNTRY_ISO[user.country || ""] || "TG";
+  const currency = CURRENCY_BY_ISO[countryIso] || "XOF";
+
   try {
-    const response = await fetch(`${SENDAVAPAY_BASE}/v1/create-payment`, {
+    const response = await fetch(`${SENDAVAPAY_BASE}/create-payment`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${settings.sendavapayApiKey}` },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${settings.sendavapayApiKey}`,
+      },
       body: JSON.stringify({
         amount: activationFee,
-        currency: "XOF",
+        currency,
         description: `Activation compte Nexarix — ${user.username}`,
-        externalReference: `nexarix-activation-${user.id}`,
+        customerName: user.username,
         customerEmail: user.email,
         customerPhone: user.phone,
-        customerName: user.username,
-        redirectUrl: `${baseUrl}/payment-status`,
+        payerCountry: countryIso,
+        webhookUrl: `${baseUrl}/api/activate/webhook`,
+        externalReference: `nexarix-activation-${user.id}`,
       }),
     });
     const json = await response.json() as any;
-    if (!response.ok || !json.success) { res.status(502).json({ error: "Erreur Sendavapay", detail: json }); return; }
-    res.json({ paymentUrl: json.data.paymentUrl, reference: json.data.reference });
+    if (!response.ok || !json.success) {
+      res.status(502).json({ error: "Erreur Sendavapay", detail: json });
+      return;
+    }
+    res.json({
+      paymentToken: json.data.paymentToken,
+      reference: json.data.reference,
+    });
   } catch (e: any) {
     res.status(502).json({ error: "Impossible de contacter Sendavapay", detail: e.message });
   }
@@ -73,15 +102,14 @@ router.get("/activate/check", authMiddleware, async (req, res) => {
     try {
       const [settings] = await db.select().from(siteSettingsTable).limit(1);
       if (settings?.sendavapayApiKey) {
-        const resp = await fetch(`${SENDAVAPAY_BASE}/v1/verify-payment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${settings.sendavapayApiKey}` },
-          body: JSON.stringify({ reference }),
+        const resp = await fetch(`${SENDAVAPAY_BASE}/payment-status/${reference}`, {
+          headers: { "Authorization": `Bearer ${settings.sendavapayApiKey}` },
         });
         const json = await resp.json() as any;
         if (json.success && json.data?.status === "completed" && user.status !== "active") {
           await activateUser(user);
-          res.json({ status: "active" }); return;
+          res.json({ status: "active" });
+          return;
         }
       }
     } catch (_) {}
@@ -89,34 +117,57 @@ router.get("/activate/check", authMiddleware, async (req, res) => {
   res.json({ status: user.status });
 });
 
-// ─── Webhook ──────────────────────────────────────────────────────────────────
+// ─── Webhook (raw body for HMAC) ──────────────────────────────────────────────
 router.post("/activate/webhook", async (req, res) => {
+  const rawBody: Buffer = req.body;
   const signature = req.headers["x-sendavapay-signature"] as string | undefined;
-  const event = req.headers["x-sendavapay-event"] as string | undefined;
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
 
   if (settings?.sendavapayWebhookSecret && signature) {
-    const expected = createHmac("sha256", settings.sendavapayWebhookSecret)
-      .update(JSON.stringify(req.body)).digest("hex");
-    if (expected !== signature) { res.status(401).json({ error: "Signature invalide" }); return; }
+    const expected = "sha256=" + createHmac("sha256", settings.sendavapayWebhookSecret)
+      .update(rawBody)
+      .digest("hex");
+    try {
+      if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+        res.status(401).json({ error: "Signature invalide" });
+        return;
+      }
+    } catch {
+      res.status(401).json({ error: "Signature invalide" });
+      return;
+    }
   }
 
-  const { data } = req.body as { event?: string; data?: { reference?: string }; timestamp?: string };
-  const eventType = event || req.body.event;
+  let payload: any;
+  try {
+    payload = JSON.parse(rawBody.toString());
+  } catch {
+    res.status(400).json({ error: "Payload invalide" });
+    return;
+  }
+
+  const eventType = req.headers["x-sendavapay-event"] as string || payload.event;
 
   if (eventType === "payment.completed") {
-    const reference = data?.reference;
-    if (!reference) { res.status(400).json({ error: "Reference manquante" }); return; }
+    const reference = payload.reference;
+    const externalRef = payload.externalReference;
+    if (!reference && !externalRef) { res.json({ received: true }); return; }
+
     try {
       if (settings?.sendavapayApiKey) {
-        const resp = await fetch(`${SENDAVAPAY_BASE}/v1/verify-payment`, {
+        const refToVerify = reference || externalRef;
+        const resp = await fetch(`${SENDAVAPAY_BASE}/verify-payment`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${settings.sendavapayApiKey}` },
-          body: JSON.stringify({ reference }),
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${settings.sendavapayApiKey}`,
+          },
+          body: JSON.stringify({ reference: refToVerify }),
         });
         const json = await resp.json() as any;
-        if (json.success && json.data?.externalReference) {
-          const match = (json.data.externalReference as string).match(/^nexarix-activation-(\d+)$/);
+        if (json.success && json.data?.status === "completed") {
+          const extRef = json.data.externalReference || externalRef;
+          const match = typeof extRef === "string" ? extRef.match(/^nexarix-activation-(\d+)$/) : null;
           if (match) {
             const uid = parseInt(match[1]);
             const [user] = await db.select().from(usersTable).where(eq(usersTable.id, uid)).limit(1);
@@ -126,6 +177,49 @@ router.post("/activate/webhook", async (req, res) => {
       }
     } catch (_) {}
   }
+
+  if (eventType === "withdrawal.completed" || eventType === "withdrawal.failed") {
+    const reference = payload.reference;
+    const externalRef = payload.externalReference;
+    if (reference || externalRef) {
+      try {
+        const ref = reference || externalRef;
+        const newStatus = eventType === "withdrawal.completed" ? "completed" : "failed";
+
+        const [withdrawal] = await db.update(withdrawalsTable)
+          .set({ sendavapayStatus: newStatus })
+          .where(eq(withdrawalsTable.sendavapayReference, ref))
+          .returning();
+
+        if (withdrawal && newStatus === "failed") {
+          const amountToRefund = parseFloat(withdrawal.amountGross || "0");
+          await db.update(usersTable)
+            .set({ balance: sql`${usersTable.balance} + ${amountToRefund}` })
+            .where(eq(usersTable.id, withdrawal.userId));
+
+          const [user] = await db.select().from(usersTable).where(eq(usersTable.id, withdrawal.userId)).limit(1);
+          await sendTelegramNotification(
+            `❌ <b>Retrait échoué — remboursement</b>\n` +
+            `👤 Utilisateur: <b>${user?.username || withdrawal.userId}</b>\n` +
+            `💰 Montant remboursé: <b>${amountToRefund.toLocaleString()} FCFA</b>\n` +
+            `📱 Téléphone: ${withdrawal.phone}\n` +
+            `🔖 Réf Sendavapay: ${ref}`
+          );
+        }
+
+        if (withdrawal && newStatus === "completed") {
+          const [user] = await db.select().from(usersTable).where(eq(usersTable.id, withdrawal.userId)).limit(1);
+          await sendTelegramNotification(
+            `✅ <b>Retrait confirmé par Sendavapay</b>\n` +
+            `👤 Utilisateur: <b>${user?.username || withdrawal.userId}</b>\n` +
+            `💰 Montant net: <b>${parseFloat(withdrawal.amountNet || "0").toLocaleString()} FCFA</b>\n` +
+            `📱 ${withdrawal.operator} — ${withdrawal.phone}`
+          );
+        }
+      } catch (_) {}
+    }
+  }
+
   res.json({ received: true });
 });
 

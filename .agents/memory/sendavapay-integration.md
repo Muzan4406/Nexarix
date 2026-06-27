@@ -1,51 +1,85 @@
 ---
-name: Sendavapay integration
-description: Correct API endpoints, payload structure, webhook format and signature verification for Sendavapay payment gateway (West African Mobile Money)
+name: Sendavapay SDK Integration
+description: Correct endpoints, payload fields, webhook format, payout flow for the new SDK v1
 ---
 
-# Sendavapay API integration
-
-**Why:** Initial implementation used wrong endpoint/param names. Correct details extracted from official docs.
-
-## Endpoints (Base: https://sendavapay.com/api)
-
-- **Create payment:** `POST /v1/create-payment`
-- **Verify payment:** `POST /v1/verify-payment` — body: `{ reference }`
-- **Credit account:** `POST /v1/credit-account`
-- **Balance:** `GET /v1/balance?phone=...`
+## Base URL
+`https://sendavapay.com/api/sdk/v1`
 
 ## Auth
-`Authorization: Bearer pk_live_...` on every request.
+`Authorization: Bearer sdk_...` — server-side only, never in frontend
 
-## Create-payment payload
+## Pay-in (activation)
+
+### POST /create-payment
+Fields: `amount`, `currency` (XOF/XAF/GNF/CDF), `description`, `customerName`, `customerEmail`, `customerPhone`, `payerCountry` (ISO), `webhookUrl`, `externalReference`
+Returns: `{ reference, paymentToken, expiresAt, status: "pending" }` — **no paymentUrl, no redirectUrl**
+
+**Why:** Old integration expected a paymentUrl redirect — new SDK uses embedded flow via paymentToken + CORS client endpoints.
+
+### Client CORS endpoints (frontend, no auth key needed)
+- `GET /operators/:countryCode` — list available operators, filter `status === "online"`
+- `POST /initiate-payment` — `{ paymentToken, payerName, payerPhone, payerCountry, operatorId }`
+  - Returns `requiresOtp: true` + `otpToken` (Orange Money), or `requiresRedirect: true` + `redirectUrl` (Wave), or neither (push to phone)
+- `POST /submit-otp` — `{ otpToken, otp }` — only for Orange Money operators
+- `GET /operators-status` — public endpoint, no auth required
+
+### GET /payment-status/:reference
+Returns `{ status: "pending"|"processing"|"completed"|"failed"|"cancelled" }`
+
+### POST /verify-payment
+Body: `{ reference }` — returns full transaction details. Use server-side to confirm before activating.
+
+## Pay-out (withdrawals)
+
+### POST /withdraw
+Fields: `amount`, `phoneNumber` (E.164), `operator` (slug), `country` (ISO), `currency`, `description`, `externalReference`
+Returns: `{ withdrawalId, reference, status: "queued" }` — processed async
+
+**Operator slugs:** tmoney, moov, mtn, orange, wave, airtel, freemoney, vodacom, cellcom, wizall
+
+### GET /withdrawal-status/:reference
+Statuses: queued → processing → provider_pending → completed | failed | reversed | cancelled
+
+### POST /validate-withdrawal (dry-run)
+Check balance + operator availability before executing. Returns `valid`, `fee`, `netAmount`, `walletBalance`.
+
+## Webhooks
+
+### Setup
+- Configure via `PUT /webhook { webhookUrl }` or pass per `create-payment`
+- Returns `webhookSecret` — store as env var (shown once)
+
+### Headers
+- `X-SendavaPay-Signature: sha256={hmac_hex}` — HMAC-SHA256 of **raw Buffer body** (NOT JSON.stringify)
+- `X-SendavaPay-Event: payment.completed|payment.failed|withdrawal.completed|withdrawal.failed`
+
+**How to apply:** Register `express.raw({ type: "application/json" })` for `/api/activate/webhook` BEFORE `express.json()` in app.ts. Compare `"sha256=" + hmac.digest("hex")` with timing-safe equal.
+
+### Payload (flat, not nested under data)
 ```json
-{ "amount", "currency" (default XOF), "description", "externalReference", "customerEmail", "customerPhone", "customerName", "redirectUrl", "metadata" }
-```
-- `externalReference` = our internal order ID (e.g. `nexarix-activation-{userId}`)
-- `redirectUrl` = where user is sent after payment (our `/payment-status` page)
-- **No callback_url in request body** — webhook URL configured in Sendavapay merchant dashboard
-
-## Create-payment response
-```json
-{ "success": true, "data": { "reference": "pay_abc123", "paymentUrl": "...", "status": "pending", ... } }
+{ "event": "payment.completed", "reference": "sdk_...", "externalReference": "nexarix-activation-...", "status": "completed", ... }
 ```
 
-## Verify-payment response
-```json
-{ "success": true, "data": { "reference", "externalReference", "amount", "status": "completed", "customerEmail", ... } }
-```
-Use `externalReference` to map back to our userId.
+## Country / Currency Mapping
+| Country name | ISO | Currency |
+|---|---|---|
+| Togo | TG | XOF |
+| Bénin | BJ | XOF |
+| Côte d'Ivoire | CI | XOF |
+| Cameroun | CM | XAF |
+| Burkina Faso | BF | XOF |
+| Mali | ML | XOF |
+| Niger | NE | XOF |
+| Sénégal | SN | XOF |
+| Guinée | GN | GNF |
+| RD Congo | COD | CDF |
+| Congo/Gabon/Tchad/CF/GQ | COG/GA/TD/CF/GQ | XAF |
 
-## Webhook structure
-- **Body:** `{ "event": "payment.completed", "data": { "reference", "amount", "currency", "customerPhone" }, "timestamp" }`
-- **Headers:** `X-SendavaPay-Event`, `X-SendavaPay-Signature`
-- **Signature verification:** `HMAC-SHA256(JSON.stringify(body), webhookSecret)` — secret starts with `whsec_`
-
-## Nexarix flow
-1. `POST /activate/initiate` → calls create-payment, returns `{ paymentUrl, reference }`
-2. Frontend stores reference in sessionStorage, redirects user to paymentUrl
-3. User pays, Sendavapay redirects to `/payment-status`
-4. `/payment-status` polls `GET /activate/check?reference=...` — verifies via Sendavapay API if not yet active in DB
-5. Webhook `POST /activate/webhook` → verifies signature → calls verify-payment to get externalReference → activates user + MLM commissions
-
-**How to apply:** Any change to Sendavapay calls must use these exact field names. Merchant ID is NOT a field — only API key + webhook secret needed.
+## Implementation notes
+- No merchant_id — auth is purely the SDK key (prefix sdk_)
+- `withdrawals` table: added `country`, `sendavapayReference`, `sendavapayStatus` columns
+- Auto-payout triggered when admin approves (PATCH /admin/withdrawals/:id/approve) and paymentMode=auto
+- `withdrawal.failed` webhook refunds `amountGross` to user balance automatically
+- Phone normalization: `00XXX` → `+XXX`, else prepend `+` if missing
+- `externalReference` for payout: `nexarix-withdrawal-{withdrawalId}`
