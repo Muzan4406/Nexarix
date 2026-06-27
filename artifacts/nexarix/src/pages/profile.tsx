@@ -1,92 +1,146 @@
+import { motion } from "framer-motion";
 import { useGetProfile } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Phone, Mail, Calendar, MapPin, Link, Wallet, Users, Star } from "lucide-react";
+import { User, Phone, Mail, Calendar, MapPin, Link, Wallet, Users, Star, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
-function formatFcfa(v: number) { return `XOF ${v.toLocaleString("fr-FR")}`; }
+function formatFcfa(v: number) { return `${v.toLocaleString("fr-FR")} XOF`; }
+
+const item = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  }),
+};
 
 export default function Profile() {
   const { data: profile, isLoading } = useGetProfile();
 
-  if (isLoading) return <AppLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Chargement...</div></AppLayout>;
+  if (isLoading) return (
+    <AppLayout>
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+        <p className="text-gray-400 text-sm font-medium">Chargement…</p>
+      </div>
+    </AppLayout>
+  );
   if (!profile) return null;
+
+  const isActive = profile.status === "active";
+
+  const stats = [
+    { label: "Solde",    value: formatFcfa(profile.balance),         icon: Wallet, gradient: "from-emerald-400 to-teal-500" },
+    { label: "Filleuls", value: String(profile.totalDownlines),       icon: Users,  gradient: "from-blue-400 to-indigo-500" },
+    { label: "Adhésion", value: profile.membership,                  icon: Star,   gradient: "from-amber-400 to-orange-500" },
+    { label: "Retiré",  value: formatFcfa(profile.totalWithdrawn),   icon: Wallet, gradient: "from-violet-400 to-purple-500" },
+  ];
+
+  const infos = [
+    { label: "Nom d'utilisateur", value: profile.username,   icon: User },
+    { label: "Email",             value: profile.email,       icon: Mail },
+    { label: "Téléphone",         value: profile.phone,       icon: Phone },
+    { label: "Parrain",           value: profile.upline || "Aucun", icon: Link },
+    { label: "Membre depuis",     value: profile.joinedAt ? format(new Date(profile.joinedAt), "dd MMMM yyyy") : "—", icon: Calendar },
+    { label: "Pays",              value: profile.country,     icon: MapPin },
+  ];
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Mon Profil</h1>
+      <div className="space-y-5">
 
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={profile.avatarUrl || undefined} />
-                <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                  {profile.username.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 text-center sm:text-left">
-                <h2 className="text-xl font-bold" data-testid="text-username">{profile.username}</h2>
-                <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-2">
-                  <Badge className="text-xs">{profile.membership}</Badge>
-                  <Badge variant="outline" className="text-xs">{profile.country}</Badge>
-                  <Badge variant={profile.status === "active" ? "default" : "secondary"} className="text-xs">
-                    {profile.status === "active" ? "Actif" : "Inactif"}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Membre depuis {profile.joinedAt ? format(new Date(profile.joinedAt), "MMMM yyyy") : "—"}
-                </p>
-              </div>
+        {/* Hero profil */}
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-3xl bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-600 p-6 text-white relative overflow-hidden shadow-xl shadow-violet-300/30"
+        >
+          <div className="absolute -top-8 -right-8 h-36 w-36 rounded-full bg-white/10" />
+          <div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/10" />
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="h-20 w-20 rounded-3xl bg-white/20 flex items-center justify-center font-black text-4xl shadow-inner shrink-0">
+              {profile.username.charAt(0).toUpperCase()}
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <h1 className="font-black text-2xl leading-tight" data-testid="text-username">
+                {profile.username}
+              </h1>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="bg-white/20 rounded-xl px-2.5 py-1 text-xs font-bold">{profile.membership}</span>
+                <span className="bg-white/20 rounded-xl px-2.5 py-1 text-xs font-bold">{profile.country}</span>
+                <span className={cn(
+                  "rounded-xl px-2.5 py-1 text-xs font-bold flex items-center gap-1",
+                  isActive ? "bg-emerald-400/30 text-emerald-100" : "bg-amber-400/30 text-amber-100"
+                )}>
+                  {isActive ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                  {isActive ? "Actif" : "Inactif"}
+                </span>
+              </div>
+              <p className="text-violet-200 text-xs mt-1 font-semibold">
+                Membre depuis {profile.joinedAt ? format(new Date(profile.joinedAt), "MMMM yyyy") : "—"}
+              </p>
+            </div>
+          </div>
+        </motion.div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Solde", value: formatFcfa(profile.balance), Icon: Wallet, color: "text-primary" },
-            { label: "Filleuls", value: profile.totalDownlines.toString(), Icon: Users, color: "text-blue-600" },
-            { label: "Adhesion", value: profile.membership, Icon: Star, color: "text-amber-600" },
-            { label: "Retire", value: formatFcfa(profile.totalWithdrawn), Icon: Wallet, color: "text-green-600" },
-          ].map(item => (
-            <Card key={item.label}>
-              <CardContent className="pt-4 pb-3 text-center">
-                <item.Icon className={`h-5 w-5 mx-auto mb-1 ${item.color}`} />
-                <p className="text-sm font-semibold">{item.value}</p>
-                <p className="text-xs text-muted-foreground">{item.label}</p>
-              </CardContent>
-            </Card>
+        {/* Stats cards */}
+        <div className="grid grid-cols-2 gap-3">
+          {stats.map((s, i) => (
+            <motion.div
+              key={s.label}
+              custom={i}
+              variants={item}
+              initial="hidden"
+              animate="visible"
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center"
+            >
+              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center mx-auto mb-2 shadow-md`}>
+                <s.icon className="h-5 w-5 text-white" />
+              </div>
+              <p className="font-black text-gray-900 text-sm leading-tight">{s.value}</p>
+              <p className="text-xs text-gray-400 font-semibold mt-0.5">{s.label}</p>
+            </motion.div>
           ))}
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Informations du profil</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y sm:divide-y-0 sm:divide-x divide-border">
-              {[
-                { label: "NOM D'UTILISATEUR", value: profile.username, Icon: User },
-                { label: "EMAIL", value: profile.email, Icon: Mail },
-                { label: "TELEPHONE", value: profile.phone, Icon: Phone },
-                { label: "PARRAIN (UPLINE)", value: profile.upline || "Aucun", Icon: Link },
-                { label: "INSCRIPTION", value: profile.joinedAt ? format(new Date(profile.joinedAt), "dd MMMM yyyy") : "—", Icon: Calendar },
-                { label: "PAYS", value: profile.country, Icon: MapPin },
-              ].map(item => (
-                <div key={item.label} className="py-3 px-4 first:pt-0 last:pb-0 sm:first:pt-3 sm:last:pb-3">
-                  <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase mb-1">{item.label}</p>
-                  <div className="flex items-center gap-1.5">
-                    <item.Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <p className="text-sm font-medium" data-testid={`text-profile-${item.label.toLowerCase().replace(/\s/g, "-")}`}>{item.value}</p>
-                  </div>
+        {/* Info card */}
+        <motion.div
+          custom={4}
+          variants={item}
+          initial="hidden"
+          animate="visible"
+          className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
+        >
+          <h2 className="font-black text-gray-900 mb-4">Informations du profil</h2>
+          <div className="space-y-3">
+            {infos.map((info, i) => (
+              <motion.div
+                key={info.label}
+                custom={i + 5}
+                variants={item}
+                initial="hidden"
+                animate="visible"
+                className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100"
+              >
+                <div className="h-9 w-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center shrink-0 shadow-sm">
+                  <info.icon className="h-4 w-4 text-gray-400" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{info.label}</p>
+                  <p
+                    className="text-sm font-black text-gray-900 truncate"
+                    data-testid={`text-profile-${info.label.toLowerCase().replace(/\s/g, "-")}`}
+                  >
+                    {info.value}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
       </div>
     </AppLayout>
   );

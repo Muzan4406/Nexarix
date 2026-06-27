@@ -1,48 +1,25 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { useGetDashboard, useGetPublicSettings, getGetDashboardQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Wallet, ArrowDownCircle, Gift, Copy, CheckCircle } from "lucide-react";
+import { Wallet, ArrowDownCircle, Gift, Copy, CheckCircle, TrendingUp, Users, Zap, Sparkles } from "lucide-react";
 
 function formatFcfa(amount: number) {
-  return `XOF ${amount.toLocaleString("fr-FR")}`;
+  return `${amount.toLocaleString("fr-FR")} XOF`;
 }
 
 const BASE = import.meta.env.BASE_URL;
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  bg,
-  iconBg,
-  iconColor,
-  textColor,
-}: {
-  label: string;
-  value: string;
-  icon: React.ElementType;
-  bg: string;
-  iconBg: string;
-  iconColor: string;
-  textColor: string;
-}) {
-  return (
-    <div className={`rounded-2xl p-4 ${bg} flex items-center justify-between`}>
-      <div>
-        <p className="text-xs font-medium text-gray-500 mb-1">{label}</p>
-        <p className={`text-xl font-bold ${textColor}`}>{value}</p>
-      </div>
-      <div className={`h-12 w-12 rounded-xl ${iconBg} flex items-center justify-center shadow-sm`}>
-        <Icon className={`h-6 w-6 ${iconColor}`} />
-      </div>
-    </div>
-  );
-}
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  }),
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -56,17 +33,16 @@ export default function Dashboard() {
     if (stats?.referralLink) {
       navigator.clipboard.writeText(stats.referralLink);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      toast({ title: "Lien copié !", description: "Partagez-le pour gagner des commissions." });
+      setTimeout(() => setCopied(false), 2500);
     }
   };
 
   if (isLoading) return (
     <AppLayout>
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-muted-foreground text-sm">Chargement...</p>
-        </div>
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
+        <p className="text-gray-400 text-sm font-medium">Chargement…</p>
       </div>
     </AppLayout>
   );
@@ -74,93 +50,182 @@ export default function Dashboard() {
   const activationFee = publicSettings?.activationFee ?? 3000;
   const totalEarned = stats?.totalEarned || 0;
 
+  const statCards = [
+    {
+      label: "Solde disponible",
+      value: formatFcfa(stats?.balance || 0),
+      icon: Wallet,
+      gradient: "from-emerald-500 to-teal-500",
+      bg: "bg-emerald-50",
+      shadow: "shadow-emerald-200/60",
+    },
+    {
+      label: "Total retiré",
+      value: formatFcfa(stats?.totalWithdrawn || 0),
+      icon: ArrowDownCircle,
+      gradient: "from-orange-500 to-amber-500",
+      bg: "bg-orange-50",
+      shadow: "shadow-orange-200/60",
+    },
+    {
+      label: "Bonus de bienvenue",
+      value: formatFcfa(stats?.welcomeBonus || 0),
+      icon: Gift,
+      gradient: "from-violet-500 to-purple-500",
+      bg: "bg-violet-50",
+      shadow: "shadow-violet-200/60",
+    },
+    {
+      label: "Mes points",
+      value: `${(stats?.points || 0).toLocaleString()} pts`,
+      icon: Zap,
+      gradient: "from-amber-400 to-orange-500",
+      bg: "bg-amber-50",
+      shadow: "shadow-amber-200/60",
+    },
+  ];
+
   return (
     <AppLayout>
       <div className="space-y-5">
 
         {/* Hero banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-[#1565C0] to-[#1E88E5] p-5 text-white shadow-lg">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg shrink-0">
-              {user?.username?.[0]?.toUpperCase()}
-            </div>
-            <div>
-              <p className="text-blue-100 text-xs">Bienvenue</p>
-              <p className="font-bold text-lg leading-tight">
-                {user?.username} 🎉
-              </p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white/15 rounded-xl p-3 backdrop-blur-sm">
-              <p className="text-blue-100 text-xs mb-1">Frais d'activation</p>
-              <p className="font-bold text-base">{formatFcfa(activationFee)}</p>
-            </div>
-            <div className="bg-white/15 rounded-xl p-3 backdrop-blur-sm">
-              <p className="text-blue-100 text-xs mb-1">Total Gagné</p>
-              <p className="font-bold text-base">{formatFcfa(totalEarned)}</p>
-            </div>
-          </div>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 p-5 text-white relative overflow-hidden shadow-xl shadow-blue-300/30"
+        >
+          {/* Decorative circles */}
+          <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/10" />
+          <div className="absolute top-6 right-16 h-6 w-6 rounded-full bg-white/20" />
+          <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/10" />
 
-        {/* Cartes stat colorées */}
-        <div className="grid grid-cols-1 gap-3">
-          <StatCard
-            label="Solde disponible"
-            value={formatFcfa(stats?.balance || 0)}
-            icon={Wallet}
-            bg="bg-emerald-50 dark:bg-emerald-950/30"
-            iconBg="bg-emerald-500"
-            iconColor="text-white"
-            textColor="text-emerald-700 dark:text-emerald-400"
-          />
-          <StatCard
-            label="Total Retiré"
-            value={formatFcfa(stats?.totalWithdrawn || 0)}
-            icon={ArrowDownCircle}
-            bg="bg-orange-50 dark:bg-orange-950/30"
-            iconBg="bg-orange-500"
-            iconColor="text-white"
-            textColor="text-orange-700 dark:text-orange-400"
-          />
-          <StatCard
-            label="Bonus de Bienvenue"
-            value={formatFcfa(stats?.welcomeBonus || 0)}
-            icon={Gift}
-            bg="bg-purple-50 dark:bg-purple-950/30"
-            iconBg="bg-purple-500"
-            iconColor="text-white"
-            textColor="text-purple-700 dark:text-purple-400"
-          />
-        </div>
-
-        {/* Lien de parrainage */}
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
-                <Gift className="h-4 w-4 text-white" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center font-black text-xl shrink-0 shadow-inner">
+                {user?.username?.[0]?.toUpperCase()}
               </div>
-              Mon lien de parrainage
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-4">
-            <div className="bg-muted rounded-xl p-3 mb-3 font-mono text-xs text-muted-foreground truncate">
-              {stats?.referralLink}
+              <div>
+                <p className="text-blue-200 text-xs font-semibold">Bienvenue sur Nexarix</p>
+                <p className="font-black text-xl leading-tight">{user?.username} 🎉</p>
+              </div>
+              <div className="ml-auto flex items-center gap-1.5 bg-white/20 rounded-xl px-3 py-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
+                <span className="text-xs font-black text-yellow-200">Premium</span>
+              </div>
             </div>
-            <Button
-              variant="outline"
-              className="w-full rounded-xl h-10 font-semibold"
-              onClick={handleCopy}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white/15 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
+                <p className="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Frais d'activation</p>
+                <p className="font-black text-lg">{formatFcfa(activationFee)}</p>
+              </div>
+              <div className="bg-white/15 rounded-2xl p-3 backdrop-blur-sm border border-white/10">
+                <p className="text-blue-200 text-[10px] font-bold uppercase tracking-wider mb-1">Total Gagné</p>
+                <p className="font-black text-lg">{formatFcfa(totalEarned)}</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 gap-3">
+          {statCards.map((s, i) => (
+            <motion.div
+              key={s.label}
+              custom={i}
+              variants={item}
+              initial="hidden"
+              animate="visible"
+              className={`rounded-2xl ${s.bg} p-4 shadow-md ${s.shadow} border border-white`}
             >
-              {copied ? (
-                <><CheckCircle className="h-4 w-4 mr-2 text-emerald-500" />Lien copié !</>
-              ) : (
-                <><Copy className="h-4 w-4 mr-2" />Copier mon lien</>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+              <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${s.gradient} flex items-center justify-center mb-3 shadow-lg`}>
+                <s.icon className="h-5 w-5 text-white" />
+              </div>
+              <p className="text-gray-500 text-xs font-semibold mb-0.5">{s.label}</p>
+              <p className="font-black text-base text-gray-900 leading-tight">{s.value}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* MLM earnings summary */}
+        {stats?.earnings && (
+          <motion.div
+            custom={4}
+            variants={item}
+            initial="hidden"
+            animate="visible"
+            className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                <TrendingUp className="h-4 w-4 text-white" />
+              </div>
+              <span className="font-black text-gray-900">Mes gains par source</span>
+            </div>
+            <div className="space-y-2">
+              {[
+                { label: "Filleuls Niv. 1", value: stats.earnings.mlmLevel1, color: "from-emerald-400 to-teal-500" },
+                { label: "Filleuls Niv. 2", value: stats.earnings.mlmLevel2, color: "from-blue-400 to-indigo-500" },
+                { label: "Filleuls Niv. 3", value: stats.earnings.mlmLevel3, color: "from-violet-400 to-purple-500" },
+                { label: "Tâches",          value: stats.earnings.tasks,    color: "from-amber-400 to-orange-500" },
+              ].map(row => {
+                const total = (stats.earnings.mlmLevel1 || 0) + (stats.earnings.mlmLevel2 || 0) + (stats.earnings.mlmLevel3 || 0) + (stats.earnings.tasks || 0);
+                const pct = total > 0 ? Math.round(((row.value || 0) / total) * 100) : 0;
+                return (
+                  <div key={row.label}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-500 font-semibold">{row.label}</span>
+                      <span className="font-black text-gray-800">{formatFcfa(row.value || 0)}</span>
+                    </div>
+                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ delay: 0.5, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                        className={`h-full rounded-full bg-gradient-to-r ${row.color}`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Referral link */}
+        <motion.div
+          custom={5}
+          variants={item}
+          initial="hidden"
+          animate="visible"
+          className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <Users className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-black text-gray-900">Mon lien de parrainage</span>
+          </div>
+          <div className="bg-gray-50 rounded-2xl p-3 mb-3 border border-gray-100">
+            <p className="font-mono text-xs text-gray-500 truncate">{stats?.referralLink}</p>
+          </div>
+          <button
+            onClick={handleCopy}
+            className={`w-full rounded-2xl h-11 flex items-center justify-center gap-2 font-bold text-sm transition-all ${
+              copied
+                ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200"
+                : "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-200 hover:shadow-violet-300"
+            }`}
+          >
+            {copied ? (
+              <><CheckCircle className="h-4 w-4" /> Lien copié !</>
+            ) : (
+              <><Copy className="h-4 w-4" /> Copier mon lien</>
+            )}
+          </button>
+        </motion.div>
 
       </div>
     </AppLayout>

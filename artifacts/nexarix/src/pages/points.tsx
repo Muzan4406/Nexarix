@@ -1,12 +1,19 @@
+import { motion } from "framer-motion";
 import { useGetDashboard, useConvertPoints, getGetDashboardQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, Star, TrendingUp } from "lucide-react";
+import { Zap, Star, TrendingUp, ArrowRight, Sparkles } from "lucide-react";
 
-function formatFcfa(amount: number) { return `XOF ${amount.toLocaleString("fr-FR")}`; }
+function formatFcfa(amount: number) { return `${amount.toLocaleString("fr-FR")} XOF`; }
+
+const item = {
+  hidden: { opacity: 0, y: 18 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  }),
+};
 
 export default function Points() {
   const { data: stats, isLoading } = useGetDashboard();
@@ -18,18 +25,19 @@ export default function Points() {
     convertPoints.mutate(undefined, {
       onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-        toast({ title: "Conversion réussie", description: `${res.pointsConverted} pts → ${formatFcfa(res.fcfaAdded)}` });
+        toast({ title: "✅ Conversion réussie !", description: `${res.pointsConverted} pts → ${formatFcfa(res.fcfaAdded)}` });
       },
       onError: (err: any) => {
-        toast({ title: "Erreur", description: err?.data?.error || "Minimum 1000 points requis", variant: "destructive" });
+        toast({ title: "Erreur", description: err?.data?.error || "Minimum 1 000 points requis", variant: "destructive" });
       },
     });
   };
 
   if (isLoading) return (
     <AppLayout>
-      <div className="flex items-center justify-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-amber-400 border-t-transparent" />
+        <p className="text-gray-400 text-sm font-medium">Chargement…</p>
       </div>
     </AppLayout>
   );
@@ -38,81 +46,131 @@ export default function Points() {
   const canConvert = points >= 1000;
   const setsOf1000 = Math.floor(points / 1000);
   const estimatedFcfa = setsOf1000 * 500;
+  const remaining = 1000 - (points % 1000);
+  const progress = Math.min((points % 1000) / 1000 * 100, 100);
 
   return (
     <AppLayout>
       <div className="space-y-5">
-        <div>
-          <h1 className="text-2xl font-bold">Mes Points</h1>
-          <p className="text-muted-foreground text-sm">Convertissez vos points en argent réel</p>
-        </div>
 
-        {/* Solde de points */}
-        <div className="rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 p-5 text-white shadow-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <Star className="h-5 w-5 text-white" />
+        {/* Hero solde */}
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="rounded-3xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 p-6 text-white relative overflow-hidden shadow-xl shadow-amber-300/30"
+        >
+          <div className="absolute -top-8 -right-8 h-36 w-36 rounded-full bg-white/10" />
+          <div className="absolute top-6 right-20 h-5 w-5 rounded-full bg-white/20" />
+          <div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/10" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-14 w-14 rounded-2xl bg-white/20 flex items-center justify-center shadow-inner">
+                <Star className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <p className="text-amber-100 text-xs font-bold uppercase tracking-wider">Solde Points</p>
+                <p className="font-black text-2xl leading-tight">Mes Points</p>
+              </div>
             </div>
-            <div>
-              <p className="text-amber-100 text-xs">Solde actuel</p>
-              <p className="font-black text-3xl">{points.toLocaleString()} pts</p>
-            </div>
+            <motion.p
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="text-5xl font-black mb-1"
+            >
+              {points.toLocaleString()}
+            </motion.p>
+            <p className="text-amber-100 font-semibold mb-4">points disponibles</p>
+
+            {canConvert ? (
+              <div className="bg-white/20 rounded-2xl p-3 backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-yellow-200 shrink-0" />
+                  <p className="text-sm font-bold">Convertissable maintenant !</p>
+                </div>
+                <p className="text-amber-100 text-xs mt-1">
+                  {(setsOf1000 * 1000).toLocaleString()} pts → {formatFcfa(estimatedFcfa)}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="flex justify-between text-xs mb-1.5">
+                  <span className="text-amber-100 font-semibold">Progrès vers conversion</span>
+                  <span className="text-amber-200 font-bold">{points % 1000}/1 000 pts</span>
+                </div>
+                <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ delay: 0.4, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="h-full rounded-full bg-white"
+                  />
+                </div>
+                <p className="text-amber-100 text-xs mt-1.5">Encore {remaining} pts avant conversion</p>
+              </div>
+            )}
           </div>
-          {canConvert && (
-            <div className="bg-white/15 rounded-xl p-3 text-sm backdrop-blur-sm">
-              <p className="text-amber-100 text-xs mb-1">Convertible maintenant</p>
-              <p className="font-bold">{(setsOf1000 * 1000).toLocaleString()} pts → {formatFcfa(estimatedFcfa)}</p>
-            </div>
-          )}
-        </div>
+        </motion.div>
 
         {/* Taux de conversion */}
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                <TrendingUp className="h-4 w-4 text-white" />
-              </div>
-              Taux de conversion
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 pb-4">
-            <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3">
-              <div className="flex items-center gap-2">
-                <Star className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium">1 000 points</span>
-              </div>
-              <span className="font-bold text-emerald-600">= 500 XOF</span>
+        <motion.div
+          custom={0} variants={item} initial="hidden" animate="visible"
+          className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-white" />
             </div>
-            <p className="text-xs text-muted-foreground px-1">
-              Minimum 1 000 points requis pour une conversion. Les points restants sont conservés.
-            </p>
-          </CardContent>
-        </Card>
+            <h2 className="font-black text-gray-900">Taux de conversion</h2>
+          </div>
+          <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-4 border border-amber-100">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                <Star className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="font-black text-gray-900">1 000 points</p>
+                <p className="text-xs text-gray-500">minimum requis</p>
+              </div>
+            </div>
+            <ArrowRight className="h-5 w-5 text-gray-400" />
+            <div className="text-right">
+              <p className="font-black text-emerald-600 text-lg">500 XOF</p>
+              <p className="text-xs text-gray-500">sur votre solde</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-3 text-center">
+            Les points non multiples de 1 000 sont conservés après conversion.
+          </p>
+        </motion.div>
 
-        {/* Bouton de conversion */}
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardContent className="p-5">
-            <Button
-              onClick={handleConvert}
-              disabled={convertPoints.isPending || !canConvert}
-              className="w-full rounded-xl h-12 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white border-0 font-bold text-base"
-            >
-              <Zap className="h-5 w-5 mr-2" />
-              {convertPoints.isPending
-                ? "Conversion en cours..."
-                : canConvert
-                  ? `Convertir ${(setsOf1000 * 1000).toLocaleString()} pts → ${formatFcfa(estimatedFcfa)}`
-                  : "Minimum 1 000 pts requis"
-              }
-            </Button>
-            {!canConvert && (
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                Il vous faut encore {1000 - (points % 1000)} pts pour pouvoir convertir.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        {/* Bouton conversion */}
+        <motion.div custom={1} variants={item} initial="hidden" animate="visible">
+          <button
+            onClick={handleConvert}
+            disabled={convertPoints.isPending || !canConvert}
+            className={`w-full rounded-2xl h-14 flex items-center justify-center gap-3 font-black text-base transition-all shadow-lg ${
+              canConvert && !convertPoints.isPending
+                ? "bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-amber-200 hover:shadow-amber-300 hover:-translate-y-0.5 active:translate-y-0"
+                : "bg-gray-100 text-gray-400 shadow-none cursor-not-allowed"
+            }`}
+          >
+            <Zap className="h-5 w-5" />
+            {convertPoints.isPending
+              ? "Conversion en cours…"
+              : canConvert
+                ? `Convertir ${(setsOf1000 * 1000).toLocaleString()} pts → ${formatFcfa(estimatedFcfa)}`
+                : `Minimum 1 000 pts requis`
+            }
+          </button>
+          {!canConvert && (
+            <p className="text-xs text-center text-gray-400 mt-2 font-semibold">
+              Il vous manque encore {remaining.toLocaleString()} points
+            </p>
+          )}
+        </motion.div>
+
       </div>
     </AppLayout>
   );
