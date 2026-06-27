@@ -210,9 +210,15 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Task"
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Task"
+                  totalCompleted:
+                    type: integer
+                required: [tasks, totalCompleted]
 
   /tasks/{taskId}/complete:
     post:

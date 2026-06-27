@@ -32,7 +32,10 @@ router.get("/tasks", authMiddleware, async (req, res) => {
     createdAt: task.createdAt.toISOString(),
   }));
 
-  res.json(tasksWithCompletion);
+  res.json({
+    tasks: tasksWithCompletion,
+    totalCompleted: completions.length,
+  });
 });
 
 router.post("/tasks/:taskId/complete", authMiddleware, async (req, res) => {

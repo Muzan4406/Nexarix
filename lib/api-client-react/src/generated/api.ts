@@ -35,6 +35,7 @@ import type {
   ErrorResponse,
   GetAdminUsersParams,
   GetAdminWithdrawalsParams,
+  GetTasks200,
   HealthStatus,
   LoginInput,
   ProfileUpdate,
@@ -752,9 +753,9 @@ export const getGetTasksUrl = () => {
 /**
  * @summary Get active tasks
  */
-export const getTasks = async ( options?: RequestInit): Promise<Task[]> => {
+export const getTasks = async ( options?: RequestInit): Promise<GetTasks200> => {
 
-  return customFetch<Task[]>(getGetTasksUrl(),
+  return customFetch<GetTasks200>(getGetTasksUrl(),
   {
     ...options,
     method: 'GET'

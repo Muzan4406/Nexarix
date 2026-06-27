@@ -192,7 +192,8 @@ export const SpinWheelResponse = zod.object({
 /**
  * @summary Get active tasks
  */
-export const GetTasksResponseItem = zod.object({
+export const GetTasksResponse = zod.object({
+  "tasks": zod.array(zod.object({
   "id": zod.number(),
   "category": zod.string(),
   "title": zod.string(),
@@ -204,8 +205,9 @@ export const GetTasksResponseItem = zod.object({
   "correctAnswer": zod.string().nullish(),
   "completedAt": zod.string().nullish(),
   "createdAt": zod.string()
+})),
+  "totalCompleted": zod.number()
 })
-export const GetTasksResponse = zod.array(GetTasksResponseItem)
 
 
 /**

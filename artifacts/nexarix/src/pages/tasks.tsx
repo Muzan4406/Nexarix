@@ -175,7 +175,7 @@ function TaskCard({ task, onWatch, index }: { task: any; onWatch: (t: any) => vo
 }
 
 export default function Tasks() {
-  const { data: tasks, isLoading } = useGetTasks();
+  const { data: tasksData, isLoading } = useGetTasks();
   const completeTask = useCompleteTask();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -198,10 +198,12 @@ export default function Tasks() {
     });
   };
 
-  const categories = tasks ? [...new Set(tasks.map((t: any) => t.category))] : [];
-  const pending = tasks?.filter((t: any) => !t.completedAt) || [];
-  const completed = tasks?.filter((t: any) => t.completedAt) || [];
-  const filtered = activeCategory === "all" ? tasks || [] : (tasks || []).filter((t: any) => t.category === activeCategory);
+  const tasks = tasksData?.tasks || [];
+  const totalCompleted = tasksData?.totalCompleted ?? 0;
+  const categories = tasks.length ? [...new Set(tasks.map((t: any) => t.category))] : [];
+  const pending = tasks.filter((t: any) => !t.completedAt);
+  const completed = tasks.filter((t: any) => t.completedAt);
+  const filtered = activeCategory === "all" ? tasks : tasks.filter((t: any) => t.category === activeCategory);
 
   if (isLoading) return (
     <AppLayout>
@@ -240,7 +242,7 @@ export default function Tasks() {
                 <p className="text-blue-200 text-xs font-medium mt-0.5">Disponibles</p>
               </div>
               <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3">
-                <p className="text-3xl font-black tabular-nums text-emerald-300">{completed.length}</p>
+                <p className="text-3xl font-black tabular-nums text-emerald-300">{totalCompleted}</p>
                 <p className="text-blue-200 text-xs font-medium mt-0.5">Complétées</p>
               </div>
             </div>

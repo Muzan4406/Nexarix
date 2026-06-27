@@ -315,24 +315,6 @@ router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req
 
 router.delete("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req, res) => {
   const taskId = parseInt(req.params.taskId as string);
-
-  const [task] = await db.select().from(tasksTable).where(eq(tasksTable.id, taskId)).limit(1);
-  if (task) {
-    const pts = task.points || 0;
-    const completions = await db.select().from(taskCompletionsTable)
-      .where(eq(taskCompletionsTable.taskId, taskId));
-    if (completions.length > 0) {
-      const userIds = completions.map(c => c.userId);
-      const earnings = pts * 0.5;
-      await db.update(usersTable).set({
-        points: sql`GREATEST(${usersTable.points} - ${pts}, 0)`,
-        taskEarnings: sql`GREATEST(${usersTable.taskEarnings}::numeric - ${earnings}, 0)`,
-        balance: sql`GREATEST(${usersTable.balance}::numeric - ${earnings}, 0)`,
-      }).where(inArray(usersTable.id, userIds));
-    }
-  }
-
-  await db.delete(taskCompletionsTable).where(eq(taskCompletionsTable.taskId, taskId));
   await db.delete(tasksTable).where(eq(tasksTable.id, taskId));
   res.json({ success: true });
 });

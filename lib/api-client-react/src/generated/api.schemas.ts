@@ -318,6 +318,11 @@ export interface SiteSettingsUpdate {
   appBaseUrl?: string | null;
 }
 
+export type GetTasks200 = {
+  tasks: Task[];
+  totalCompleted: number;
+};
+
 export type GetAdminUsersParams = {
 search?: string;
 status?: string;

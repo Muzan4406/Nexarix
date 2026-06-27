@@ -23,6 +23,7 @@ export * from './downlineUser';
 export * from './errorResponse';
 export * from './getAdminUsersParams';
 export * from './getAdminWithdrawalsParams';
+export * from './getTasks200';
 export * from './healthStatus';
 export * from './loginInput';
 export * from './profileUpdate';
