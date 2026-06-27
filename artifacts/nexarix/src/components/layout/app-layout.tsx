@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
   LogOut, Menu, LayoutDashboard, CheckSquare, Wallet, MessageCircle,
-  Phone, User, ChevronDown, Gift, Star, History, Users,
+  Phone, User, ChevronDown, Gift, Star, History, Users, Zap,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -25,17 +25,8 @@ const NAV_SECTIONS: NavSection[] = [
     item: { name: "Mon Compte", href: "/profile", icon: User },
   },
   {
-    kind: "group",
-    group: {
-      name: "Communauté",
-      icon: MessageCircle,
-      accent: "text-blue-500",
-      items: [
-        { name: "Canal Telegram", href: "/community", icon: MessageCircle },
-        { name: "WhatsApp", href: "/community", icon: MessageCircle },
-        { name: "Filleuls (Downline)", href: "/downline", icon: Users },
-      ],
-    },
+    kind: "item",
+    item: { name: "Mes Filleuls", href: "/downline", icon: Users },
   },
   {
     kind: "group",
@@ -45,6 +36,7 @@ const NAV_SECTIONS: NavSection[] = [
       accent: "text-amber-500",
       items: [
         { name: "Tâches", href: "/tasks", icon: CheckSquare },
+        { name: "Mes Points", href: "/points", icon: Zap },
         { name: "Bonus de Bienvenue", href: "/bonus", icon: Gift },
         { name: "Roue de la Fortune", href: "/spin", icon: Star },
       ],
@@ -58,7 +50,19 @@ const NAV_SECTIONS: NavSection[] = [
       accent: "text-emerald-500",
       items: [
         { name: "Retrait Solde", href: "/withdrawals", icon: Wallet },
-        { name: "Historique", href: "/withdrawals", icon: History },
+        { name: "Historique", href: "/withdrawal-history", icon: History },
+      ],
+    },
+  },
+  {
+    kind: "group",
+    group: {
+      name: "Communauté",
+      icon: MessageCircle,
+      accent: "text-blue-500",
+      items: [
+        { name: "Canal Telegram", href: "/community", icon: MessageCircle },
+        { name: "WhatsApp", href: "/community", icon: MessageCircle },
       ],
     },
   },
@@ -92,7 +96,7 @@ function NavLink({ href, icon: Icon, name, active, onClick }: {
 function NavGroupSection({ group, location, onClose }: {
   group: NavGroup; location: string; onClose?: () => void;
 }) {
-  const isAnyActive = group.items.some(i => location.startsWith(i.href));
+  const isAnyActive = group.items.some(i => location === i.href);
   const [open, setOpen] = useState(isAnyActive);
 
   return (
@@ -113,7 +117,7 @@ function NavGroupSection({ group, location, onClose }: {
       {open && (
         <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-gray-100 dark:border-gray-800 pl-3">
           {group.items.map(item => {
-            const active = location.startsWith(item.href);
+            const active = location === item.href;
             return (
               <Link key={item.name} href={item.href}>
                 <span
@@ -144,8 +148,11 @@ function NavContent({ onClose }: { onClose?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex h-16 items-center px-4 border-b border-gray-100 dark:border-gray-800">
-        <img src={`${BASE}logo.png`} alt="Nexarix" className="h-9 w-auto object-contain" />
+      <div className="flex h-16 items-center px-4 border-b border-gray-100 dark:border-gray-800 gap-3">
+        <div className="h-9 w-9 rounded-xl bg-[#1565C0] flex items-center justify-center shadow-sm shrink-0">
+          <img src={`${BASE}logo.png`} alt="Nexarix" className="h-7 w-7 object-contain" />
+        </div>
+        <span className="font-black text-[#1565C0] tracking-tight text-lg">NEXARIX</span>
       </div>
 
       {/* User card */}
@@ -165,7 +172,7 @@ function NavContent({ onClose }: { onClose?: () => void }) {
       <nav className="flex-1 overflow-auto px-3 py-2 space-y-0.5">
         {NAV_SECTIONS.map((section, i) => {
           if (section.kind === "item") {
-            const active = location.startsWith(section.item.href);
+            const active = location === section.item.href;
             return (
               <NavLink
                 key={i}
@@ -228,7 +235,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <img src={`${BASE}logo.png`} alt="Nexarix" className="h-7 w-auto" />
+          {/* Logo dans le header mobile */}
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-[#1565C0] flex items-center justify-center shadow-sm">
+              <img src={`${BASE}logo.png`} alt="Nexarix" className="h-6 w-6 object-contain" />
+            </div>
+            <span className="font-black text-[#1565C0] tracking-tight text-base">NEXARIX</span>
+          </div>
 
           <div className="ml-auto flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-[#1565C0] text-white flex items-center justify-center font-bold text-sm">

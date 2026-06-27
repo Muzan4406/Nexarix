@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useGetPublicSettings, useInitiateActivation, useCheckActivationStatus } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Zap, CheckCircle, LogOut, MessageCircle } from "lucide-react";
+import { Phone, Zap, CheckCircle, LogOut, MessageCircle, CreditCard, Loader } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -26,19 +29,64 @@ const BENEFITS = [
 
 export default function Activate() {
   const { user, logout } = useAuth();
+  const [, navigate] = useLocation();
+  const { data: publicSettings } = useGetPublicSettings();
+  const initiatePayment = useInitiateActivation();
+  const { data: activationStatus, refetch: refetchStatus } = useCheckActivationStatus();
+  const [paymentInitiated, setPaymentInitiated] = useState(false);
+  const [polling, setPolling] = useState(false);
+
   const operators = user?.country ? (PAYMENT_METHODS[user.country] || []) : [];
+  const activationFee = publicSettings?.activationFee ?? 3000;
+  const paymentMode = publicSettings?.paymentMode ?? "manual";
+
+  useEffect(() => {
+    if (activationStatus?.status === "active") {
+      navigate("/dashboard");
+    }
+  }, [activationStatus]);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (paymentInitiated && polling) {
+      interval = setInterval(async () => {
+        const result = await refetchStatus();
+        if (result.data?.status === "active") {
+          setPolling(false);
+          navigate("/dashboard");
+        }
+      }, 5000);
+    }
+    return () => { if (interval) clearInterval(interval); };
+  }, [paymentInitiated, polling]);
+
+  const handleAutoPayment = () => {
+    initiatePayment.mutate(undefined, {
+      onSuccess: (data) => {
+        if (data.paymentUrl) {
+          setPaymentInitiated(true);
+          setPolling(true);
+          window.open(data.paymentUrl, "_blank");
+        }
+      },
+      onError: () => {},
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-br from-[#0D1B3E] via-[#1565C0] to-[#0D1B3E] p-4 py-8">
 
       {/* Logo */}
       <div className="mb-6 flex flex-col items-center">
-        <img
-          src={`${BASE}logo.png`}
-          alt="Nexarix"
-          className="h-20 w-auto object-contain drop-shadow-2xl"
-        />
-        <p className="text-blue-200 text-sm mt-2 font-medium tracking-wide">Activation du compte</p>
+        <div className="h-20 w-20 rounded-2xl bg-white flex items-center justify-center shadow-2xl mb-3">
+          <img
+            src={`${BASE}logo.png`}
+            alt="Nexarix"
+            className="h-14 w-14 object-contain"
+          />
+        </div>
+        <p className="text-white text-xl font-black tracking-tight">NEXARIX</p>
+        <p className="text-blue-200 text-sm mt-1 font-medium tracking-wide">Activation du compte</p>
       </div>
 
       <div className="w-full max-w-sm space-y-4">
@@ -57,10 +105,10 @@ export default function Activate() {
               </div>
             </div>
 
-            {/* Prix mis en avant */}
+            {/* Prix */}
             <div className="bg-gradient-to-r from-[#1565C0] to-[#1E88E5] rounded-2xl p-4 text-center text-white mb-4">
               <p className="text-blue-100 text-xs mb-1">Frais d'activation</p>
-              <p className="text-4xl font-black">3 000</p>
+              <p className="text-4xl font-black">{activationFee.toLocaleString("fr-FR")}</p>
               <p className="text-blue-200 text-sm font-medium">XOF (FCFA)</p>
             </div>
 
@@ -78,38 +126,84 @@ export default function Activate() {
 
         {/* Carte paiement */}
         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden">
-          <div className="h-1.5 bg-gradient-to-r from-emerald-400 to-teal-500" />
+          <div className={`h-1.5 ${paymentMode === "auto" ? "bg-gradient-to-r from-[#1565C0] to-[#1E88E5]" : "bg-gradient-to-r from-emerald-400 to-teal-500"}`} />
           <div className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Phone className="h-5 w-5 text-emerald-500" />
-              <h3 className="font-bold text-gray-900 dark:text-white">Instructions de paiement</h3>
-              {user?.country && (
-                <Badge variant="outline" className="ml-auto text-xs">{user.country}</Badge>
-              )}
-            </div>
 
-            {operators.length > 0 ? (
-              <div className="space-y-2">
-                {operators.map(op => (
-                  <div
-                    key={op.name}
-                    className={`flex items-center justify-between rounded-xl px-4 py-3 border ${op.color}`}
-                  >
-                    <span className="font-semibold text-sm">{op.name}</span>
-                    <span className="text-xs opacity-70">Contactez le support</span>
+            {paymentMode === "auto" ? (
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <CreditCard className="h-5 w-5 text-blue-500" />
+                  <h3 className="font-bold text-gray-900 dark:text-white">Paiement en ligne</h3>
+                  <Badge variant="outline" className="ml-auto text-xs bg-blue-50 text-blue-600 border-blue-200">Automatique</Badge>
+                </div>
+
+                {paymentInitiated ? (
+                  <div className="text-center py-4">
+                    <div className="flex items-center justify-center gap-2 text-blue-600 mb-2">
+                      <Loader className="h-5 w-5 animate-spin" />
+                      <span className="font-semibold text-sm">En attente de paiement...</span>
+                    </div>
+                    <p className="text-xs text-gray-500">La page de paiement s'est ouverte. Complétez le paiement puis revenez ici.</p>
+                    <p className="text-xs text-gray-400 mt-2">Cette page se rafraîchit automatiquement.</p>
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Payez directement en ligne via Mobile Money. Activation immédiate après confirmation.
+                    </p>
+                    <Button
+                      onClick={handleAutoPayment}
+                      disabled={initiatePayment.isPending}
+                      className="w-full rounded-xl h-12 bg-gradient-to-r from-[#1565C0] to-[#1E88E5] text-white font-bold shadow-lg"
+                    >
+                      {initiatePayment.isPending ? (
+                        <><Loader className="h-4 w-4 mr-2 animate-spin" />Initialisation...</>
+                      ) : (
+                        <><CreditCard className="h-4 w-4 mr-2" />Payer {activationFee.toLocaleString("fr-FR")} XOF</>
+                      )}
+                    </Button>
+                    {initiatePayment.isError && (
+                      <p className="text-xs text-red-500 text-center mt-2">
+                        Erreur lors de l'initialisation du paiement. Veuillez réessayer ou contacter le support.
+                      </p>
+                    )}
+                  </>
+                )}
+              </>
             ) : (
-              <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                Contactez le support pour les instructions.
-              </p>
-            )}
+              <>
+                <div className="flex items-center gap-2 mb-4">
+                  <Phone className="h-5 w-5 text-emerald-500" />
+                  <h3 className="font-bold text-gray-900 dark:text-white">Instructions de paiement</h3>
+                  {user?.country && (
+                    <Badge variant="outline" className="ml-auto text-xs">{user.country}</Badge>
+                  )}
+                </div>
 
-            <div className="mt-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl p-3 text-xs text-blue-700 dark:text-blue-300 text-center">
-              Après paiement, envoyez la capture d'écran au support.<br />
-              <span className="font-semibold">Activation sous 24h.</span>
-            </div>
+                {operators.length > 0 ? (
+                  <div className="space-y-2">
+                    {operators.map(op => (
+                      <div
+                        key={op.name}
+                        className={`flex items-center justify-between rounded-xl px-4 py-3 border ${op.color}`}
+                      >
+                        <span className="font-semibold text-sm">{op.name}</span>
+                        <span className="text-xs opacity-70">Contactez le support</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+                    Contactez le support pour les instructions.
+                  </p>
+                )}
+
+                <div className="mt-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl p-3 text-xs text-blue-700 dark:text-blue-300 text-center">
+                  Après paiement, envoyez la capture d'écran au support.<br />
+                  <span className="font-semibold">Activation sous 24h.</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -119,21 +213,21 @@ export default function Activate() {
             variant="outline"
             className="flex-1 rounded-xl h-11 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white font-medium backdrop-blur-sm"
             onClick={logout}
-            data-testid="button-logout"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Déconnexion
           </Button>
-          <Button
-            className="flex-1 rounded-xl h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-lg"
-            asChild
-            data-testid="button-contact-support"
-          >
-            <a href="https://wa.me/nexarix" target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="h-4 w-4 mr-2" />
-              WhatsApp
-            </a>
-          </Button>
+          {paymentMode === "manual" && (
+            <Button
+              className="flex-1 rounded-xl h-11 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold shadow-lg"
+              asChild
+            >
+              <a href={publicSettings ? "#" : "https://wa.me/nexarix"} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                WhatsApp
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 

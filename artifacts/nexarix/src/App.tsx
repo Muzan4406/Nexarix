@@ -11,6 +11,8 @@ import Activate from "@/pages/activate";
 import Dashboard from "@/pages/dashboard";
 import Tasks from "@/pages/tasks";
 import Withdrawals from "@/pages/withdrawals";
+import WithdrawalHistory from "@/pages/withdrawal-history";
+import Points from "@/pages/points";
 import Downline from "@/pages/downline";
 import Profile from "@/pages/profile";
 import Community from "@/pages/community";
@@ -93,6 +95,8 @@ function Router() {
       <Route path="/dashboard" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/tasks" component={() => <ProtectedRoute component={Tasks} />} />
       <Route path="/withdrawals" component={() => <ProtectedRoute component={Withdrawals} />} />
+      <Route path="/withdrawal-history" component={() => <ProtectedRoute component={WithdrawalHistory} />} />
+      <Route path="/points" component={() => <ProtectedRoute component={Points} />} />
       <Route path="/downline" component={() => <ProtectedRoute component={Downline} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
       <Route path="/community" component={() => <ProtectedRoute component={Community} />} />

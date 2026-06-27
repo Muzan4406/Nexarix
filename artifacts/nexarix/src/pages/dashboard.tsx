@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useGetDashboard, useConvertPoints, getGetDashboardQueryKey } from "@workspace/api-client-react";
+import { useGetDashboard, useGetPublicSettings, getGetDashboardQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Wallet, ArrowDownCircle, Gift, Users, Zap, TrendingUp, Copy, Star, CheckCircle } from "lucide-react";
+import { Wallet, ArrowDownCircle, Gift, Copy, CheckCircle } from "lucide-react";
 
 function formatFcfa(amount: number) {
   return `XOF ${amount.toLocaleString("fr-FR")}`;
@@ -47,22 +47,10 @@ function StatCard({
 export default function Dashboard() {
   const { user } = useAuth();
   const { data: stats, isLoading } = useGetDashboard();
-  const convertPoints = useConvertPoints();
+  const { data: publicSettings } = useGetPublicSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
-
-  const handleConvert = () => {
-    convertPoints.mutate(undefined, {
-      onSuccess: (res) => {
-        queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-        toast({ title: "Conversion réussie", description: `${res.pointsConverted} pts → ${formatFcfa(res.fcfaAdded)}` });
-      },
-      onError: (err: any) => {
-        toast({ title: "Erreur", description: err?.data?.error || "Minimum 1000 points requis", variant: "destructive" });
-      },
-    });
-  };
 
   const handleCopy = () => {
     if (stats?.referralLink) {
@@ -76,21 +64,26 @@ export default function Dashboard() {
     <AppLayout>
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-3">
-          <img src={`${BASE}logo.png`} alt="Nexarix" className="h-12 animate-pulse" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="text-muted-foreground text-sm">Chargement...</p>
         </div>
       </div>
     </AppLayout>
   );
 
+  const activationFee = publicSettings?.activationFee ?? 3000;
+  const totalEarned = stats?.totalEarned || 0;
+
   return (
     <AppLayout>
       <div className="space-y-5">
 
-        {/* Hero banner — vert comme HiveQash */}
+        {/* Hero banner */}
         <div className="rounded-2xl bg-gradient-to-r from-[#1565C0] to-[#1E88E5] p-5 text-white shadow-lg">
           <div className="flex items-center gap-3 mb-4">
-            <img src={`${BASE}logo.png`} alt="Nexarix" className="h-8 brightness-0 invert" />
+            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg shrink-0">
+              {user?.username?.[0]?.toUpperCase()}
+            </div>
             <div>
               <p className="text-blue-100 text-xs">Bienvenue</p>
               <p className="font-bold text-lg leading-tight">
@@ -100,12 +93,12 @@ export default function Dashboard() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white/15 rounded-xl p-3 backdrop-blur-sm">
-              <p className="text-blue-100 text-xs mb-1">Total Gagné</p>
-              <p className="font-bold text-base">{formatFcfa(stats?.totalEarned || 0)}</p>
+              <p className="text-blue-100 text-xs mb-1">Frais d'activation</p>
+              <p className="font-bold text-base">{formatFcfa(activationFee)}</p>
             </div>
             <div className="bg-white/15 rounded-xl p-3 backdrop-blur-sm">
-              <p className="text-blue-100 text-xs mb-1">Total Retiré</p>
-              <p className="font-bold text-base">{formatFcfa(stats?.totalWithdrawn || 0)}</p>
+              <p className="text-blue-100 text-xs mb-1">Total Gagné</p>
+              <p className="font-bold text-base">{formatFcfa(totalEarned)}</p>
             </div>
           </div>
         </div>
@@ -139,88 +132,7 @@ export default function Dashboard() {
             iconColor="text-white"
             textColor="text-purple-700 dark:text-purple-400"
           />
-          <StatCard
-            label="Mes Points"
-            value={(stats?.points || 0).toLocaleString() + " pts"}
-            icon={Star}
-            bg="bg-sky-50 dark:bg-sky-950/30"
-            iconBg="bg-sky-500"
-            iconColor="text-white"
-            textColor="text-sky-700 dark:text-sky-400"
-          />
-          <StatCard
-            label="Filleuls directs"
-            value={`${stats?.downlineCount || 0} membres`}
-            icon={Users}
-            bg="bg-amber-50 dark:bg-amber-950/30"
-            iconBg="bg-amber-500"
-            iconColor="text-white"
-            textColor="text-amber-700 dark:text-amber-400"
-          />
         </div>
-
-        {/* Gains MLM */}
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-[#1565C0] to-[#1E88E5] flex items-center justify-center">
-                <TrendingUp className="h-4 w-4 text-white" />
-              </div>
-              Gains MLM par niveau
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 pb-4">
-            {[
-              { label: "Niveau 1", detail: "1 300 XOF/filleul", value: stats?.earnings.mlmLevel1 || 0, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
-              { label: "Niveau 2", detail: "700 XOF/filleul",  value: stats?.earnings.mlmLevel2 || 0, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-              { label: "Niveau 3", detail: "400 XOF/filleul",  value: stats?.earnings.mlmLevel3 || 0, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
-              { label: "Tâches",   detail: "Rémunérées",       value: stats?.earnings.tasks || 0,    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
-            ].map(item => (
-              <div key={item.label} className="flex items-center justify-between py-2 border-b border-border/40 last:border-0">
-                <div>
-                  <span className="text-sm font-medium">{item.label}</span>
-                  <span className="text-xs text-muted-foreground ml-2">{item.detail}</span>
-                </div>
-                <span className={`text-xs font-bold px-2 py-1 rounded-lg ${item.color}`}>{formatFcfa(item.value)}</span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Convertir les points */}
-        <Card className="rounded-2xl border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                <Zap className="h-4 w-4 text-white" />
-              </div>
-              Points &amp; Conversion
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pb-4">
-            <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3">
-              <div>
-                <p className="text-xs text-muted-foreground">Solde points</p>
-                <p className="text-xl font-bold text-amber-600" data-testid="text-points">
-                  {(stats?.points || 0).toLocaleString()} pts
-                </p>
-              </div>
-              <div className="text-right text-xs text-muted-foreground">
-                <p className="font-medium text-foreground">1 000 pts</p>
-                <p>= 500 XOF</p>
-              </div>
-            </div>
-            <Button
-              onClick={handleConvert}
-              disabled={convertPoints.isPending || (stats?.points || 0) < 1000}
-              className="w-full rounded-xl h-11 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white border-0 font-semibold"
-              data-testid="button-convert-points"
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              {convertPoints.isPending ? "Conversion..." : "Convertir mes points"}
-            </Button>
-          </CardContent>
-        </Card>
 
         {/* Lien de parrainage */}
         <Card className="rounded-2xl border-0 shadow-sm">
@@ -233,14 +145,13 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
-            <div className="bg-muted rounded-xl p-3 mb-3 font-mono text-xs text-muted-foreground truncate" data-testid="text-referral-link">
+            <div className="bg-muted rounded-xl p-3 mb-3 font-mono text-xs text-muted-foreground truncate">
               {stats?.referralLink}
             </div>
             <Button
               variant="outline"
               className="w-full rounded-xl h-10 font-semibold"
               onClick={handleCopy}
-              data-testid="button-copy-referral"
             >
               {copied ? (
                 <><CheckCircle className="h-4 w-4 mr-2 text-emerald-500" />Lien copié !</>
