@@ -1,22 +1,32 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Nexarix Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User operations
+  - name: tasks
+    description: Task management
+  - name: withdrawals
+    description: Withdrawal operations
+  - name: downline
+    description: Downline/MLM operations
+  - name: admin
+    description: Admin panel operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +34,1027 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/dashboard:
+    get:
+      operationId: getDashboard
+      tags: [users]
+      summary: Get dashboard stats for current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /users/profile:
+    get:
+      operationId: getProfile
+      tags: [users]
+      summary: Get user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    patch:
+      operationId: updateProfile
+      tags: [users]
+      summary: Update profile (avatar)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /users/convert-points:
+    post:
+      operationId: convertPoints
+      tags: [users]
+      summary: Convert points to FCFA (min 1000 pts = 500 FCFA)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConvertPointsResult"
+        "400":
+          description: Not enough points
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tasks:
+    get:
+      operationId: getTasks
+      tags: [tasks]
+      summary: Get active tasks
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+
+  /tasks/{taskId}/complete:
+    post:
+      operationId: completeTask
+      tags: [tasks]
+      summary: Mark task as completed and earn points
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskCompleteInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskCompletion"
+        "400":
+          description: Already completed or wrong answer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /withdrawals:
+    get:
+      operationId: getWithdrawals
+      tags: [withdrawals]
+      summary: Get user withdrawal history
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Withdrawal"
+    post:
+      operationId: requestWithdrawal
+      tags: [withdrawals]
+      summary: Request a withdrawal (min 3000 FCFA, 5% fee)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Withdrawal"
+        "400":
+          description: Insufficient balance or below minimum
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /downline:
+    get:
+      operationId: getDownline
+      tags: [downline]
+      summary: Get user downline (levels 1, 2, 3)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownlineData"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Admin dashboard stats
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  /admin/users:
+    get:
+      operationId: getAdminUsers
+      tags: [admin]
+      summary: List all users with search
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+  /admin/users/{userId}:
+    get:
+      operationId: getAdminUser
+      tags: [admin]
+      summary: Get user details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+    patch:
+      operationId: updateAdminUser
+      tags: [admin]
+      summary: Update user (balance, points, status, upline, password)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUserUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /admin/tasks:
+    get:
+      operationId: getAdminTasks
+      tags: [admin]
+      summary: List all tasks
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createAdminTask
+      tags: [admin]
+      summary: Create a new task
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+  /admin/tasks/{taskId}:
+    patch:
+      operationId: updateAdminTask
+      tags: [admin]
+      summary: Update a task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+    delete:
+      operationId: deleteAdminTask
+      tags: [admin]
+      summary: Delete a task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/withdrawals:
+    get:
+      operationId: getAdminWithdrawals
+      tags: [admin]
+      summary: List all withdrawals
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminWithdrawal"
+
+  /admin/withdrawals/{withdrawalId}/approve:
+    patch:
+      operationId: approveWithdrawal
+      tags: [admin]
+      summary: Approve a withdrawal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: withdrawalId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminWithdrawal"
+
+  /admin/withdrawals/{withdrawalId}/reject:
+    patch:
+      operationId: rejectWithdrawal
+      tags: [admin]
+      summary: Reject a withdrawal with reason
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: withdrawalId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminWithdrawal"
+
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      summary: Get support/contact settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+    patch:
+      operationId: updateAdminSettings
+      tags: [admin]
+      summary: Update support/contact settings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteSettingsUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteSettings"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required: [success]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required: [token, user]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+        membership:
+          type: string
+        balance:
+          type: number
+        points:
+          type: integer
+        upline:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        joinedAt:
+          type: string
+        isAdmin:
+          type: boolean
+      required: [id, username, email, phone, country, status, membership, balance, points, joinedAt, isAdmin]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+        membership:
+          type: string
+        balance:
+          type: number
+        points:
+          type: integer
+        upline:
+          type: ["string", "null"]
+        avatarUrl:
+          type: ["string", "null"]
+        joinedAt:
+          type: string
+        totalDownlines:
+          type: integer
+        totalWithdrawn:
+          type: number
+      required: [id, username, email, phone, country, status, membership, balance, points, joinedAt, totalDownlines, totalWithdrawn]
+
+    DashboardStats:
+      type: object
+      properties:
+        balance:
+          type: number
+        points:
+          type: integer
+        totalWithdrawn:
+          type: number
+        totalEarned:
+          type: number
+        welcomeBonus:
+          type: number
+        downlineCount:
+          type: integer
+        referralLink:
+          type: string
+        earnings:
+          type: object
+          properties:
+            mlmLevel1:
+              type: number
+            mlmLevel2:
+              type: number
+            mlmLevel3:
+              type: number
+            tasks:
+              type: number
+          required: [mlmLevel1, mlmLevel2, mlmLevel3, tasks]
+      required: [balance, points, totalWithdrawn, totalEarned, welcomeBonus, downlineCount, referralLink, earnings]
+
+    RegisterInput:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        country:
+          type: string
+        password:
+          type: string
+          minLength: 6
+        upline:
+          type: ["string", "null"]
+      required: [username, email, phone, country, password]
+
+    LoginInput:
+      type: object
+      properties:
+        identifier:
+          type: string
+        password:
+          type: string
+      required: [identifier, password]
+
+    ProfileUpdate:
+      type: object
+      properties:
+        avatarUrl:
+          type: ["string", "null"]
+
+    ConvertPointsResult:
+      type: object
+      properties:
+        pointsConverted:
+          type: integer
+        fcfaAdded:
+          type: number
+        newBalance:
+          type: number
+        newPoints:
+          type: integer
+      required: [pointsConverted, fcfaAdded, newBalance, newPoints]
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        targetUrl:
+          type: string
+        points:
+          type: integer
+        isActive:
+          type: boolean
+        question:
+          type: ["string", "null"]
+        correctAnswer:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, category, title, targetUrl, points, isActive, createdAt]
+
+    TaskInput:
+      type: object
+      properties:
+        category:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        targetUrl:
+          type: string
+        points:
+          type: integer
+        isActive:
+          type: boolean
+        question:
+          type: ["string", "null"]
+        correctAnswer:
+          type: ["string", "null"]
+      required: [category, title, targetUrl, points, isActive]
+
+    TaskUpdate:
+      type: object
+      properties:
+        category:
+          type: string
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        targetUrl:
+          type: string
+        points:
+          type: integer
+        isActive:
+          type: boolean
+        question:
+          type: ["string", "null"]
+        correctAnswer:
+          type: ["string", "null"]
+
+    TaskCompleteInput:
+      type: object
+      properties:
+        answer:
+          type: ["string", "null"]
+
+    TaskCompletion:
+      type: object
+      properties:
+        pointsEarned:
+          type: integer
+        newPoints:
+          type: integer
+      required: [pointsEarned, newPoints]
+
+    Withdrawal:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        operator:
+          type: string
+        phone:
+          type: string
+        amountGross:
+          type: number
+        fee:
+          type: number
+        amountNet:
+          type: number
+        status:
+          type: string
+        rejectionReason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, type, operator, phone, amountGross, fee, amountNet, status, createdAt]
+
+    WithdrawalInput:
+      type: object
+      properties:
+        type:
+          type: string
+        operator:
+          type: string
+        phone:
+          type: string
+        amount:
+          type: number
+      required: [type, operator, phone, amount]
+
+    DownlineUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+        joinedAt:
+          type: string
+      required: [id, username, country, status, joinedAt]
+
+    DownlineData:
+      type: object
+      properties:
+        level1:
+          type: array
+          items:
+            $ref: "#/components/schemas/DownlineUser"
+        level2:
+          type: array
+          items:
+            $ref: "#/components/schemas/DownlineUser"
+        level3:
+          type: array
+          items:
+            $ref: "#/components/schemas/DownlineUser"
+        inactive:
+          type: array
+          items:
+            $ref: "#/components/schemas/DownlineUser"
+      required: [level1, level2, level3, inactive]
+
+    AdminLoginInput:
+      type: object
+      properties:
+        identifier:
+          type: string
+        password:
+          type: string
+      required: [identifier, password]
+
+    AdminDashboard:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        inactiveUsers:
+          type: integer
+        totalActivationFees:
+          type: number
+        totalPointsGenerated:
+          type: integer
+        totalPointsConverted:
+          type: integer
+        pendingWithdrawals:
+          type: number
+        paidWithdrawals:
+          type: number
+        recentRegistrations:
+          type: integer
+      required: [totalUsers, activeUsers, inactiveUsers, totalActivationFees, totalPointsGenerated, totalPointsConverted, pendingWithdrawals, paidWithdrawals, recentRegistrations]
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+        membership:
+          type: string
+        balance:
+          type: number
+        points:
+          type: integer
+        upline:
+          type: ["string", "null"]
+        joinedAt:
+          type: string
+        totalDownlines:
+          type: integer
+      required: [id, username, email, phone, country, status, membership, balance, points, joinedAt, totalDownlines]
+
+    AdminUserUpdate:
+      type: object
+      properties:
+        balance:
+          type: number
+        points:
+          type: integer
+        status:
+          type: string
+        upline:
+          type: ["string", "null"]
+        password:
+          type: string
+        isBanned:
+          type: boolean
+
+    AdminWithdrawal:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        username:
+          type: string
+        type:
+          type: string
+        operator:
+          type: string
+        phone:
+          type: string
+        amountGross:
+          type: number
+        fee:
+          type: number
+        amountNet:
+          type: number
+        status:
+          type: string
+        rejectionReason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, userId, username, type, operator, phone, amountGross, fee, amountNet, status, createdAt]
+
+    RejectInput:
+      type: object
+      properties:
+        reason:
+          type: string
+      required: [reason]
+
+    SiteSettings:
+      type: object
+      properties:
+        id:
+          type: integer
+        supportEmail:
+          type: string
+        telegramLink:
+          type: string
+        whatsappLink:
+          type: string
+        vcfLink:
+          type: ["string", "null"]
+      required: [id, supportEmail, telegramLink, whatsappLink]
+
+    SiteSettingsUpdate:
+      type: object
+      properties:
+        supportEmail:
+          type: string
+        telegramLink:
+          type: string
+        whatsappLink:
+          type: string
+        vcfLink:
+          type: ["string", "null"]
