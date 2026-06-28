@@ -571,12 +571,13 @@ router.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res) 
 });
 
 router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res) => {
-  const { supportEmail, telegramLink, whatsappLink, vcfLink, activationFee, minWithdrawal, paymentMode, sendavapayApiKey, sendavapayWebhookSecret, appBaseUrl } = req.body;
+  const { supportEmail, telegramLink, telegramChannel, whatsappLink, vcfLink, activationFee, minWithdrawal, paymentMode, sendavapayApiKey, sendavapayWebhookSecret, appBaseUrl } = req.body;
 
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
   const updates: any = {};
   if (supportEmail !== undefined) updates.supportEmail = supportEmail;
   if (telegramLink !== undefined) updates.telegramLink = telegramLink;
+  if (telegramChannel !== undefined) updates.telegramChannel = telegramChannel;
   if (whatsappLink !== undefined) updates.whatsappLink = whatsappLink;
   if (vcfLink !== undefined) updates.vcfLink = vcfLink;
   if (activationFee !== undefined) updates.activationFee = activationFee.toString();

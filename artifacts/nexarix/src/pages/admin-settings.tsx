@@ -19,6 +19,7 @@ export default function AdminSettings() {
   const [form, setForm] = useState({
     supportEmail: "",
     telegramLink: "",
+    telegramChannel: "",
     whatsappLink: "",
     vcfLink: "",
     activationFee: "3000",
@@ -34,6 +35,7 @@ export default function AdminSettings() {
       setForm({
         supportEmail: settings.supportEmail || "",
         telegramLink: settings.telegramLink || "",
+        telegramChannel: settings.telegramChannel || "",
         whatsappLink: settings.whatsappLink || "",
         vcfLink: settings.vcfLink || "",
         activationFee: String(settings.activationFee ?? 3000),
@@ -52,6 +54,7 @@ export default function AdminSettings() {
         ...form,
         activationFee: parseFloat(form.activationFee) || 3000,
         minWithdrawal: parseFloat(form.minWithdrawal) || 3000,
+        telegramChannel: form.telegramChannel || null,
         vcfLink: form.vcfLink || null,
         sendavapayApiKey: form.sendavapayApiKey || null,
         sendavapayWebhookSecret: form.sendavapayWebhookSecret || null,
@@ -285,17 +288,27 @@ export default function AdminSettings() {
             </div>
             <div>
               <Label className="flex items-center gap-2 mb-1.5">
-                <SiTelegram className="h-4 w-4 text-blue-500" />Lien Telegram
+                <SiTelegram className="h-4 w-4 text-blue-500" />Support Telegram (contact direct)
               </Label>
               <Input
                 value={form.telegramLink}
                 onChange={e => setForm(f => ({ ...f, telegramLink: e.target.value }))}
-                placeholder="https://t.me/nexarix"
+                placeholder="https://t.me/nexarix_support"
               />
             </div>
             <div>
               <Label className="flex items-center gap-2 mb-1.5">
-                <SiWhatsapp className="h-4 w-4 text-green-500" />Lien WhatsApp
+                <SiTelegram className="h-4 w-4 text-cyan-500" />Canal Telegram
+              </Label>
+              <Input
+                value={form.telegramChannel}
+                onChange={e => setForm(f => ({ ...f, telegramChannel: e.target.value }))}
+                placeholder="https://t.me/nexarix_canal"
+              />
+            </div>
+            <div>
+              <Label className="flex items-center gap-2 mb-1.5">
+                <SiWhatsapp className="h-4 w-4 text-green-500" />Chaîne WhatsApp
               </Label>
               <Input
                 value={form.whatsappLink}

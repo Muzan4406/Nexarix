@@ -4,6 +4,7 @@ export const siteSettingsTable = pgTable("site_settings", {
   id: serial("id").primaryKey(),
   supportEmail: text("support_email").notNull().default("support@nexarix.com"),
   telegramLink: text("telegram_link").notNull().default("https://t.me/nexarix"),
+  telegramChannel: text("telegram_channel"),
   whatsappLink: text("whatsapp_link").notNull().default("https://wa.me/nexarix"),
   vcfLink: text("vcf_link"),
   activationFee: numeric("activation_fee", { precision: 12, scale: 2 }).notNull().default("3000"),

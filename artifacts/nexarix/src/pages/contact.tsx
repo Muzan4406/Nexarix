@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useGetAdminSettings } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Mail, ExternalLink, Phone, Clock, Shield } from "lucide-react";
-import { SiTelegram } from "react-icons/si";
+import { SiTelegram, SiWhatsapp } from "react-icons/si";
 
 const card = {
   hidden: { opacity: 0, y: 18 },
@@ -47,7 +47,7 @@ export default function Contact() {
           </div>
         </motion.div>
 
-        {/* Email */}
+        {/* Email Support */}
         <motion.div custom={0} variants={card} initial="hidden" animate="visible">
           <a
             href={`mailto:${settings?.supportEmail || "support@nexarix.com"}`}
@@ -75,7 +75,7 @@ export default function Contact() {
           </a>
         </motion.div>
 
-        {/* Telegram */}
+        {/* Support Telegram */}
         <motion.div custom={1} variants={card} initial="hidden" animate="visible">
           <a
             href={settings?.telegramLink || "#"}
@@ -99,6 +99,62 @@ export default function Contact() {
             </div>
             <p className="text-gray-500 text-xs mt-3 pl-[4.5rem]">
               Contactez notre support directement via Telegram pour une assistance prioritaire.
+            </p>
+          </a>
+        </motion.div>
+
+        {/* Canal Telegram */}
+        <motion.div custom={2} variants={card} initial="hidden" animate="visible">
+          <a
+            href={settings?.telegramChannel || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="button-contact-telegram-channel"
+            className="block bg-white rounded-3xl border border-gray-100 shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-[#0088cc] flex items-center justify-center shrink-0 shadow-lg shadow-cyan-200">
+                <SiTelegram className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-0.5">Annonces</p>
+                <h2 className="font-black text-lg text-gray-900 leading-tight">Canal Telegram</h2>
+                <p className="text-cyan-600 font-semibold text-sm mt-0.5">Actualités & mises à jour</p>
+              </div>
+              <div className="h-9 w-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                <ExternalLink className="h-4 w-4 text-gray-500" />
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs mt-3 pl-[4.5rem]">
+              Rejoignez notre canal pour recevoir toutes les annonces et mises à jour officielles.
+            </p>
+          </a>
+        </motion.div>
+
+        {/* Chaîne WhatsApp */}
+        <motion.div custom={3} variants={card} initial="hidden" animate="visible">
+          <a
+            href={settings?.whatsappLink || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="button-contact-whatsapp"
+            className="block bg-white rounded-3xl border border-gray-100 shadow-sm p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shrink-0 shadow-lg shadow-green-200">
+                <SiWhatsapp className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-0.5">Communauté</p>
+                <h2 className="font-black text-lg text-gray-900 leading-tight">Chaîne WhatsApp</h2>
+                <p className="text-green-600 font-semibold text-sm mt-0.5">Rejoindre la communauté</p>
+              </div>
+              <div className="h-9 w-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                <ExternalLink className="h-4 w-4 text-gray-500" />
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs mt-3 pl-[4.5rem]">
+              Rejoignez notre chaîne WhatsApp pour rester connecté avec la communauté Nexarix.
             </p>
           </a>
         </motion.div>
