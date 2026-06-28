@@ -52,6 +52,7 @@ export default function Activate() {
 
   // Payment state
   const [paymentToken, setPaymentToken] = useState("");
+  const [reference, setReference] = useState("");
   const [otpToken, setOtpToken] = useState("");
   const [otp, setOtp] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -71,6 +72,21 @@ export default function Activate() {
     if (user?.country && !country) setCountry(user.country);
     if (user?.phone && !phone) setPhone(user.phone);
   }, [user]);
+
+  // Direct check with reference (bypasses React Query cache, sends reference to server)
+  const checkWithReference = async (ref: string): Promise<boolean> => {
+    try {
+      const url = `${BASE}api/activate/check${ref ? `?reference=${encodeURIComponent(ref)}` : ""}`;
+      const token = localStorage.getItem("nexarix_token");
+      const resp = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = await resp.json();
+      return json?.status === "active";
+    } catch {
+      return false;
+    }
+  };
 
   // Load operators when country changes (auto mode only)
   useEffect(() => {
@@ -100,15 +116,15 @@ export default function Activate() {
     return () => { cancelled = true; };
   }, [countryCode, paymentMode]);
 
-  // Polling in waiting phase
+  // Polling in waiting phase — sends reference so server can verify with Sendavapay
   useEffect(() => {
     if (phase !== "waiting") return;
     const interval = setInterval(async () => {
-      const result = await refetchStatus();
-      if (result.data?.status === "active") navigate("/dashboard");
+      const isActive = await checkWithReference(reference);
+      if (isActive) navigate("/dashboard");
     }, 5000);
     return () => clearInterval(interval);
-  }, [phase]);
+  }, [phase, reference]);
 
   const handlePay = () => {
     if (!country || !phone.trim() || !selectedOperator) return;
@@ -118,6 +134,7 @@ export default function Activate() {
     initiatePayment.mutate(undefined, {
       onSuccess: async (data) => {
         setPaymentToken(data.paymentToken);
+        setReference(data.reference);   // ← save reference for polling
         try {
           const resp = await fetch(`${SENDAVAPAY_CLIENT}/initiate-payment`, {
             method: "POST",
@@ -184,8 +201,8 @@ export default function Activate() {
     setChecking(true);
     setCheckCount(c => c + 1);
     try {
-      const result = await refetchStatus();
-      if (result.data?.status === "active") navigate("/dashboard");
+      const isActive = await checkWithReference(reference);
+      if (isActive) navigate("/dashboard");
     } finally {
       setChecking(false);
     }
@@ -194,6 +211,7 @@ export default function Activate() {
   const handleReset = () => {
     setPhase("form");
     setPaymentToken("");
+    setReference("");
     setOtpToken("");
     setOtp("");
     setErrorMsg("");
