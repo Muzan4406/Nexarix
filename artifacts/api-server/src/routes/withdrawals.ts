@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { withdrawalsTable, usersTable } from "@workspace/db";
+import { withdrawalsTable, usersTable, siteSettingsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
 
 const router = Router();
-const MIN_WITHDRAWAL = 3000;
+const DEFAULT_MIN_WITHDRAWAL = 3000;
 const FEE_RATE = 0.05;
 
 router.get("/withdrawals", authMiddleware, async (req, res) => {
@@ -28,8 +28,11 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     return;
   }
 
-  if (amount < MIN_WITHDRAWAL) {
-    res.status(400).json({ error: `Minimum de retrait : ${MIN_WITHDRAWAL} FCFA` });
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  const minWithdrawal = parseFloat(settings?.minWithdrawal || String(DEFAULT_MIN_WITHDRAWAL));
+
+  if (amount < minWithdrawal) {
+    res.status(400).json({ error: `Minimum de retrait : ${minWithdrawal.toLocaleString("fr-FR")} FCFA` });
     return;
   }
 

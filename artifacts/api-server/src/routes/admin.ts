@@ -556,11 +556,12 @@ router.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res) 
   res.json({
     ...settings,
     activationFee: parseFloat(settings.activationFee || "3000"),
+    minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
   });
 });
 
 router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res) => {
-  const { supportEmail, telegramLink, whatsappLink, vcfLink, activationFee, paymentMode, sendavapayApiKey, sendavapayWebhookSecret, appBaseUrl } = req.body;
+  const { supportEmail, telegramLink, whatsappLink, vcfLink, activationFee, minWithdrawal, paymentMode, sendavapayApiKey, sendavapayWebhookSecret, appBaseUrl } = req.body;
 
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
   const updates: any = {};
@@ -569,6 +570,7 @@ router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res
   if (whatsappLink !== undefined) updates.whatsappLink = whatsappLink;
   if (vcfLink !== undefined) updates.vcfLink = vcfLink;
   if (activationFee !== undefined) updates.activationFee = activationFee.toString();
+  if (minWithdrawal !== undefined) updates.minWithdrawal = minWithdrawal.toString();
   if (paymentMode !== undefined) updates.paymentMode = paymentMode;
   if (sendavapayApiKey !== undefined) updates.sendavapayApiKey = sendavapayApiKey;
   if (sendavapayWebhookSecret !== undefined) updates.sendavapayWebhookSecret = sendavapayWebhookSecret;
@@ -583,6 +585,7 @@ router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res
   res.json({
     ...settings,
     activationFee: parseFloat(settings.activationFee || "3000"),
+    minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
   });
 });
 
@@ -644,10 +647,13 @@ function formatAdminWithdrawal(w: any) {
     type: w.type,
     operator: w.operator,
     phone: w.phone,
+    country: w.country,
     amountGross: parseFloat(w.amountGross || "0"),
     fee: parseFloat(w.fee || "0"),
     amountNet: parseFloat(w.amountNet || "0"),
     status: w.status,
+    sendavapayReference: w.sendavapayReference,
+    sendavapayStatus: w.sendavapayStatus,
     rejectionReason: w.rejectionReason,
     createdAt: w.createdAt?.toISOString(),
   };

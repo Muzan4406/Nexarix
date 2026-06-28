@@ -253,12 +253,18 @@ export interface AdminWithdrawal {
   type: string;
   operator: string;
   phone: string;
+  /** @nullable */
+  country?: string | null;
   amountGross: number;
   fee: number;
   amountNet: number;
   status: string;
   /** @nullable */
   rejectionReason?: string | null;
+  /** @nullable */
+  sendavapayReference?: string | null;
+  /** @nullable */
+  sendavapayStatus?: string | null;
   createdAt: string;
 }
 
@@ -293,6 +299,7 @@ export interface SiteSettings {
   /** @nullable */
   vcfLink?: string | null;
   activationFee: number;
+  minWithdrawal: number;
   paymentMode: string;
   /** @nullable */
   sendavapayApiKey?: string | null;
@@ -309,6 +316,7 @@ export interface SiteSettingsUpdate {
   /** @nullable */
   vcfLink?: string | null;
   activationFee?: number;
+  minWithdrawal?: number;
   paymentMode?: string;
   /** @nullable */
   sendavapayApiKey?: string | null;

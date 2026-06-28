@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Mail, Download, CreditCard, Key, ToggleLeft, ToggleRight, Globe, Copy, Check } from "lucide-react";
+import { Save, Mail, Download, CreditCard, Key, ToggleLeft, ToggleRight, Globe, Copy, Check, ArrowDownToLine } from "lucide-react";
 import { SiTelegram, SiWhatsapp } from "react-icons/si";
 
 export default function AdminSettings() {
@@ -22,6 +22,7 @@ export default function AdminSettings() {
     whatsappLink: "",
     vcfLink: "",
     activationFee: "3000",
+    minWithdrawal: "3000",
     paymentMode: "manual",
     sendavapayApiKey: "",
     sendavapayWebhookSecret: "",
@@ -36,6 +37,7 @@ export default function AdminSettings() {
         whatsappLink: settings.whatsappLink || "",
         vcfLink: settings.vcfLink || "",
         activationFee: String(settings.activationFee ?? 3000),
+        minWithdrawal: String(settings.minWithdrawal ?? 3000),
         paymentMode: settings.paymentMode || "manual",
         sendavapayApiKey: settings.sendavapayApiKey || "",
         sendavapayWebhookSecret: settings.sendavapayWebhookSecret || "",
@@ -49,6 +51,7 @@ export default function AdminSettings() {
       data: {
         ...form,
         activationFee: parseFloat(form.activationFee) || 3000,
+        minWithdrawal: parseFloat(form.minWithdrawal) || 3000,
         vcfLink: form.vcfLink || null,
         sendavapayApiKey: form.sendavapayApiKey || null,
         sendavapayWebhookSecret: form.sendavapayWebhookSecret || null,
@@ -174,6 +177,32 @@ export default function AdminSettings() {
                 className="max-w-xs"
               />
               <p className="text-xs text-muted-foreground mt-1">Montant affiché sur la page d'activation et le dashboard.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Retrait minimum */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ArrowDownToLine className="h-4 w-4 text-primary" />
+              Retrait minimum
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <Label className="mb-1.5 block">Montant minimum de retrait (XOF)</Label>
+              <Input
+                type="number"
+                min="0"
+                value={form.minWithdrawal}
+                onChange={e => setForm(f => ({ ...f, minWithdrawal: e.target.value }))}
+                placeholder="3000"
+                className="max-w-xs"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Les utilisateurs ne pourront pas soumettre une demande en dessous de ce montant.
+              </p>
             </div>
           </CardContent>
         </Card>

@@ -7,6 +7,7 @@ export const siteSettingsTable = pgTable("site_settings", {
   whatsappLink: text("whatsapp_link").notNull().default("https://wa.me/nexarix"),
   vcfLink: text("vcf_link"),
   activationFee: numeric("activation_fee", { precision: 12, scale: 2 }).notNull().default("3000"),
+  minWithdrawal: numeric("min_withdrawal", { precision: 12, scale: 2 }).notNull().default("3000"),
   paymentMode: text("payment_mode").notNull().default("manual"),
   sendavapayApiKey: text("sendavapay_api_key"),
   sendavapayWebhookSecret: text("sendavapay_webhook_secret"),
