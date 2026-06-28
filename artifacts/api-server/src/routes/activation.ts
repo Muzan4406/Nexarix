@@ -41,6 +41,9 @@ router.get("/settings/public", async (_req, res) => {
 // ─── Initiate Sendavapay payment (server-side create-payment) ─────────────────
 router.post("/activate/initiate", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
+  // Accept country + phone from form (fallback to user profile)
+  const { country: formCountry, phone: formPhone } = req.body || {};
+
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) { res.status(404).json({ error: "Utilisateur non trouvé" }); return; }
   if (user.status === "active") { res.status(400).json({ error: "Compte déjà activé" }); return; }
@@ -54,31 +57,46 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
   const activationFee = parseFloat(settings.activationFee || "3000");
   const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
 
-  const countryIso = COUNTRY_ISO[user.country || ""] || "TG";
+  // Prioritize form data over profile data
+  const resolvedCountry = formCountry || user.country || "";
+  const resolvedPhone = formPhone || user.phone || "";
+  const countryIso = COUNTRY_ISO[resolvedCountry] || "TG";
   const currency = CURRENCY_BY_ISO[countryIso] || "XOF";
 
+  // Persist country + phone to profile if missing
+  if ((formCountry && !user.country) || (formPhone && !user.phone)) {
+    await db.update(usersTable).set({
+      ...(formCountry && !user.country ? { country: formCountry } : {}),
+      ...(formPhone && !user.phone ? { phone: formPhone } : {}),
+    }).where(eq(usersTable.id, userId));
+  }
+
   try {
+    const payload = {
+      amount: activationFee,
+      currency,
+      description: `Activation compte Nexarix — ${user.username}`,
+      customerName: user.username,
+      customerEmail: user.email || `${user.username}@nexarix.app`,
+      customerPhone: resolvedPhone || undefined,
+      payerCountry: countryIso,
+      webhookUrl: `${baseUrl}/api/activate/webhook`,
+      externalReference: `nexarix-activation-${user.id}`,
+    };
+
     const response = await fetch(`${SENDAVAPAY_BASE}/create-payment`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${settings.sendavapayApiKey}`,
       },
-      body: JSON.stringify({
-        amount: activationFee,
-        currency,
-        description: `Activation compte Nexarix — ${user.username}`,
-        customerName: user.username,
-        customerEmail: user.email,
-        customerPhone: user.phone,
-        payerCountry: countryIso,
-        webhookUrl: `${baseUrl}/api/activate/webhook`,
-        externalReference: `nexarix-activation-${user.id}`,
-      }),
+      body: JSON.stringify(payload),
     });
     const json = await response.json() as any;
     if (!response.ok || !json.success) {
-      res.status(502).json({ error: "Erreur Sendavapay", detail: json });
+      // Return the actual Sendavapay error message so it shows in the UI
+      const detail = json?.message || json?.error || json?.code || JSON.stringify(json);
+      res.status(502).json({ error: detail });
       return;
     }
     res.json({
@@ -86,7 +104,7 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
       reference: json.data.reference,
     });
   } catch (e: any) {
-    res.status(502).json({ error: "Impossible de contacter Sendavapay", detail: e.message });
+    res.status(502).json({ error: "Impossible de contacter Sendavapay : " + e.message });
   }
 });
 

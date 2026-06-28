@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useGetPublicSettings, useInitiateActivation, useCheckActivationStatus } from "@workspace/api-client-react";
+import { useGetPublicSettings, useCheckActivationStatus } from "@workspace/api-client-react";
 import {
   Phone, Zap, CheckCircle, CheckCircle2, MessageCircle, CreditCard, Loader,
   RefreshCw, RotateCcw, Smartphone, AlertCircle, Globe, ChevronDown, PartyPopper,
@@ -37,8 +37,7 @@ export default function Activate() {
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
   const { data: publicSettings } = useGetPublicSettings();
-  const initiatePayment = useInitiateActivation();
-  const { data: activationStatus, refetch: refetchStatus } = useCheckActivationStatus();
+  const { data: activationStatus } = useCheckActivationStatus();
 
   const [phase, setPhase] = useState<Phase>("form");
 
@@ -134,54 +133,65 @@ export default function Activate() {
     return () => clearInterval(interval);
   }, [phase, reference]);
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (!country || !phone.trim() || !selectedOperator) return;
     setErrorMsg("");
     setPhase("initiating");
 
-    initiatePayment.mutate(undefined, {
-      onSuccess: async (data) => {
-        setPaymentToken(data.paymentToken);
-        setReference(data.reference);   // ← save reference for polling
-        try {
-          const resp = await fetch(`${SENDAVAPAY_CLIENT}/initiate-payment`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              paymentToken: data.paymentToken,
-              payerName: user?.username || "Client",
-              payerPhone: phone.trim(),
-              payerCountry: countryCode,
-              operatorId: selectedOperator.id,
-            }),
-          });
-          const json = await resp.json() as any;
-          if (!json.success) {
-            setErrorMsg(json.message || json.error || "Erreur lors de l'initiation.");
-            setPhase("form");
-            return;
-          }
-          if (json.requiresRedirect && json.redirectUrl) {
-            window.location.href = json.redirectUrl;
-            return;
-          }
-          if (json.requiresOtp && json.otpToken) {
-            setOtpToken(json.otpToken);
-            setPhase("otp");
-            return;
-          }
-          setPhase("waiting");
-          setCheckCount(0);
-        } catch {
-          setErrorMsg("Erreur réseau. Réessayez.");
-          setPhase("form");
-        }
-      },
-      onError: (err: any) => {
-        setErrorMsg(err?.data?.error || "Erreur de connexion. Réessayez ou contactez le support.");
+    // Step 1 — server creates Sendavapay payment, we pass country + phone from form
+    try {
+      const token = localStorage.getItem("nexarix_token");
+      const initResp = await fetch("/api/activate/initiate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ country, phone: phone.trim() }),
+      });
+      const initJson = await initResp.json() as any;
+      if (!initResp.ok) {
+        setErrorMsg(initJson?.error || "Erreur Sendavapay. Vérifiez la configuration.");
         setPhase("form");
-      },
-    });
+        return;
+      }
+      const { paymentToken: pt, reference: ref } = initJson;
+      setPaymentToken(pt);
+      setReference(ref);
+
+      // Step 2 — frontend calls Sendavapay CORS endpoint to initiate the Mobile Money prompt
+      const sdkResp = await fetch(`${SENDAVAPAY_CLIENT}/initiate-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentToken: pt,
+          payerName: user?.username || "Client",
+          payerPhone: phone.trim(),
+          payerCountry: countryCode,
+          operatorId: selectedOperator.id,
+        }),
+      });
+      const sdkJson = await sdkResp.json() as any;
+      if (!sdkJson.success) {
+        setErrorMsg(sdkJson.message || sdkJson.error || "Erreur lors de l'initiation Mobile Money.");
+        setPhase("form");
+        return;
+      }
+      if (sdkJson.requiresRedirect && sdkJson.redirectUrl) {
+        window.location.href = sdkJson.redirectUrl;
+        return;
+      }
+      if (sdkJson.requiresOtp && sdkJson.otpToken) {
+        setOtpToken(sdkJson.otpToken);
+        setPhase("otp");
+        return;
+      }
+      setPhase("waiting");
+      setCheckCount(0);
+    } catch (e: any) {
+      setErrorMsg("Erreur réseau. Réessayez.");
+      setPhase("form");
+    }
   };
 
   const handleSubmitOtp = async () => {
