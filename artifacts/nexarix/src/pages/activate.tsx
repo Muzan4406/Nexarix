@@ -94,7 +94,7 @@ export default function Activate() {
   // Auto-redirect 3 seconds after success screen
   useEffect(() => {
     if (phase !== "success") return;
-    const t = setTimeout(() => navigate("/dashboard"), 3000);
+    const t = setTimeout(() => { window.location.href = `${BASE}dashboard`; }, 3000);
     return () => clearTimeout(t);
   }, [phase]);
 
@@ -401,6 +401,13 @@ export default function Activate() {
                         : <><CreditCard className="h-4 w-4" />Payer {activationFee.toLocaleString("fr-FR")} {getCurrencyCode(country || user?.country)}</>
                       }
                     </button>
+
+                    <div className="flex items-center justify-center gap-1.5 pt-1">
+                      <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <p className="text-[11px] text-gray-400 font-medium">Paiement sécurisé via Sendavapay</p>
+                    </div>
                   </motion.div>
                 )}
 
@@ -543,7 +550,7 @@ export default function Activate() {
                     </motion.div>
 
                     <button
-                      onClick={() => navigate("/dashboard")}
+                      onClick={() => { window.location.href = `${BASE}dashboard`; }}
                       className="w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:-translate-y-0.5 transition-all"
                     >
                       <CheckCircle2 className="h-4 w-4" />
