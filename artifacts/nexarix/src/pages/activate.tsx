@@ -76,9 +76,9 @@ export default function Activate() {
   // Direct check with reference (bypasses React Query cache, sends reference to server)
   const checkWithReference = async (ref: string): Promise<boolean> => {
     try {
-      const url = `${BASE}api/activate/check${ref ? `?reference=${encodeURIComponent(ref)}` : ""}`;
+      const qs = ref ? `?reference=${encodeURIComponent(ref)}` : "";
       const token = localStorage.getItem("nexarix_token");
-      const resp = await fetch(url, {
+      const resp = await fetch(`/api/activate/check${qs}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const json = await resp.json();
