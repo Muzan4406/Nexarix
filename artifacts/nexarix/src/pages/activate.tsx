@@ -3,8 +3,8 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetPublicSettings, useInitiateActivation, useCheckActivationStatus } from "@workspace/api-client-react";
 import {
-  Phone, Zap, CheckCircle, MessageCircle, CreditCard, Loader,
-  RefreshCw, RotateCcw, Smartphone, AlertCircle, Globe, ChevronDown,
+  Phone, Zap, CheckCircle, CheckCircle2, MessageCircle, CreditCard, Loader,
+  RefreshCw, RotateCcw, Smartphone, AlertCircle, Globe, ChevronDown, PartyPopper,
 } from "lucide-react";
 import { getCurrencyCode } from "@/lib/currency";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,7 +29,7 @@ const BENEFITS = [
   "Retrait de vos gains à tout moment",
 ];
 
-type Phase = "form" | "initiating" | "otp" | "waiting";
+type Phase = "form" | "initiating" | "otp" | "waiting" | "success";
 
 interface SdkOperator { id: string; name: string; requiresOtp: boolean; status: string }
 
@@ -65,7 +65,7 @@ export default function Activate() {
   const countryCode = COUNTRY_ISO[country] || "";
 
   useEffect(() => {
-    if (activationStatus?.status === "active") navigate("/dashboard");
+    if (activationStatus?.status === "active") setPhase("success");
   }, [activationStatus]);
 
   useEffect(() => {
@@ -82,11 +82,22 @@ export default function Activate() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const json = await resp.json();
-      return json?.status === "active";
+      if (json?.status === "active") {
+        setPhase("success");
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
   };
+
+  // Auto-redirect 3 seconds after success screen
+  useEffect(() => {
+    if (phase !== "success") return;
+    const t = setTimeout(() => navigate("/dashboard"), 3000);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   // Load operators when country changes (auto mode only)
   useEffect(() => {
@@ -119,10 +130,7 @@ export default function Activate() {
   // Polling in waiting phase — sends reference so server can verify with Sendavapay
   useEffect(() => {
     if (phase !== "waiting") return;
-    const interval = setInterval(async () => {
-      const isActive = await checkWithReference(reference);
-      if (isActive) navigate("/dashboard");
-    }, 5000);
+    const interval = setInterval(() => { checkWithReference(reference); }, 5000);
     return () => clearInterval(interval);
   }, [phase, reference]);
 
@@ -466,6 +474,70 @@ export default function Activate() {
 
                     <button onClick={handleReset} className="w-full h-10 rounded-2xl text-gray-400 text-xs font-bold flex items-center justify-center gap-2 hover:text-gray-600 hover:bg-gray-50 transition-colors">
                       <RotateCcw className="h-3.5 w-3.5" />Recommencer un nouveau paiement
+                    </button>
+                  </motion.div>
+                )}
+
+                {/* ── SUCCESS ── */}
+                {phase === "success" && (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    className="text-center py-2 space-y-5"
+                  >
+                    {/* Icône animée */}
+                    <div className="flex justify-center">
+                      <motion.div
+                        initial={{ scale: 0, rotate: -20 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ delay: 0.1, duration: 0.5, type: "spring", stiffness: 200 }}
+                        className="relative"
+                      >
+                        <div className="h-24 w-24 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <CheckCircle2 className="h-14 w-14 text-emerald-500" />
+                        </div>
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ delay: 0.45, duration: 0.35, type: "spring" }}
+                          className="absolute -top-1 -right-1 h-8 w-8 rounded-full bg-amber-400 flex items-center justify-center shadow-lg"
+                        >
+                          <PartyPopper className="h-4 w-4 text-white" />
+                        </motion.div>
+                      </motion.div>
+                    </div>
+
+                    {/* Texte */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3, duration: 0.4 }}
+                    >
+                      <p className="text-xl font-black text-gray-900">Compte activé ! 🎉</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Bienvenue sur Nexarix. Vous allez être redirigé vers votre tableau de bord…
+                      </p>
+                    </motion.div>
+
+                    {/* Barre de progression */}
+                    <motion.div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                      <motion.div
+                        className="h-full bg-emerald-500 rounded-full"
+                        initial={{ width: "0%" }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 3, ease: "linear" }}
+                      />
+                    </motion.div>
+
+                    <button
+                      onClick={() => navigate("/dashboard")}
+                      className="w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 hover:-translate-y-0.5 transition-all"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Accéder au tableau de bord
                     </button>
                   </motion.div>
                 )}
