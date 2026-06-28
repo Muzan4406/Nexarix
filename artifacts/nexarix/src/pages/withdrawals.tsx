@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useRequestWithdrawal, getGetWithdrawalsQueryKey, getGetDashboardQueryKey } from "@workspace/api-client-react";
+import { useRequestWithdrawal, getGetWithdrawalsQueryKey, getGetDashboardQueryKey, useGetPublicSettings } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -25,14 +25,16 @@ export default function Withdrawals() {
   const requestWithdrawal = useRequestWithdrawal();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { data: publicSettings } = useGetPublicSettings();
   const [form, setForm] = useState({ operator: "", phone: "", amount: "" });
   const [submitted, setSubmitted] = useState(false);
 
+  const minWithdrawal = publicSettings?.minWithdrawal ?? 3000;
   const operators = user?.country ? (OPERATORS_BY_COUNTRY[user.country] || []) : [];
   const amountNum = parseFloat(form.amount) || 0;
   const feeEstimate = form.amount ? Math.round(amountNum * 0.05) : 0;
   const netEstimate = form.amount ? Math.round(amountNum - feeEstimate) : 0;
-  const validAmount = amountNum >= 3000;
+  const validAmount = amountNum >= minWithdrawal;
 
   const handleSubmit = () => {
     if (!form.operator || !form.phone || !form.amount) {
@@ -40,7 +42,7 @@ export default function Withdrawals() {
       return;
     }
     if (!validAmount) {
-      toast({ title: "Montant insuffisant", description: `Minimum 3 000 ${getCurrencyCode(user?.country)}.`, variant: "destructive" });
+      toast({ title: "Montant insuffisant", description: `Minimum ${minWithdrawal.toLocaleString("fr-FR")} ${getCurrencyCode(user?.country)}.`, variant: "destructive" });
       return;
     }
     requestWithdrawal.mutate(
@@ -85,7 +87,7 @@ export default function Withdrawals() {
               </div>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Min: 3 000 {getCurrencyCode(user?.country)}</div>
+              <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Min: {minWithdrawal.toLocaleString("fr-FR")} {getCurrencyCode(user?.country)}</div>
               <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Frais: 5%</div>
               <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Délai: 24h</div>
             </div>
@@ -168,11 +170,11 @@ export default function Withdrawals() {
                 <Wallet className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="number"
-                  min="3000"
+                  min={minWithdrawal}
                   className="w-full h-12 pl-10 pr-4 rounded-2xl border border-gray-200 bg-gray-50 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   value={form.amount}
                   onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                  placeholder={`Minimum 3 000 ${getCurrencyCode(user?.country)}`}
+                  placeholder={`Minimum ${minWithdrawal.toLocaleString("fr-FR")} ${getCurrencyCode(user?.country)}`}
                   data-testid="input-withdrawal-amount"
                 />
               </div>
