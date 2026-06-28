@@ -35,6 +35,7 @@ router.get("/settings/public", async (_req, res) => {
     activationFee: parseFloat(settings.activationFee || "3000"),
     paymentMode: settings.paymentMode || "manual",
     telegramLink: settings.telegramLink,
+    minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
   });
 });
 
