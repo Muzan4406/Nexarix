@@ -158,7 +158,17 @@ router.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (req
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
     if (user && user.status !== "active") {
       updates.membership = "Premium";
+      updates.balance = sql`${usersTable.balance} + 50`;
+      updates.welcomeBonus = sql`${usersTable.welcomeBonus} + 50`;
       await distributeMLMCommissions(user);
+      await sendTelegramNotification(
+        `💰 <b>Activation manuelle (Admin)</b>\n` +
+        `👤 Utilisateur: <b>${user.username}</b>\n` +
+        `📧 Email: ${user.email}\n` +
+        `📱 Téléphone: ${user.phone || "—"}\n` +
+        `🌍 Pays: ${user.country || "—"}\n` +
+        `✅ Compte activé manuellement`
+      );
     }
   }
 
