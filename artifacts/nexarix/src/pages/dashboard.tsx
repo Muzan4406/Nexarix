@@ -151,6 +151,18 @@ export default function Dashboard() {
               bg: "bg-white",
               i: 3,
             },
+            {
+              label: "Tâches faites",
+              value: completedTasks.toLocaleString(),
+              sub: "Tâches complétées",
+              icon: BadgeDollarSign,
+              iconColor: "text-[#1565C0]",
+              iconBg: "bg-blue-50",
+              accent: "#1565C0",
+              border: "border-blue-100",
+              bg: "bg-white",
+              i: 4,
+            },
           ].map((s) => (
             <motion.div
               key={s.label}
@@ -169,19 +181,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* ── Tâches accomplies ────────────────────── */}
-        <motion.div variants={fadeUp(5)} initial="hidden" animate="visible">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "linear-gradient(135deg, #0d1b3e, #1565C0)" }}>
-              <BadgeDollarSign className="h-5 w-5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-gray-400 text-[11px] font-semibold">Tâches faites</p>
-              <p className="font-black text-lg text-gray-900 leading-tight">{completedTasks.toLocaleString()}</p>
-            </div>
-          </div>
-        </motion.div>
 
         {/* ── Lien de parrainage ───────────────────── */}
         <motion.div
