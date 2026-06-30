@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   LogOut, Menu, LayoutDashboard, CheckSquare, Wallet,
   MessageCircle, Phone, User, Star, History,
-  Users, Zap, ChevronDown,
+  Users, Zap, ChevronDown, ShoppingBag, GraduationCap,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -18,9 +18,9 @@ type Section  = { kind: "item"; item: NavItem & { gradient: string } }
               | { kind: "group"; group: NavGroup };
 
 const SECTIONS: Section[] = [
-  { kind: "item", item: { name: "Vue d'ensemble", href: "/dashboard", icon: LayoutDashboard, gradient: "from-blue-500 to-indigo-500" } },
-  { kind: "item", item: { name: "Mon Compte",     href: "/profile",   icon: User,            gradient: "from-violet-500 to-purple-500" } },
-  { kind: "item", item: { name: "Mes Filleuls",   href: "/downline",  icon: Users,           gradient: "from-cyan-500 to-teal-500" } },
+  { kind: "item", item: { name: "Vue d'ensemble", href: "/dashboard",  icon: LayoutDashboard, gradient: "from-blue-500 to-indigo-500" } },
+  { kind: "item", item: { name: "Mon Compte",     href: "/profile",    icon: User,            gradient: "from-violet-500 to-purple-500" } },
+  { kind: "item", item: { name: "Mes Filleuls",   href: "/downline",   icon: Users,           gradient: "from-cyan-500 to-teal-500" } },
   {
     kind: "group",
     group: {
@@ -42,8 +42,10 @@ const SECTIONS: Section[] = [
       ],
     },
   },
-  { kind: "item", item: { name: "Communauté", href: "/community", icon: MessageCircle, gradient: "from-emerald-500 to-green-500" } },
-  { kind: "item", item: { name: "Assistance",  href: "/contact",   icon: Phone,         gradient: "from-rose-500 to-pink-500" } },
+  { kind: "item", item: { name: "Store Premium",  href: "/store",      icon: ShoppingBag,     gradient: "from-purple-500 to-fuchsia-500" } },
+  { kind: "item", item: { name: "Formations",     href: "/formations", icon: GraduationCap,   gradient: "from-orange-500 to-amber-500" } },
+  { kind: "item", item: { name: "Communauté",     href: "/community",  icon: MessageCircle,   gradient: "from-emerald-500 to-green-500" } },
+  { kind: "item", item: { name: "Assistance",     href: "/contact",    icon: Phone,           gradient: "from-rose-500 to-pink-500" } },
 ];
 
 function NavLink({ href, icon: Icon, name, active, gradient, onClick }: {

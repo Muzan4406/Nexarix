@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Menu, LayoutDashboard, Users, CheckSquare, Wallet, Settings, ChevronRight, Shield } from "lucide-react";
+import { LogOut, Menu, LayoutDashboard, Users, CheckSquare, Wallet, Settings, ChevronRight, Shield, ShoppingBag, GraduationCap } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -8,11 +8,13 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
 const NAV = [
-  { name: "Vue d'ensemble", href: "/admin/dashboard",  icon: LayoutDashboard, accent: "from-blue-500 to-indigo-500",    dot: "bg-blue-400" },
-  { name: "Utilisateurs",   href: "/admin/users",       icon: Users,           accent: "from-violet-500 to-purple-500", dot: "bg-violet-400" },
-  { name: "Tâches",         href: "/admin/tasks",       icon: CheckSquare,     accent: "from-amber-500 to-orange-500",  dot: "bg-amber-400" },
-  { name: "Retraits",       href: "/admin/withdrawals", icon: Wallet,          accent: "from-emerald-500 to-teal-500",  dot: "bg-emerald-400" },
-  { name: "Paramètres",     href: "/admin/settings",    icon: Settings,        accent: "from-gray-400 to-gray-500",     dot: "bg-gray-400" },
+  { name: "Vue d'ensemble", href: "/admin/dashboard",   icon: LayoutDashboard, accent: "from-blue-500 to-indigo-500",    dot: "bg-blue-400" },
+  { name: "Utilisateurs",   href: "/admin/users",        icon: Users,           accent: "from-violet-500 to-purple-500", dot: "bg-violet-400" },
+  { name: "Tâches",         href: "/admin/tasks",        icon: CheckSquare,     accent: "from-amber-500 to-orange-500",  dot: "bg-amber-400" },
+  { name: "Retraits",       href: "/admin/withdrawals",  icon: Wallet,          accent: "from-emerald-500 to-teal-500",  dot: "bg-emerald-400" },
+  { name: "Store Premium",  href: "/admin/store",        icon: ShoppingBag,     accent: "from-purple-500 to-fuchsia-500", dot: "bg-purple-400" },
+  { name: "Formations",     href: "/admin/formations",   icon: GraduationCap,   accent: "from-orange-500 to-amber-500",  dot: "bg-orange-400" },
+  { name: "Paramètres",     href: "/admin/settings",     icon: Settings,        accent: "from-gray-400 to-gray-500",     dot: "bg-gray-400" },
 ];
 
 function NavContent({ onNav }: { onNav?: () => void }) {

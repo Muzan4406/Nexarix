@@ -19,12 +19,16 @@ import Profile from "@/pages/profile";
 import Community from "@/pages/community";
 import Contact from "@/pages/contact";
 import SpinWheel from "@/pages/spin-wheel";
+import Store from "@/pages/store";
+import Formations from "@/pages/formations";
 import AdminLogin from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminUsers from "@/pages/admin-users";
 import AdminTasks from "@/pages/admin-tasks";
 import AdminWithdrawals from "@/pages/admin-withdrawals";
 import AdminSettings from "@/pages/admin-settings";
+import AdminStore from "@/pages/admin-store";
+import AdminFormations from "@/pages/admin-formations";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -103,6 +107,8 @@ function Router() {
       <Route path="/community" component={() => <ProtectedRoute component={Community} />} />
       <Route path="/contact" component={() => <ProtectedRoute component={Contact} />} />
       <Route path="/spin" component={() => <ProtectedRoute component={SpinWheel} />} />
+      <Route path="/store" component={() => <ProtectedRoute component={Store} />} />
+      <Route path="/formations" component={() => <ProtectedRoute component={Formations} />} />
 
       <Route path="/admin/login" component={() => <PublicRoute component={AdminLogin} />} />
       <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} adminOnly />} />
@@ -110,6 +116,8 @@ function Router() {
       <Route path="/admin/tasks" component={() => <ProtectedRoute component={AdminTasks} adminOnly />} />
       <Route path="/admin/withdrawals" component={() => <ProtectedRoute component={AdminWithdrawals} adminOnly />} />
       <Route path="/admin/settings" component={() => <ProtectedRoute component={AdminSettings} adminOnly />} />
+      <Route path="/admin/store" component={() => <ProtectedRoute component={AdminStore} adminOnly />} />
+      <Route path="/admin/formations" component={() => <ProtectedRoute component={AdminFormations} adminOnly />} />
 
       <Route component={NotFound} />
     </Switch>
