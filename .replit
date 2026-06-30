@@ -9,31 +9,9 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "Project"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Nexarix"
-
-[[workflows.workflow]]
-name = "Nexarix"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "BASE_PATH=/ PORT=3000 pnpm --filter @workspace/nexarix run dev"
-waitForPort = 3000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [agent]
-stack = "PNPM_WORKSPACE"
+stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
 
 [postMerge]
@@ -46,4 +24,4 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-SUPABASE_PROJECT_REF = "lmtjchlqdatyvokcnhgl"
+JWT_SECRET = "nexarix-jwt-secret-replit-2024"
