@@ -16,7 +16,6 @@ import WithdrawalHistory from "@/pages/withdrawal-history";
 import Points from "@/pages/points";
 import Downline from "@/pages/downline";
 import Profile from "@/pages/profile";
-import Community from "@/pages/community";
 import Contact from "@/pages/contact";
 import SpinWheel from "@/pages/spin-wheel";
 import Store from "@/pages/store";
@@ -104,7 +103,6 @@ function Router() {
       <Route path="/points" component={() => <ProtectedRoute component={Points} />} />
       <Route path="/downline" component={() => <ProtectedRoute component={Downline} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
-      <Route path="/community" component={() => <ProtectedRoute component={Community} />} />
       <Route path="/contact" component={() => <ProtectedRoute component={Contact} />} />
       <Route path="/spin" component={() => <ProtectedRoute component={SpinWheel} />} />
       <Route path="/store" component={() => <ProtectedRoute component={Store} />} />

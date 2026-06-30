@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
   LogOut, Menu, LayoutDashboard, CheckSquare, Wallet,
-  MessageCircle, Phone, User, Star, History,
+  Phone, User, Star, History,
   Users, Zap, ChevronDown, ShoppingBag, GraduationCap,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -44,7 +44,6 @@ const SECTIONS: Section[] = [
   },
   { kind: "item", item: { name: "Store Premium",  href: "/store",      icon: ShoppingBag,     gradient: "from-purple-500 to-fuchsia-500" } },
   { kind: "item", item: { name: "Formations",     href: "/formations", icon: GraduationCap,   gradient: "from-orange-500 to-amber-500" } },
-  { kind: "item", item: { name: "Communauté",     href: "/community",  icon: MessageCircle,   gradient: "from-emerald-500 to-green-500" } },
   { kind: "item", item: { name: "Assistance",     href: "/contact",    icon: Phone,           gradient: "from-rose-500 to-pink-500" } },
 ];
 
