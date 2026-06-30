@@ -46,10 +46,11 @@ export default function Dashboard() {
     </AppLayout>
   );
 
-  const balance       = stats?.balance || 0;
+  const balance        = stats?.balance || 0;
   const totalWithdrawn = stats?.totalWithdrawn || 0;
-  const totalBalance  = stats?.totalBalance || 0;
-  const points        = stats?.points || 0;
+  const totalBalance   = stats?.totalBalance || 0;
+  const points         = stats?.points || 0;
+  const activationFee  = publicSettings?.activationFee ?? 3000;
   const completedTasks = (stats as any)?.completedTasks || 0;
   const mlm1 = stats?.earnings?.mlmLevel1 || 0;
   const mlm2 = stats?.earnings?.mlmLevel2 || 0;
@@ -94,15 +95,15 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Solde principal */}
+            {/* Frais activation + Total gagné */}
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl p-4 border border-white/10 backdrop-blur-sm"
                 style={{ background: "rgba(255,255,255,0.08)" }}>
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <Wallet className="h-3.5 w-3.5 text-yellow-300" />
-                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">Solde disponible</p>
+                  <Zap className="h-3.5 w-3.5 text-yellow-300" />
+                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">Frais d'activation</p>
                 </div>
-                <p className="font-black text-2xl leading-tight">{formatCurrency(balance, user?.country)}</p>
+                <p className="font-black text-2xl leading-tight">{activationFee.toLocaleString("fr-FR")} F</p>
               </div>
               <div className="rounded-2xl p-4 border border-white/10 backdrop-blur-sm"
                 style={{ background: "rgba(255,255,255,0.08)" }}>
