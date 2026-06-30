@@ -356,7 +356,7 @@ router.delete("/admin/users/:userId", authMiddleware, adminMiddleware, async (re
       { field: "mlmEarningsL2" as const, amount: 700 },
       { field: "mlmEarningsL3" as const, amount: 400 },
     ];
-    let currentUpline = user.upline;
+    let currentUpline: string | null = user.upline;
     for (const { field, amount } of commissions) {
       if (!currentUpline) break;
       const [uplineUser] = await db.select().from(usersTable).where(eq(usersTable.username, currentUpline)).limit(1);
@@ -395,7 +395,7 @@ router.post("/admin/users/:userId/revoke-referral", authMiddleware, adminMiddlew
       { field: "mlmEarningsL2" as const, amount: 700 },
       { field: "mlmEarningsL3" as const, amount: 400 },
     ];
-    let currentUpline = user.upline;
+    let currentUpline: string | null = user.upline;
     for (const { field, amount } of commissions) {
       if (!currentUpline) break;
       const [uplineUser] = await db.select().from(usersTable).where(eq(usersTable.username, currentUpline)).limit(1);

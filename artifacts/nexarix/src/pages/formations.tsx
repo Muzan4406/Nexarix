@@ -38,7 +38,7 @@ const card = {
   hidden:  { opacity: 0, y: 14 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.06, duration: 0.35, ease: [0.22, 1, 0.36, 1] },
+    transition: { delay: i * 0.06, duration: 0.35, ease: "easeOut" as const },
   }),
 };
 
@@ -242,7 +242,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
         initial={{ opacity: 0, y: 40, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 30, scale: 0.97 }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
         className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden"
       >
         {/* Header */}

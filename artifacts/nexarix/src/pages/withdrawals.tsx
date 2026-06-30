@@ -29,7 +29,7 @@ export default function Withdrawals() {
   const [form, setForm] = useState({ operator: "", phone: "", amount: "" });
   const [submitted, setSubmitted] = useState(false);
 
-  const minWithdrawal = publicSettings?.minWithdrawal ?? 3000;
+  const minWithdrawal = (publicSettings as any)?.minWithdrawal ?? 3000;
   const operators = user?.country ? (OPERATORS_BY_COUNTRY[user.country] || []) : [];
   const amountNum = parseFloat(form.amount) || 0;
   const feeEstimate = form.amount ? Math.round(amountNum * 0.05) : 0;

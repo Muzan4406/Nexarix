@@ -126,7 +126,7 @@ router.get("/activate/check", authMiddleware, async (req, res) => {
           headers: { "Authorization": `Bearer ${settings.sendavapayApiKey}` },
         });
         const json = await resp.json() as any;
-        if (json.success && json.data?.status === "completed" && user.status !== "active") {
+        if (json.success && json.data?.status === "completed" && (user.status as string) !== "active") {
           await activateUser(user);
           res.json({ status: "active" });
           return;
