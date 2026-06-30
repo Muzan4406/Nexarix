@@ -17,10 +17,6 @@ const loginSchema = z.object({
   password: z.string().min(1, "Requis"),
 });
 
-const otpSchema = z.object({
-  otp: z.string().length(6, "Le code doit être de 6 chiffres"),
-});
-
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login } = useAuth();
@@ -29,16 +25,7 @@ export default function Login() {
   const [sessionToken, setSessionToken] = useState("");
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loadingOtp, setLoadingOtp] = useState(false);
-
-  const credForm = useForm({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { identifier: "", password: "" },
-  });
-
-  const otpForm = useForm({
-    resolver: zodResolver(otpSchema),
-    defaultValues: { otp: "" },
-  });
+  const [otpValue, setOtpValue] = useState("");
 
   const onSubmitCredentials = async (values: z.infer<typeof loginSchema>) => {
     setLoadingLogin(true);
@@ -73,13 +60,17 @@ export default function Login() {
     }
   };
 
-  const onSubmitOtp = async (values: z.infer<typeof otpSchema>) => {
+  const onSubmitOtp = async () => {
+    if (otpValue.length !== 6) {
+      toast({ title: "Code invalide", description: "Le code doit être de 6 chiffres", variant: "destructive" });
+      return;
+    }
     setLoadingOtp(true);
     try {
       const res = await fetch("/api/admin/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionToken, otp: values.otp }),
+        body: JSON.stringify({ sessionToken, otp: otpValue }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Code OTP invalide");
@@ -190,43 +181,57 @@ export default function Login() {
                 Un code à 6 chiffres a été envoyé dans votre groupe Telegram. Il expire dans 5 minutes.
               </p>
 
-              <Form {...otpForm}>
-                <form onSubmit={otpForm.handleSubmit(onSubmitOtp)} className="space-y-4">
-                  <FormField control={otpForm.control} name="otp" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300 text-sm font-medium">
-                        Code OTP
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="123456"
-                          maxLength={6}
-                          inputMode="numeric"
-                          className="text-center text-2xl font-black tracking-widest h-14 rounded-xl border-gray-200"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Code OTP
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="123456"
+                    value={otpValue}
+                    onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onKeyDown={(e) => { if (e.key === "Enter") onSubmitOtp(); }}
+                    autoFocus
+                    style={{
+                      width: "100%",
+                      height: "56px",
+                      fontSize: "28px",
+                      fontWeight: 900,
+                      textAlign: "center",
+                      letterSpacing: "0.3em",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "12px",
+                      outline: "none",
+                      color: "#111827",
+                      background: "#ffffff",
+                      padding: "0 12px",
+                    }}
+                  />
+                  {otpValue.length > 0 && otpValue.length < 6 && (
+                    <p className="text-xs text-red-500 mt-1">{6 - otpValue.length} chiffre(s) manquant(s)</p>
+                  )}
+                </div>
 
-                  <Button
-                    type="submit"
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1565C0] to-[#1E88E5] hover:from-[#0D47A1] hover:to-[#1565C0] text-white font-bold text-base shadow-lg"
-                    disabled={loadingOtp}
-                  >
-                    {loadingOtp ? "Vérification..." : "Valider le code"}
-                  </Button>
+                <Button
+                  type="button"
+                  onClick={onSubmitOtp}
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1565C0] to-[#1E88E5] hover:from-[#0D47A1] hover:to-[#1565C0] text-white font-bold text-base shadow-lg"
+                  disabled={loadingOtp || otpValue.length !== 6}
+                >
+                  {loadingOtp ? "Vérification..." : "Valider le code"}
+                </Button>
 
-                  <button
-                    type="button"
-                    onClick={() => { setStep("credentials"); otpForm.reset(); }}
-                    className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors mt-1"
-                  >
-                    ← Retour à la connexion
-                  </button>
-                </form>
-              </Form>
+                <button
+                  type="button"
+                  onClick={() => { setStep("credentials"); setOtpValue(""); }}
+                  className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors mt-1"
+                >
+                  ← Retour à la connexion
+                </button>
+              </div>
             </>
           )}
         </div>
