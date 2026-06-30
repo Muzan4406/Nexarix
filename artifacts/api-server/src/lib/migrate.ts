@@ -27,6 +27,19 @@ export async function runStartupMigrations(): Promise<void> {
       );
     `);
 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS formation_purchases (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        formation_id INTEGER NOT NULL,
+        amount NUMERIC(10, 2),
+        status TEXT NOT NULL DEFAULT 'pending',
+        sendavapay_reference TEXT,
+        payment_token TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
     logger.info("Startup migrations OK");
   } catch (err) {
     logger.error({ err }, "Startup migrations failed");
