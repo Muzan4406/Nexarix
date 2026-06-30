@@ -5,12 +5,11 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  Wallet, ArrowDownCircle, Copy, CheckCircle, Users,
-  Zap, Sparkles, TrendingUp, ArrowRight, Gift,
-  BadgeDollarSign, ShieldCheck,
+  Wallet, ArrowDownCircle, Copy, CheckCircle,
+  Zap, Sparkles, TrendingUp, Gift,
+  BadgeDollarSign,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
-import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 const fadeUp = (i: number) => ({
@@ -52,10 +51,6 @@ export default function Dashboard() {
   const points         = stats?.points || 0;
   const activationFee  = publicSettings?.activationFee ?? 3000;
   const completedTasks = (stats as any)?.completedTasks || 0;
-  const mlm1 = stats?.earnings?.mlmLevel1 || 0;
-  const mlm2 = stats?.earnings?.mlmLevel2 || 0;
-  const mlm3 = stats?.earnings?.mlmLevel3 || 0;
-  const totalMlm = mlm1 + mlm2 + mlm3;
 
   return (
     <AppLayout>
@@ -145,18 +140,6 @@ export default function Dashboard() {
               i: 2,
             },
             {
-              label: "Commissions MLM",
-              value: formatCurrency(totalMlm, user?.country),
-              sub: `Réseau 3 niveaux`,
-              icon: Users,
-              iconColor: "text-[#0d1b3e]",
-              iconBg: "bg-slate-100",
-              accent: "#0d1b3e",
-              border: "border-slate-100",
-              bg: "bg-white",
-              i: 3,
-            },
-            {
               label: "Mes Points",
               value: `${points.toLocaleString()} pts`,
               sub: "Convertibles en FCFA",
@@ -166,7 +149,7 @@ export default function Dashboard() {
               accent: "#ca8a04",
               border: "border-yellow-100",
               bg: "bg-white",
-              i: 4,
+              i: 3,
             },
           ].map((s) => (
             <motion.div
@@ -186,10 +169,8 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* ── Tâches accomplies + statut ───────────── */}
-        <motion.div variants={fadeUp(5)} initial="hidden" animate="visible"
-          className="grid grid-cols-2 gap-3"
-        >
+        {/* ── Tâches accomplies ────────────────────── */}
+        <motion.div variants={fadeUp(5)} initial="hidden" animate="visible">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
               style={{ background: "linear-gradient(135deg, #0d1b3e, #1565C0)" }}>
@@ -200,52 +181,7 @@ export default function Dashboard() {
               <p className="font-black text-lg text-gray-900 leading-tight">{completedTasks.toLocaleString()}</p>
             </div>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "linear-gradient(135deg, #166534, #15803d)" }}>
-              <ShieldCheck className="h-5 w-5 text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-gray-400 text-[11px] font-semibold">Statut</p>
-              <p className="font-black text-sm text-emerald-600 leading-tight">Compte actif</p>
-            </div>
-          </div>
         </motion.div>
-
-        {/* ── Commissions MLM détail ───────────────── */}
-        {totalMlm > 0 && (
-          <motion.div variants={fadeUp(6)} initial="hidden" animate="visible"
-            className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #0d1b3e, #1565C0)" }}>
-                  <TrendingUp className="h-4 w-4 text-white" />
-                </div>
-                <span className="font-black text-gray-900 text-sm">Commissions MLM</span>
-              </div>
-              <Link href="/downline">
-                <span className="text-xs font-bold text-[#1565C0] flex items-center gap-1 cursor-pointer hover:underline">
-                  Voir <ArrowRight className="h-3 w-3" />
-                </span>
-              </Link>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: "Niveau 1", value: mlm1, dot: "#059669" },
-                { label: "Niveau 2", value: mlm2, dot: "#1565C0" },
-                { label: "Niveau 3", value: mlm3, dot: "#7c3aed" },
-              ].map((lv) => (
-                <div key={lv.label} className="rounded-2xl border border-slate-100 bg-slate-50 p-3 text-center">
-                  <div className="h-2 w-2 rounded-full mx-auto mb-2" style={{ background: lv.dot }} />
-                  <p className="font-black text-sm text-gray-900">{formatCurrency(lv.value, user?.country)}</p>
-                  <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{lv.label}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
 
         {/* ── Lien de parrainage ───────────────────── */}
         <motion.div
