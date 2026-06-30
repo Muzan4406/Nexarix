@@ -27,6 +27,11 @@ export default function Login() {
   const [loadingOtp, setLoadingOtp] = useState(false);
   const [otpValue, setOtpValue] = useState("");
 
+  const credForm = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { identifier: "", password: "" },
+  });
+
   const onSubmitCredentials = async (values: z.infer<typeof loginSchema>) => {
     setLoadingLogin(true);
     try {
