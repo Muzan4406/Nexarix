@@ -1,10 +1,15 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
+import { usersTable, adminOtpSessionsTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { signToken, authMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
+
+function generateOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 const router = Router();
 
@@ -87,12 +92,31 @@ router.post("/auth/login", async (req, res) => {
     return;
   }
 
-  const token = signToken({ userId: user.id, isAdmin: user.isAdmin });
+  // Admin users require OTP verification
+  if (user.isAdmin) {
+    const otp = generateOtp();
+    const sessionToken = randomUUID();
+    await db.insert(adminOtpSessionsTable).values({
+      sessionToken,
+      otp,
+      userId: user.id,
+      isAdmin: 1,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    });
 
-  res.json({
-    token,
-    user: formatUser(user),
-  });
+    await sendTelegramNotification(
+      `🔐 <b>Connexion Admin</b>\n` +
+      `👤 Admin: <b>${user.username}</b>\n` +
+      `🔢 Code OTP: <b>${otp}</b>\n` +
+      `⏱️ Valide 5 minutes`
+    );
+
+    res.json({ otpRequired: true, sessionToken });
+    return;
+  }
+
+  const token = signToken({ userId: user.id, isAdmin: false });
+  res.json({ token, user: formatUser(user) });
 });
 
 router.get("/auth/me", authMiddleware, async (req, res) => {
