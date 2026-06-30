@@ -288,8 +288,8 @@ async function distributeMLMCommissions(user: any) {
   if (!user.upline) return;
   const commissions = [
     { field: "mlmEarningsL1", amount: 1300 },
-    { field: "mlmEarningsL2", amount: 700 },
-    { field: "mlmEarningsL3", amount: 400 },
+    { field: "mlmEarningsL2", amount: 600 },
+    { field: "mlmEarningsL3", amount: 300 },
   ];
   let currentUplineUsername = user.upline;
   let isLevel1 = true;
