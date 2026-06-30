@@ -1,5 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable } from "@workspace/db";
 import { eq, or, ilike, sql, inArray } from "drizzle-orm";
@@ -11,52 +12,138 @@ const ADMIN_EMAIL = "godmuzan42@gmail.com";
 const ADMIN_USERNAME = "Muzan4406";
 const ADMIN_PASSWORD = "@admin4406";
 
+// In-memory OTP store: sessionToken -> { otp, userId, isAdmin, expiresAt }
+const otpSessions = new Map<string, { otp: string; userId: number; isAdmin: boolean; expiresAt: number }>();
+
+// Clean up expired sessions every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of otpSessions.entries()) {
+    if (val.expiresAt < now) otpSessions.delete(key);
+  }
+}, 10 * 60 * 1000);
+
+function generateOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 router.post("/admin/login", async (req, res) => {
   const { identifier, password } = req.body;
+
+  let userId: number;
+  let isAdminUser: boolean;
+  let username: string;
 
   const isAdminIdentifier = identifier === ADMIN_EMAIL || identifier === ADMIN_USERNAME;
   const isAdminPassword = password === ADMIN_PASSWORD;
 
-  if (!isAdminIdentifier || !isAdminPassword) {
-    const adminUser = await db.select().from(usersTable)
+  if (isAdminIdentifier && isAdminPassword) {
+    // Super admin hardcoded login
+    let [adminUser] = await db.select().from(usersTable)
+      .where(eq(usersTable.email, ADMIN_EMAIL)).limit(1);
+
+    if (!adminUser) {
+      const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+      [adminUser] = await db.insert(usersTable).values({
+        username: ADMIN_USERNAME,
+        email: ADMIN_EMAIL,
+        phone: "0000000000",
+        country: "Togo",
+        passwordHash,
+        status: "active",
+        membership: "Premium",
+        isAdmin: true,
+      }).returning();
+    }
+
+    userId = adminUser.id;
+    isAdminUser = true;
+    username = adminUser.username;
+  } else {
+    // DB admin login
+    const [adminUser] = await db.select().from(usersTable)
       .where(or(eq(usersTable.email, identifier), eq(usersTable.username, identifier)))
       .limit(1);
 
-    if (adminUser.length === 0 || !adminUser[0].isAdmin) {
+    if (!adminUser || !adminUser.isAdmin) {
       res.status(401).json({ error: "Invalid admin credentials" });
       return;
     }
 
-    const valid = await bcrypt.compare(password, adminUser[0].passwordHash);
+    const valid = await bcrypt.compare(password, adminUser.passwordHash);
     if (!valid) {
       res.status(401).json({ error: "Invalid admin credentials" });
       return;
     }
 
-    const token = signToken({ userId: adminUser[0].id, isAdmin: true });
-    res.json({ token, user: formatUser(adminUser[0]) });
+    userId = adminUser.id;
+    isAdminUser = true;
+    username = adminUser.username;
+  }
+
+  // Generate OTP and send via Telegram
+  const otp = generateOtp();
+  const sessionToken = randomUUID();
+  otpSessions.set(sessionToken, {
+    otp,
+    userId,
+    isAdmin: isAdminUser,
+    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+  });
+
+  await sendTelegramNotification(
+    `🔐 <b>Tentative de connexion Admin</b>\n` +
+    `👤 Admin: <b>${username}</b>\n` +
+    `🔢 Code OTP: <b>${otp}</b>\n` +
+    `⏱️ Valide 5 minutes\n` +
+    `⚠️ Si ce n'est pas vous, ignorez ce message.`
+  );
+
+  res.json({ otpRequired: true, sessionToken });
+});
+
+router.post("/admin/verify-otp", async (req, res) => {
+  const { sessionToken, otp } = req.body;
+
+  if (!sessionToken || !otp) {
+    res.status(400).json({ error: "Session token et OTP requis" });
     return;
   }
 
-  let [adminUser] = await db.select().from(usersTable)
-    .where(eq(usersTable.email, ADMIN_EMAIL)).limit(1);
-
-  if (!adminUser) {
-    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
-    [adminUser] = await db.insert(usersTable).values({
-      username: ADMIN_USERNAME,
-      email: ADMIN_EMAIL,
-      phone: "0000000000",
-      country: "Togo",
-      passwordHash,
-      status: "active",
-      membership: "Premium",
-      isAdmin: true,
-    }).returning();
+  const session = otpSessions.get(sessionToken);
+  if (!session) {
+    res.status(401).json({ error: "Session invalide ou expirée" });
+    return;
   }
 
-  const token = signToken({ userId: adminUser.id, isAdmin: true });
-  res.json({ token, user: formatUser(adminUser) });
+  if (Date.now() > session.expiresAt) {
+    otpSessions.delete(sessionToken);
+    res.status(401).json({ error: "Code OTP expiré — veuillez vous reconnecter" });
+    return;
+  }
+
+  if (session.otp !== otp.trim()) {
+    res.status(401).json({ error: "Code OTP incorrect" });
+    return;
+  }
+
+  otpSessions.delete(sessionToken);
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, session.userId)).limit(1);
+  if (!user) {
+    res.status(401).json({ error: "Utilisateur introuvable" });
+    return;
+  }
+
+  const token = signToken({ userId: user.id, isAdmin: true });
+
+  sendTelegramNotification(
+    `✅ <b>Connexion admin réussie</b>\n` +
+    `👤 Admin: <b>${user.username}</b>\n` +
+    `📅 ${new Date().toLocaleString("fr-FR", { timeZone: "Africa/Lomé" })}`
+  );
+
+  res.json({ token, user: formatUser(user) });
 });
 
 router.get("/admin/dashboard", authMiddleware, adminMiddleware, async (req, res) => {
@@ -100,8 +187,6 @@ router.get("/admin/dashboard", authMiddleware, adminMiddleware, async (req, res)
 
 router.get("/admin/users", authMiddleware, adminMiddleware, async (req, res) => {
   const { search, status } = req.query as { search?: string; status?: string };
-
-  let query = db.select().from(usersTable).where(eq(usersTable.isAdmin, false));
 
   const users = await db.select().from(usersTable)
     .where(eq(usersTable.isAdmin, false));
@@ -172,6 +257,17 @@ router.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (req
     }
   }
 
+  if (isBanned === true) {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (user) {
+      sendTelegramNotification(
+        `⛔ <b>Utilisateur banni (Admin)</b>\n` +
+        `👤 Username: <b>${user.username}</b>\n` +
+        `📧 Email: ${user.email}`
+      );
+    }
+  }
+
   const [updated] = await db.update(usersTable)
     .set(updates)
     .where(eq(usersTable.id, userId))
@@ -181,6 +277,39 @@ router.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (req
     res.status(404).json({ error: "User not found" });
     return;
   }
+
+  const [dl] = await db.select({ count: sql<number>`count(*)` }).from(usersTable)
+    .where(eq(usersTable.upline, updated.username));
+  res.json({ ...formatAdminUser(updated), totalDownlines: Number(dl.count) });
+});
+
+// Set admin role — only super admin can do this
+router.post("/admin/users/:userId/set-admin", authMiddleware, adminMiddleware, async (req, res) => {
+  const requestingUserId = (req as any).userId;
+  const [requestingUser] = await db.select().from(usersTable).where(eq(usersTable.id, requestingUserId)).limit(1);
+
+  const isSuperAdmin = requestingUser?.email === ADMIN_EMAIL || requestingUser?.username === ADMIN_USERNAME;
+  if (!isSuperAdmin) {
+    res.status(403).json({ error: "Seul le super-admin peut nommer des administrateurs" });
+    return;
+  }
+
+  const userId = parseInt(req.params.userId as string);
+  const { isAdmin } = req.body;
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  const [updated] = await db.update(usersTable)
+    .set({ isAdmin: !!isAdmin })
+    .where(eq(usersTable.id, userId))
+    .returning();
+
+  sendTelegramNotification(
+    isAdmin
+      ? `🛡️ <b>Nouveau admin nommé</b>\n👤 ${user.username} (${user.email}) est maintenant administrateur.`
+      : `🔴 <b>Admin révoqué</b>\n👤 ${user.username} n'est plus administrateur.`
+  );
 
   const [dl] = await db.select({ count: sql<number>`count(*)` }).from(usersTable)
     .where(eq(usersTable.upline, updated.username));
@@ -240,6 +369,12 @@ router.delete("/admin/users/:userId", authMiddleware, adminMiddleware, async (re
       currentUpline = uplineUser.upline ?? null;
     }
   }
+
+  sendTelegramNotification(
+    `🗑️ <b>Utilisateur supprimé (Admin)</b>\n` +
+    `👤 Username: <b>${user.username}</b>\n` +
+    `📧 Email: ${user.email}`
+  );
 
   await db.update(usersTable).set({ upline: null }).where(eq(usersTable.upline, user.username));
   await db.delete(taskCompletionsTable).where(eq(taskCompletionsTable.userId, userId));
@@ -307,6 +442,12 @@ router.post("/admin/tasks", authMiddleware, adminMiddleware, async (req, res) =>
     correctAnswer: null,
   }).returning();
 
+  sendTelegramNotification(
+    `📋 <b>Tâche créée (Admin)</b>\n` +
+    `📌 Catégorie: ${category}\n` +
+    `🎯 Points: ${points}`
+  );
+
   res.status(201).json(formatTask(task));
 });
 
@@ -336,6 +477,7 @@ router.delete("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (re
     res.status(404).json({ error: "Task not found" });
     return;
   }
+  sendTelegramNotification(`🗑️ <b>Tâche supprimée (Admin)</b>\n📌 ID: ${taskId}`);
   res.json({ success: true });
 });
 
@@ -592,6 +734,8 @@ router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res
   } else {
     [settings] = await db.update(siteSettingsTable).set(updates).where(eq(siteSettingsTable.id, settings.id)).returning();
   }
+
+  sendTelegramNotification(`⚙️ <b>Paramètres mis à jour (Admin)</b>`);
 
   res.json({
     ...settings,

@@ -11,12 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Edit, Trash2, GraduationCap, Upload, Play, FileText, Link as LinkIcon } from "lucide-react";
+import { Plus, Edit, Trash2, GraduationCap, Upload, Play, FileText, Link as LinkIcon, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const emptyForm = {
   title: "", description: "", videoUrl: "", contentUrl: "",
-  duration: "", isFree: true, isActive: true,
+  duration: "", isFree: true, isActive: true, price: "",
 };
 
 const card = {
@@ -59,6 +59,7 @@ export default function AdminFormations() {
       videoUrl: f.videoUrl || "",
       contentUrl: f.contentUrl?.startsWith("/api/") ? "" : (f.contentUrl || ""),
       duration: f.duration || "", isFree: f.isFree, isActive: f.isActive,
+      price: f.price ? String(f.price) : "",
     });
     setFile(null);
     setContentMode(f.contentUrl?.startsWith("/api/") ? "file" : "url");
@@ -76,6 +77,7 @@ export default function AdminFormations() {
       fd.append("duration", form.duration);
       fd.append("isFree", String(form.isFree));
       fd.append("isActive", String(form.isActive));
+      fd.append("price", form.price || "");
       if (contentMode === "url") fd.append("contentUrl", form.contentUrl);
       if (file) fd.append("file", file);
 
@@ -149,6 +151,11 @@ export default function AdminFormations() {
                       <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", f.isFree ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600")}>
                         {f.isFree ? "Gratuit" : "Premium"}
                       </span>
+                      {f.price && f.price > 0 && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 flex items-center gap-1">
+                          <Tag className="h-2.5 w-2.5" />{Number(f.price).toLocaleString("fr-FR")} FCFA
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
                       {f.duration && <span>{f.duration}</span>}
@@ -239,6 +246,22 @@ export default function AdminFormations() {
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* Price */}
+            <div>
+              <Label className="text-sm font-bold text-gray-700 flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5 text-emerald-500" />
+                Prix (FCFA) <span className="font-normal text-gray-400">— laisser vide si gratuit</span>
+              </Label>
+              <Input
+                type="number"
+                min="0"
+                className="mt-2 rounded-2xl border-gray-200 h-11"
+                value={form.price}
+                onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
+                placeholder="ex: 5000"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

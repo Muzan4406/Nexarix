@@ -3,8 +3,7 @@ import { motion } from "framer-motion";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { GraduationCap, Play, FileText, Clock, ExternalLink, BookOpen } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { GraduationCap, Play, FileText, Clock, BookOpen, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
@@ -148,6 +147,13 @@ export default function Formations() {
 
                       {/* Action buttons */}
                       <div className="mt-3 flex gap-2 flex-wrap">
+                        {/* Price button */}
+                        {formation.price && formation.price > 0 && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm">
+                            <Tag className="h-3 w-3" />
+                            {formation.price.toLocaleString("fr-FR")} FCFA
+                          </span>
+                        )}
                         {formation.videoUrl && (
                           <a
                             href={formation.videoUrl}

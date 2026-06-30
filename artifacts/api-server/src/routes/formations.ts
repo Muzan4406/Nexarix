@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { formationsTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { authMiddleware, adminMiddleware } from "../lib/auth";
+import { sendTelegramNotification } from "../lib/telegram";
 import multer from "multer";
 import path from "path";
 import { mkdir } from "fs/promises";
@@ -32,7 +33,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500 MB
+  limits: { fileSize: 500 * 1024 * 1024 },
 });
 
 // Serve uploaded files
@@ -63,7 +64,7 @@ router.get("/admin/formations", authMiddleware, adminMiddleware, async (_req, re
 
 // Admin: create formation (with optional file upload)
 router.post("/admin/formations", authMiddleware, adminMiddleware, upload.single("file"), async (req, res) => {
-  const { title, description, category, thumbnailUrl, videoUrl, duration, level, isFree, isActive, order } = req.body;
+  const { title, description, category, thumbnailUrl, videoUrl, duration, level, isFree, isActive, order, price } = req.body;
 
   if (!title) {
     res.status(400).json({ error: "Le titre est requis" });
@@ -75,6 +76,8 @@ router.post("/admin/formations", authMiddleware, adminMiddleware, upload.single(
     contentUrl = `/api/formations/files/${req.file.filename}`;
   }
 
+  const priceVal = price && parseFloat(price) > 0 ? parseFloat(price).toFixed(2) : null;
+
   const [formation] = await db.insert(formationsTable).values({
     title,
     description: description || null,
@@ -85,9 +88,16 @@ router.post("/admin/formations", authMiddleware, adminMiddleware, upload.single(
     duration: duration || null,
     level: level || "debutant",
     isFree: isFree === "true" || isFree === true,
+    price: priceVal,
     isActive: isActive !== "false" && isActive !== false,
     order: parseInt(order) || 0,
   }).returning();
+
+  sendTelegramNotification(
+    `📚 <b>Formation créée (Admin)</b>\n` +
+    `📖 Titre: <b>${title}</b>\n` +
+    `💰 Prix: ${priceVal ? `${parseFloat(priceVal).toLocaleString()} FCFA` : "Gratuit"}`
+  );
 
   res.status(201).json(formatFormation(formation));
 });
@@ -95,7 +105,7 @@ router.post("/admin/formations", authMiddleware, adminMiddleware, upload.single(
 // Admin: update formation
 router.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload.single("file"), async (req, res) => {
   const id = parseInt(String(req.params.id));
-  const { title, description, category, thumbnailUrl, videoUrl, contentUrl, duration, level, isFree, isActive, order } = req.body;
+  const { title, description, category, thumbnailUrl, videoUrl, contentUrl, duration, level, isFree, isActive, order, price } = req.body;
 
   const updates: any = {};
   if (title !== undefined) updates.title = title;
@@ -108,6 +118,10 @@ router.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload.si
   if (isFree !== undefined) updates.isFree = isFree === "true" || isFree === true;
   if (isActive !== undefined) updates.isActive = isActive !== "false" && isActive !== false;
   if (order !== undefined) updates.order = parseInt(order) || 0;
+  if (price !== undefined) {
+    const priceVal = price && parseFloat(price) > 0 ? parseFloat(price).toFixed(2) : null;
+    updates.price = priceVal;
+  }
 
   if (req.file) {
     updates.contentUrl = `/api/formations/files/${req.file.filename}`;
@@ -117,13 +131,28 @@ router.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload.si
 
   const [formation] = await db.update(formationsTable).set(updates).where(eq(formationsTable.id, id)).returning();
   if (!formation) { res.status(404).json({ error: "Formation introuvable" }); return; }
+
+  sendTelegramNotification(
+    `✏️ <b>Formation modifiée (Admin)</b>\n` +
+    `📖 Titre: <b>${formation.title}</b>`
+  );
+
   res.json(formatFormation(formation));
 });
 
 // Admin: delete formation
 router.delete("/admin/formations/:id", authMiddleware, adminMiddleware, async (req, res) => {
   const id = parseInt(String(req.params.id));
+  const [formation] = await db.select().from(formationsTable).where(eq(formationsTable.id, id)).limit(1);
   await db.delete(formationsTable).where(eq(formationsTable.id, id));
+
+  if (formation) {
+    sendTelegramNotification(
+      `🗑️ <b>Formation supprimée (Admin)</b>\n` +
+      `📖 Titre: <b>${formation.title}</b>`
+    );
+  }
+
   res.json({ ok: true });
 });
 
@@ -139,6 +168,7 @@ function formatFormation(f: any) {
     duration: f.duration,
     level: f.level,
     isFree: f.isFree,
+    price: f.price ? parseFloat(f.price) : null,
     isActive: f.isActive,
     order: f.order,
     createdAt: f.createdAt?.toISOString(),

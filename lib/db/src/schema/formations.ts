@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, integer, numeric, timestamp } from "drizzle-orm/pg-core";
 
 export const formationsTable = pgTable("formations", {
   id: serial("id").primaryKey(),
@@ -11,6 +11,7 @@ export const formationsTable = pgTable("formations", {
   duration: text("duration"),
   level: text("level").notNull().default("debutant"),
   isFree: boolean("is_free").notNull().default(true),
+  price: numeric("price", { precision: 10, scale: 2 }),
   isActive: boolean("is_active").notNull().default(true),
   order: integer("order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),

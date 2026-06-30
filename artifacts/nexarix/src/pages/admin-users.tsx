@@ -10,9 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Search, UserCheck, Ban, KeyRound, Wallet, GitBranch, ShieldAlert,
-  Phone, Mail, MapPin, Calendar, Users, ChevronRight, Trash2, Unlink, AlertTriangle
+  Phone, Mail, MapPin, Calendar, Users, ChevronRight, Trash2, Unlink, AlertTriangle, ShieldCheck, ShieldOff
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -21,6 +22,8 @@ type AdminUser = {
   status: string; membership: string; balance: number; points: number;
   upline?: string | null; joinedAt: string; totalDownlines: number; isBanned?: boolean;
 };
+
+const SUPER_ADMIN_USERNAME = "Muzan4406";
 
 function StatusPill({ status, isBanned }: { status: string; isBanned?: boolean }) {
   if (isBanned) return <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-600 border border-red-200">Banni</span>;
@@ -44,6 +47,7 @@ export default function AdminUsers() {
   const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
   const [uplineInput, setUplineInput] = useState("");
   const [statusInput, setStatusInput] = useState("");
+  const [settingAdmin, setSettingAdmin] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
   const [confirmRevoke, setConfirmRevoke] = useState<AdminUser | null>(null);
@@ -54,6 +58,9 @@ export default function AdminUsers() {
   const revokeReferral = useRevokeAdminUserReferral();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { token, user: currentUser } = useAuth() as any;
+
+  const isSuperAdmin = currentUser?.username === SUPER_ADMIN_USERNAME;
 
   const filtered = (users as AdminUser[]).filter(u => {
     const q = search.toLowerCase();
@@ -115,6 +122,27 @@ export default function AdminUsers() {
         toast({ title: "Erreur", description: err?.data?.error || "Échec", variant: "destructive" });
       },
     });
+  };
+
+  const handleSetAdmin = async (userId: number, isAdmin: boolean) => {
+    if (!isSuperAdmin) return;
+    setSettingAdmin(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/set-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ isAdmin }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erreur");
+      queryClient.invalidateQueries({ queryKey: getGetAdminUsersQueryKey() });
+      toast({ title: isAdmin ? "🛡️ Admin nommé avec succès" : "🔴 Droits admin révoqués" });
+      setSelectedUser(null);
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    } finally {
+      setSettingAdmin(false);
+    }
   };
 
   const counts = {
@@ -185,15 +213,10 @@ export default function AdminUsers() {
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer overflow-hidden"
               >
                 <div className="flex items-center gap-3 p-4">
-                  {/* Status bar */}
                   <div className={`w-1 self-stretch rounded-full shrink-0 ${user.isBanned ? "bg-red-500" : user.status === "active" ? "bg-emerald-500" : "bg-gray-300"}`} />
-
-                  {/* Avatar */}
                   <div className={`h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 font-black text-sm text-white shadow-md ${user.isBanned ? "bg-gradient-to-br from-red-500 to-rose-600" : user.status === "active" ? "bg-gradient-to-br from-blue-500 to-indigo-600" : "bg-gradient-to-br from-gray-400 to-gray-500"}`}>
                     {user.username.charAt(0).toUpperCase()}
                   </div>
-
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm text-gray-900">{user.username}</span>
@@ -205,14 +228,10 @@ export default function AdminUsers() {
                       <span className="hidden sm:flex items-center gap-1"><Phone className="h-3 w-3" />{user.phone}</span>
                     </div>
                   </div>
-
-                  {/* Amounts */}
                   <div className="text-right shrink-0 hidden sm:block">
                     <p className="text-sm font-black text-gray-900">{user.balance.toLocaleString()} XOF</p>
                     <p className="text-xs text-gray-400">{user.points} pts · {user.totalDownlines} filleuls</p>
                   </div>
-
-                  {/* Quick actions */}
                   <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                     {!user.isBanned && user.status !== "active" && (
                       <Button size="sm" variant="outline"
@@ -252,7 +271,6 @@ export default function AdminUsers() {
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto rounded-3xl border-0 shadow-2xl p-0">
           {selectedUser && (
             <>
-              {/* Modal header */}
               <div className="p-6 bg-gradient-to-br from-[#0a0f1e] to-[#1565C0] text-white rounded-t-3xl">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-xl shadow-lg">
@@ -281,7 +299,6 @@ export default function AdminUsers() {
               </div>
 
               <div className="p-5">
-                {/* Meta info */}
                 <div className="flex flex-wrap gap-2 text-xs text-gray-500 mb-4 p-3 bg-gray-50 rounded-2xl">
                   <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{selectedUser.country}</span>
                   <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{selectedUser.phone}</span>
@@ -337,6 +354,32 @@ export default function AdminUsers() {
                         <Ban className="h-4 w-4 mr-1" />Bannir
                       </Button>
                     </div>
+
+                    {/* Super admin: nominate/revoke admin */}
+                    {isSuperAdmin && (
+                      <div className="pt-2 border-t border-indigo-100">
+                        <p className="text-xs font-bold text-indigo-400 mb-2 uppercase tracking-wide flex items-center gap-1">
+                          <ShieldCheck className="h-3.5 w-3.5" />Super Admin — Droits
+                        </p>
+                        <Button
+                          className="w-full rounded-2xl h-11 font-bold bg-gradient-to-r from-indigo-500 to-violet-600 border-0 text-white"
+                          disabled={settingAdmin}
+                          onClick={() => handleSetAdmin(selectedUser.id, true)}
+                        >
+                          <ShieldCheck className="h-4 w-4 mr-2" />
+                          {settingAdmin ? "En cours…" : "Nommer Administrateur"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-2xl h-11 font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 mt-2"
+                          disabled={settingAdmin}
+                          onClick={() => handleSetAdmin(selectedUser.id, false)}
+                        >
+                          <ShieldOff className="h-4 w-4 mr-2" />
+                          {settingAdmin ? "En cours…" : "Révoquer les droits Admin"}
+                        </Button>
+                      </div>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="finances" className="space-y-4 pt-4">
