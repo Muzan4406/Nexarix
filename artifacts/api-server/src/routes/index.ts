@@ -11,6 +11,7 @@ import telegramRouter from "./telegram";
 import storeRouter from "./store";
 import formationsRouter from "./formations";
 import formationPurchasesRouter from "./formation-purchases";
+import servicesRouter from "./services";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(telegramRouter);
 router.use(storeRouter);
 router.use(formationsRouter);
 router.use(formationPurchasesRouter);
+router.use(servicesRouter);
 
 export default router;

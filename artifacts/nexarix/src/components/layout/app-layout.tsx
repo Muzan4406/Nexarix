@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   LogOut, Menu, LayoutDashboard, CheckSquare, Wallet,
   Phone, User, Star, History,
-  Users, Zap, ChevronDown, ShoppingBag, GraduationCap,
+  Users, Zap, ChevronDown, ShoppingBag, GraduationCap, LayoutGrid,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -44,6 +44,7 @@ const SECTIONS: Section[] = [
   },
   { kind: "item", item: { name: "Store Premium",  href: "/store",      icon: ShoppingBag,     gradient: "from-purple-500 to-fuchsia-500" } },
   { kind: "item", item: { name: "Formations",     href: "/formations", icon: GraduationCap,   gradient: "from-orange-500 to-amber-500" } },
+  { kind: "item", item: { name: "Divers",          href: "/divers",     icon: LayoutGrid,      gradient: "from-sky-500 to-blue-500" } },
   { kind: "item", item: { name: "Assistance",     href: "/contact",    icon: Phone,           gradient: "from-rose-500 to-pink-500" } },
 ];
 

@@ -28,6 +28,8 @@ import AdminWithdrawals from "@/pages/admin-withdrawals";
 import AdminSettings from "@/pages/admin-settings";
 import AdminStore from "@/pages/admin-store";
 import AdminFormations from "@/pages/admin-formations";
+import Services from "@/pages/services";
+import AdminServices from "@/pages/admin-services";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +109,7 @@ function Router() {
       <Route path="/spin" component={() => <ProtectedRoute component={SpinWheel} />} />
       <Route path="/store" component={() => <ProtectedRoute component={Store} />} />
       <Route path="/formations" component={() => <ProtectedRoute component={Formations} />} />
+      <Route path="/divers" component={() => <ProtectedRoute component={Services} />} />
 
       <Route path="/admin/login" component={() => <PublicRoute component={AdminLogin} />} />
       <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} adminOnly />} />
@@ -116,6 +119,7 @@ function Router() {
       <Route path="/admin/settings" component={() => <ProtectedRoute component={AdminSettings} adminOnly />} />
       <Route path="/admin/store" component={() => <ProtectedRoute component={AdminStore} adminOnly />} />
       <Route path="/admin/formations" component={() => <ProtectedRoute component={AdminFormations} adminOnly />} />
+      <Route path="/admin/services" component={() => <ProtectedRoute component={AdminServices} adminOnly />} />
 
       <Route component={NotFound} />
     </Switch>

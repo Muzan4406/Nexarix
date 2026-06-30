@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { LogOut, Menu, LayoutDashboard, Users, CheckSquare, Wallet, Settings, ChevronRight, Shield, ShoppingBag, GraduationCap } from "lucide-react";
+import { LogOut, Menu, LayoutDashboard, Users, CheckSquare, Wallet, Settings, ChevronRight, Shield, ShoppingBag, GraduationCap, LayoutGrid } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -14,6 +14,7 @@ const NAV = [
   { name: "Retraits",       href: "/admin/withdrawals",  icon: Wallet,          accent: "from-emerald-500 to-teal-500",  dot: "bg-emerald-400" },
   { name: "Store Premium",  href: "/admin/store",        icon: ShoppingBag,     accent: "from-purple-500 to-fuchsia-500", dot: "bg-purple-400" },
   { name: "Formations",     href: "/admin/formations",   icon: GraduationCap,   accent: "from-orange-500 to-amber-500",  dot: "bg-orange-400" },
+  { name: "Divers",         href: "/admin/services",     icon: LayoutGrid,      accent: "from-sky-500 to-blue-500",      dot: "bg-sky-400" },
   { name: "Paramètres",     href: "/admin/settings",     icon: Settings,        accent: "from-gray-400 to-gray-500",     dot: "bg-gray-400" },
 ];
 
