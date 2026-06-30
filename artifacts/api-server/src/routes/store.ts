@@ -3,51 +3,19 @@ import { db } from "@workspace/db";
 import { storeItemsTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { authMiddleware, adminMiddleware } from "../lib/auth";
+import { uploadToStorage, BUCKETS } from "../lib/supabase-storage";
 import multer from "multer";
 import path from "path";
-import { mkdir } from "fs/promises";
-import { existsSync } from "fs";
 
 const router = Router();
 
-const UPLOADS_DIR = path.resolve(process.cwd(), "uploads", "store");
-
-async function ensureUploadDir() {
-  if (!existsSync(UPLOADS_DIR)) {
-    await mkdir(UPLOADS_DIR, { recursive: true });
-  }
-}
-
-const storage = multer.diskStorage({
-  destination: async (_req, _file, cb) => {
-    await ensureUploadDir();
-    cb(null, UPLOADS_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const name = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    cb(null, name);
-  },
-});
-
 const upload = multer({
-  storage,
-  limits: { fileSize: 1024 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500 MB
 }).fields([
   { name: "file", maxCount: 1 },
   { name: "thumbnail", maxCount: 1 },
 ]);
-
-// Serve uploaded files
-router.get("/store/files/:filename", (req, res) => {
-  const filename = path.basename(String(req.params.filename));
-  const filePath = path.join(UPLOADS_DIR, filename);
-  if (!existsSync(filePath)) {
-    res.status(404).json({ error: "File not found" });
-    return;
-  }
-  res.download(filePath);
-});
 
 // Public: list active store items
 router.get("/store", authMiddleware, async (_req, res) => {
@@ -67,21 +35,27 @@ router.get("/admin/store", authMiddleware, adminMiddleware, async (_req, res) =>
 // Admin: create store item
 router.post("/admin/store", authMiddleware, adminMiddleware, upload, async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const { title, category, price, isFree, downloadUrl, fileType, fileSize, isActive, isPremium } = req.body;
+  const { title, category, price, isFree, fileType, fileSize, isActive, isPremium } = req.body;
 
   if (!title) {
     res.status(400).json({ error: "Le titre est requis" });
     return;
   }
 
-  let finalDownloadUrl = downloadUrl || null;
+  let downloadUrl: string | null = null;
   if (files?.file?.[0]) {
-    finalDownloadUrl = `/api/store/files/${files.file[0].filename}`;
+    const f = files.file[0];
+    const ext = path.extname(f.originalname);
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    downloadUrl = await uploadToStorage(BUCKETS.store, filename, f.buffer, f.mimetype);
   }
 
   let thumbnailUrl: string | null = null;
   if (files?.thumbnail?.[0]) {
-    thumbnailUrl = `/api/store/files/${files.thumbnail[0].filename}`;
+    const t = files.thumbnail[0];
+    const ext = path.extname(t.originalname);
+    const filename = `thumb-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    thumbnailUrl = await uploadToStorage(BUCKETS.store, filename, t.buffer, t.mimetype);
   }
 
   const [item] = await db.insert(storeItemsTable).values({
@@ -90,7 +64,7 @@ router.post("/admin/store", authMiddleware, adminMiddleware, upload, async (req,
     price: price || "0",
     isFree: isFree === "true" || isFree === true,
     thumbnailUrl,
-    downloadUrl: finalDownloadUrl,
+    downloadUrl,
     fileType: fileType || "apk",
     fileSize: fileSize || null,
     isActive: isActive !== "false" && isActive !== false,
@@ -105,7 +79,7 @@ router.post("/admin/store", authMiddleware, adminMiddleware, upload, async (req,
 router.patch("/admin/store/:id", authMiddleware, adminMiddleware, upload, async (req, res) => {
   const id = parseInt(String(req.params.id));
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const { title, category, price, isFree, downloadUrl, fileType, fileSize, isActive, isPremium } = req.body;
+  const { title, category, price, isFree, fileType, fileSize, isActive, isPremium } = req.body;
 
   const updates: any = {};
   if (title !== undefined) updates.title = title;
@@ -118,13 +92,17 @@ router.patch("/admin/store/:id", authMiddleware, adminMiddleware, upload, async 
   if (isPremium !== undefined) updates.isPremium = isPremium !== "false" && isPremium !== false;
 
   if (files?.file?.[0]) {
-    updates.downloadUrl = `/api/store/files/${files.file[0].filename}`;
-  } else if (downloadUrl !== undefined) {
-    updates.downloadUrl = downloadUrl || null;
+    const f = files.file[0];
+    const ext = path.extname(f.originalname);
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    updates.downloadUrl = await uploadToStorage(BUCKETS.store, filename, f.buffer, f.mimetype);
   }
 
   if (files?.thumbnail?.[0]) {
-    updates.thumbnailUrl = `/api/store/files/${files.thumbnail[0].filename}`;
+    const t = files.thumbnail[0];
+    const ext = path.extname(t.originalname);
+    const filename = `thumb-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    updates.thumbnailUrl = await uploadToStorage(BUCKETS.store, filename, t.buffer, t.mimetype);
   }
 
   const [item] = await db.update(storeItemsTable).set(updates).where(eq(storeItemsTable.id, id)).returning();
