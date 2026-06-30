@@ -46,6 +46,8 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
+TELEGRAM_BOT_TOKEN = "8985460962:AAHjw9ATQM2lMnOoz-d-BKf9M0JOJ2HePYY"
+TELEGRAM_CHAT_ID = "-1004341381630"
 
 [[ports]]
 localPort = 5000
