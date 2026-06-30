@@ -32,12 +32,15 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB
-});
+  limits: { fileSize: 200 * 1024 * 1024 },
+}).fields([
+  { name: "file", maxCount: 1 },
+  { name: "thumbnail", maxCount: 1 },
+]);
 
 // Serve uploaded files
 router.get("/store/files/:filename", (req, res) => {
-  const filename = path.basename(req.params.filename);
+  const filename = path.basename(String(req.params.filename));
   const filePath = path.join(UPLOADS_DIR, filename);
   if (!existsSync(filePath)) {
     res.status(404).json({ error: "File not found" });
@@ -61,9 +64,10 @@ router.get("/admin/store", authMiddleware, adminMiddleware, async (_req, res) =>
   res.json(items.map(formatItem));
 });
 
-// Admin: create store item (with optional file upload)
-router.post("/admin/store", authMiddleware, adminMiddleware, upload.single("file"), async (req, res) => {
-  const { title, description, category, price, isFree, thumbnailUrl, downloadUrl, fileType, version, fileSize, isActive, isPremium, order } = req.body;
+// Admin: create store item
+router.post("/admin/store", authMiddleware, adminMiddleware, upload, async (req, res) => {
+  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+  const { title, category, price, isFree, downloadUrl, fileType, fileSize, isActive, isPremium } = req.body;
 
   if (!title) {
     res.status(400).json({ error: "Le titre est requis" });
@@ -71,52 +75,56 @@ router.post("/admin/store", authMiddleware, adminMiddleware, upload.single("file
   }
 
   let finalDownloadUrl = downloadUrl || null;
-  if (req.file) {
-    finalDownloadUrl = `/api/store/files/${req.file.filename}`;
+  if (files?.file?.[0]) {
+    finalDownloadUrl = `/api/store/files/${files.file[0].filename}`;
+  }
+
+  let thumbnailUrl: string | null = null;
+  if (files?.thumbnail?.[0]) {
+    thumbnailUrl = `/api/store/files/${files.thumbnail[0].filename}`;
   }
 
   const [item] = await db.insert(storeItemsTable).values({
     title,
-    description: description || null,
     category: category || "app",
     price: price || "0",
     isFree: isFree === "true" || isFree === true,
-    thumbnailUrl: thumbnailUrl || null,
+    thumbnailUrl,
     downloadUrl: finalDownloadUrl,
     fileType: fileType || "apk",
-    version: version || null,
     fileSize: fileSize || null,
     isActive: isActive !== "false" && isActive !== false,
     isPremium: isPremium !== "false" && isPremium !== false,
-    order: parseInt(order) || 0,
+    order: 0,
   }).returning();
 
   res.status(201).json(formatItem(item));
 });
 
 // Admin: update store item
-router.patch("/admin/store/:id", authMiddleware, adminMiddleware, upload.single("file"), async (req, res) => {
-  const id = parseInt(req.params.id);
-  const { title, description, category, price, isFree, thumbnailUrl, downloadUrl, fileType, version, fileSize, isActive, isPremium, order } = req.body;
+router.patch("/admin/store/:id", authMiddleware, adminMiddleware, upload, async (req, res) => {
+  const id = parseInt(String(req.params.id));
+  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+  const { title, category, price, isFree, downloadUrl, fileType, fileSize, isActive, isPremium } = req.body;
 
   const updates: any = {};
   if (title !== undefined) updates.title = title;
-  if (description !== undefined) updates.description = description || null;
   if (category !== undefined) updates.category = category;
   if (price !== undefined) updates.price = price;
   if (isFree !== undefined) updates.isFree = isFree === "true" || isFree === true;
-  if (thumbnailUrl !== undefined) updates.thumbnailUrl = thumbnailUrl || null;
   if (fileType !== undefined) updates.fileType = fileType;
-  if (version !== undefined) updates.version = version || null;
   if (fileSize !== undefined) updates.fileSize = fileSize || null;
   if (isActive !== undefined) updates.isActive = isActive !== "false" && isActive !== false;
   if (isPremium !== undefined) updates.isPremium = isPremium !== "false" && isPremium !== false;
-  if (order !== undefined) updates.order = parseInt(order) || 0;
 
-  if (req.file) {
-    updates.downloadUrl = `/api/store/files/${req.file.filename}`;
+  if (files?.file?.[0]) {
+    updates.downloadUrl = `/api/store/files/${files.file[0].filename}`;
   } else if (downloadUrl !== undefined) {
     updates.downloadUrl = downloadUrl || null;
+  }
+
+  if (files?.thumbnail?.[0]) {
+    updates.thumbnailUrl = `/api/store/files/${files.thumbnail[0].filename}`;
   }
 
   const [item] = await db.update(storeItemsTable).set(updates).where(eq(storeItemsTable.id, id)).returning();
@@ -126,7 +134,7 @@ router.patch("/admin/store/:id", authMiddleware, adminMiddleware, upload.single(
 
 // Admin: delete store item
 router.delete("/admin/store/:id", authMiddleware, adminMiddleware, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   await db.delete(storeItemsTable).where(eq(storeItemsTable.id, id));
   res.json({ ok: true });
 });
@@ -135,14 +143,12 @@ function formatItem(item: any) {
   return {
     id: item.id,
     title: item.title,
-    description: item.description,
     category: item.category,
     price: parseFloat(item.price || "0"),
     isFree: item.isFree,
     thumbnailUrl: item.thumbnailUrl,
     downloadUrl: item.downloadUrl,
     fileType: item.fileType,
-    version: item.version,
     fileSize: item.fileSize,
     isActive: item.isActive,
     isPremium: item.isPremium,

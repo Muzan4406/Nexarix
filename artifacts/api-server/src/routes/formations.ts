@@ -37,7 +37,7 @@ const upload = multer({
 
 // Serve uploaded files
 router.get("/formations/files/:filename", (req, res) => {
-  const filename = path.basename(req.params.filename);
+  const filename = path.basename(String(req.params.filename));
   const filePath = path.join(UPLOADS_DIR, filename);
   if (!existsSync(filePath)) {
     res.status(404).json({ error: "File not found" });
@@ -94,7 +94,7 @@ router.post("/admin/formations", authMiddleware, adminMiddleware, upload.single(
 
 // Admin: update formation
 router.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload.single("file"), async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const { title, description, category, thumbnailUrl, videoUrl, contentUrl, duration, level, isFree, isActive, order } = req.body;
 
   const updates: any = {};
@@ -122,7 +122,7 @@ router.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload.si
 
 // Admin: delete formation
 router.delete("/admin/formations/:id", authMiddleware, adminMiddleware, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   await db.delete(formationsTable).where(eq(formationsTable.id, id));
   res.json({ ok: true });
 });

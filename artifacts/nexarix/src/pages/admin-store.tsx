@@ -5,23 +5,22 @@ import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Edit, Trash2, ShoppingBag, Upload, Download, Link as LinkIcon } from "lucide-react";
+import { Plus, Edit, Trash2, ShoppingBag, Upload, Download, Link as LinkIcon, ImagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["app", "game", "tool", "other"];
 const FILE_TYPES = ["apk", "pdf", "zip", "exe", "other"];
 
 const emptyForm = {
-  title: "", description: "", category: "app", price: "0", isFree: true,
-  thumbnailUrl: "", downloadUrl: "", fileType: "apk", version: "", fileSize: "",
-  isActive: true, isPremium: true, order: "0",
+  title: "", category: "app", price: "0", isFree: true,
+  downloadUrl: "", fileType: "apk", fileSize: "",
+  isActive: true, isPremium: true,
 };
 
 const card = {
@@ -38,9 +37,12 @@ export default function AdminStore() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState<File | null>(null);
+  const [thumbnail, setThumbnail] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [uploadMode, setUploadMode] = useState<"url" | "file">("url");
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["admin-store"],
@@ -52,19 +54,33 @@ export default function AdminStore() {
     enabled: !!token,
   });
 
-  const openCreate = () => { setEditItem(null); setForm(emptyForm); setFile(null); setUploadMode("url"); setOpen(true); };
+  const openCreate = () => {
+    setEditItem(null); setForm(emptyForm);
+    setFile(null); setThumbnail(null); setThumbnailPreview(null);
+    setUploadMode("url"); setOpen(true);
+  };
+
   const openEdit = (item: any) => {
     setEditItem(item);
     setForm({
-      title: item.title, description: item.description || "", category: item.category,
-      price: String(item.price || 0), isFree: item.isFree, thumbnailUrl: item.thumbnailUrl || "",
-      downloadUrl: item.downloadUrl || "", fileType: item.fileType || "apk",
-      version: item.version || "", fileSize: item.fileSize || "",
-      isActive: item.isActive, isPremium: item.isPremium, order: String(item.order || 0),
+      title: item.title, category: item.category,
+      price: String(item.price || 0), isFree: item.isFree,
+      downloadUrl: item.downloadUrl?.startsWith("/api/") ? "" : (item.downloadUrl || ""),
+      fileType: item.fileType || "apk", fileSize: item.fileSize || "",
+      isActive: item.isActive, isPremium: item.isPremium,
     });
     setFile(null);
+    setThumbnail(null);
+    setThumbnailPreview(item.thumbnailUrl || null);
     setUploadMode(item.downloadUrl?.startsWith("/api/") ? "file" : "url");
     setOpen(true);
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setThumbnail(f);
+    setThumbnailPreview(URL.createObjectURL(f));
   };
 
   const handleSave = async () => {
@@ -72,8 +88,17 @@ export default function AdminStore() {
     setSaving(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)));
+      fd.append("title", form.title);
+      fd.append("category", form.category);
+      fd.append("price", form.price);
+      fd.append("isFree", String(form.isFree));
+      fd.append("fileType", form.fileType);
+      fd.append("fileSize", form.fileSize);
+      fd.append("isActive", String(form.isActive));
+      fd.append("isPremium", String(form.isPremium));
+      if (uploadMode === "url") fd.append("downloadUrl", form.downloadUrl);
       if (file) fd.append("file", file);
+      if (thumbnail) fd.append("thumbnail", thumbnail);
 
       const url = editItem ? `/api/admin/store/${editItem.id}` : "/api/admin/store";
       const method = editItem ? "PATCH" : "POST";
@@ -109,11 +134,9 @@ export default function AdminStore() {
       <div className="space-y-6 max-w-4xl mx-auto">
 
         <div className="flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-              {items?.length || 0} article(s) au total
-            </span>
-          </div>
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+            {items?.length || 0} article(s) au total
+          </span>
           <Button onClick={openCreate} className="rounded-2xl h-10 font-bold shadow-md shadow-purple-200/50 bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 border-0">
             <Plus className="h-4 w-4 mr-1.5" />Nouvel article
           </Button>
@@ -153,7 +176,7 @@ export default function AdminStore() {
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
                       <span>{item.isFree ? "Gratuit" : `${item.price?.toLocaleString()} FCFA`}</span>
-                      {item.version && <span>v{item.version}</span>}
+                      {item.fileSize && <span>{item.fileSize}</span>}
                       {item.downloadUrl && (
                         <span className="flex items-center gap-1 text-emerald-500">
                           <Download className="h-3 w-3" />Lien configuré
@@ -183,14 +206,41 @@ export default function AdminStore() {
             <DialogTitle className="font-black text-lg">{editItem ? "Modifier l'article" : "Nouvel article"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+
+            {/* Cover image upload */}
+            <div>
+              <Label className="text-sm font-bold text-gray-700">Image de couverture</Label>
+              <div className="mt-2">
+                <input ref={thumbInputRef} type="file" className="hidden" accept="image/*" onChange={handleThumbnailChange} />
+                <button
+                  onClick={() => thumbInputRef.current?.click()}
+                  className="w-full rounded-2xl border-2 border-dashed border-gray-200 hover:border-purple-300 transition-all overflow-hidden group"
+                >
+                  {thumbnailPreview ? (
+                    <div className="relative">
+                      <img src={thumbnailPreview} alt="Couverture" className="w-full h-32 object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <ImagePlus className="h-6 w-6 text-white" />
+                        <span className="text-white text-xs font-bold ml-2">Changer</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-6 flex flex-col items-center gap-2">
+                      <ImagePlus className="h-8 w-8 text-gray-300 group-hover:text-purple-400 transition-colors" />
+                      <span className="text-xs font-semibold text-gray-400">Cliquez pour ajouter une image</span>
+                      <span className="text-[10px] text-gray-300">JPG, PNG, WebP</span>
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+
             <div>
               <Label className="text-sm font-bold text-gray-700">Titre</Label>
-              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Nom de l'application…" />
+              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Nom de l'application…" />
             </div>
-            <div>
-              <Label className="text-sm font-bold text-gray-700">Description <span className="font-normal text-gray-400">(optionnel)</span></Label>
-              <Textarea className="mt-2 rounded-2xl border-gray-200 resize-none" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Décrivez l'application…" />
-            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-sm font-bold text-gray-700">Catégorie</Label>
@@ -211,39 +261,27 @@ export default function AdminStore() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-sm font-bold text-gray-700">Version</Label>
-                <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.version} onChange={e => setForm(f => ({ ...f, version: e.target.value }))} placeholder="1.0.0" />
-              </div>
-              <div>
-                <Label className="text-sm font-bold text-gray-700">Taille</Label>
-                <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.fileSize} onChange={e => setForm(f => ({ ...f, fileSize: e.target.value }))} placeholder="45 MB" />
-              </div>
-            </div>
+
             <div>
-              <Label className="text-sm font-bold text-gray-700">Image miniature <span className="font-normal text-gray-400">(URL, optionnel)</span></Label>
-              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.thumbnailUrl} onChange={e => setForm(f => ({ ...f, thumbnailUrl: e.target.value }))} placeholder="https://…" />
+              <Label className="text-sm font-bold text-gray-700">Taille du fichier <span className="font-normal text-gray-400">(ex: 45 MB)</span></Label>
+              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.fileSize}
+                onChange={e => setForm(f => ({ ...f, fileSize: e.target.value }))} placeholder="45 MB" />
             </div>
 
             {/* Download link: URL or File upload */}
             <div>
               <Label className="text-sm font-bold text-gray-700">Fichier à télécharger</Label>
               <div className="mt-2 flex gap-2">
-                <button
-                  onClick={() => setUploadMode("url")}
+                <button onClick={() => setUploadMode("url")}
                   className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all",
                     uploadMode === "url" ? "bg-purple-50 border-purple-300 text-purple-600" : "border-gray-200 text-gray-400 hover:border-gray-300"
-                  )}
-                >
+                  )}>
                   <LinkIcon className="h-3.5 w-3.5" />Lien externe
                 </button>
-                <button
-                  onClick={() => setUploadMode("file")}
+                <button onClick={() => setUploadMode("file")}
                   className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all",
                     uploadMode === "file" ? "bg-purple-50 border-purple-300 text-purple-600" : "border-gray-200 text-gray-400 hover:border-gray-300"
-                  )}
-                >
+                  )}>
                   <Upload className="h-3.5 w-3.5" />Upload direct
                 </button>
               </div>
@@ -277,17 +315,16 @@ export default function AdminStore() {
                 <Label htmlFor="is-active" className="text-sm font-bold text-gray-700 cursor-pointer">Actif</Label>
               </div>
             </div>
+
             {!form.isFree && (
               <div>
                 <Label className="text-sm font-bold text-gray-700">Prix (FCFA)</Label>
-                <Input type="number" className="mt-2 rounded-2xl border-gray-200 h-11" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="5000" />
+                <Input type="number" className="mt-2 rounded-2xl border-gray-200 h-11" value={form.price}
+                  onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="5000" />
               </div>
             )}
-            <div>
-              <Label className="text-sm font-bold text-gray-700">Ordre d'affichage</Label>
-              <Input type="number" className="mt-2 rounded-2xl border-gray-200 h-11" value={form.order} onChange={e => setForm(f => ({ ...f, order: e.target.value }))} placeholder="0" />
-            </div>
           </div>
+
           <DialogFooter className="gap-2 pt-2">
             <Button variant="outline" className="rounded-2xl flex-1 h-11 font-bold" onClick={() => setOpen(false)}>Annuler</Button>
             <Button className="rounded-2xl flex-1 h-11 font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 border-0"

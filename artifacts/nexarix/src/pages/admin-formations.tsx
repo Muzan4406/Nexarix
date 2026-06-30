@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -15,28 +14,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { Plus, Edit, Trash2, GraduationCap, Upload, Play, FileText, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const CATEGORIES = ["general", "marketing", "finance", "technique", "autre"];
-const LEVELS = [
-  { value: "debutant",     label: "Débutant" },
-  { value: "intermediaire",label: "Intermédiaire" },
-  { value: "avance",       label: "Avancé" },
-];
-
 const emptyForm = {
-  title: "", description: "", category: "general", thumbnailUrl: "",
-  videoUrl: "", contentUrl: "", duration: "", level: "debutant",
-  isFree: true, isActive: true, order: "0",
+  title: "", description: "", videoUrl: "", contentUrl: "",
+  duration: "", isFree: true, isActive: true,
 };
 
 const card = {
   hidden:  { opacity: 0, y: 12 },
   visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] } }),
-};
-
-const LEVEL_COLORS: Record<string, string> = {
-  debutant:     "bg-emerald-100 text-emerald-600",
-  intermediaire:"bg-amber-100 text-amber-600",
-  avance:       "bg-red-100 text-red-600",
 };
 
 export default function AdminFormations() {
@@ -62,14 +47,18 @@ export default function AdminFormations() {
     enabled: !!token,
   });
 
-  const openCreate = () => { setEditItem(null); setForm(emptyForm); setFile(null); setContentMode("url"); setOpen(true); };
+  const openCreate = () => {
+    setEditItem(null); setForm(emptyForm);
+    setFile(null); setContentMode("url"); setOpen(true);
+  };
+
   const openEdit = (f: any) => {
     setEditItem(f);
     setForm({
-      title: f.title, description: f.description || "", category: f.category,
-      thumbnailUrl: f.thumbnailUrl || "", videoUrl: f.videoUrl || "",
-      contentUrl: f.contentUrl || "", duration: f.duration || "",
-      level: f.level, isFree: f.isFree, isActive: f.isActive, order: String(f.order || 0),
+      title: f.title, description: f.description || "",
+      videoUrl: f.videoUrl || "",
+      contentUrl: f.contentUrl?.startsWith("/api/") ? "" : (f.contentUrl || ""),
+      duration: f.duration || "", isFree: f.isFree, isActive: f.isActive,
     });
     setFile(null);
     setContentMode(f.contentUrl?.startsWith("/api/") ? "file" : "url");
@@ -81,7 +70,13 @@ export default function AdminFormations() {
     setSaving(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)));
+      fd.append("title", form.title);
+      fd.append("description", form.description);
+      fd.append("videoUrl", form.videoUrl);
+      fd.append("duration", form.duration);
+      fd.append("isFree", String(form.isFree));
+      fd.append("isActive", String(form.isActive));
+      if (contentMode === "url") fd.append("contentUrl", form.contentUrl);
       if (file) fd.append("file", file);
 
       const url = editItem ? `/api/admin/formations/${editItem.id}` : "/api/admin/formations";
@@ -142,11 +137,8 @@ export default function AdminFormations() {
               <motion.div key={f.id} custom={i} variants={card} initial="hidden" animate="visible"
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-center gap-4 p-4">
-                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shrink-0 overflow-hidden">
-                    {f.thumbnailUrl
-                      ? <img src={f.thumbnailUrl} alt={f.title} className="h-full w-full object-cover" />
-                      : <GraduationCap className="h-5 w-5 text-white" />
-                    }
+                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-md shrink-0">
+                    <GraduationCap className="h-5 w-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-0.5">
@@ -154,12 +146,11 @@ export default function AdminFormations() {
                       <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", f.isActive ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-400")}>
                         {f.isActive ? "Actif" : "Inactif"}
                       </span>
-                      <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", LEVEL_COLORS[f.level] || "bg-gray-100 text-gray-500")}>
-                        {LEVELS.find(l => l.value === f.level)?.label || f.level}
+                      <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", f.isFree ? "bg-blue-100 text-blue-600" : "bg-amber-100 text-amber-600")}>
+                        {f.isFree ? "Gratuit" : "Premium"}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span>{f.isFree ? "Gratuit" : "Premium"}</span>
                       {f.duration && <span>{f.duration}</span>}
                       {f.videoUrl && <span className="flex items-center gap-1 text-red-400"><Play className="h-3 w-3" />Vidéo</span>}
                       {f.contentUrl && <span className="flex items-center gap-1 text-orange-400"><FileText className="h-3 w-3" />Document</span>}
@@ -187,56 +178,35 @@ export default function AdminFormations() {
             <DialogTitle className="font-black text-lg">{editItem ? "Modifier la formation" : "Nouvelle formation"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+
             <div>
               <Label className="text-sm font-bold text-gray-700">Titre</Label>
-              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titre de la formation…" />
+              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.title}
+                onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Titre de la formation…" />
             </div>
+
             <div>
               <Label className="text-sm font-bold text-gray-700">Description <span className="font-normal text-gray-400">(optionnel)</span></Label>
-              <Textarea className="mt-2 rounded-2xl border-gray-200 resize-none" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Décrivez cette formation…" />
+              <Textarea className="mt-2 rounded-2xl border-gray-200 resize-none" value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} placeholder="Décrivez cette formation…" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-sm font-bold text-gray-700">Catégorie</Label>
-                <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-                  <SelectTrigger className="mt-2 rounded-2xl border-gray-200 h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-bold text-gray-700">Niveau</Label>
-                <Select value={form.level} onValueChange={v => setForm(f => ({ ...f, level: v }))}>
-                  <SelectTrigger className="mt-2 rounded-2xl border-gray-200 h-11"><SelectValue /></SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    {LEVELS.map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-sm font-bold text-gray-700">Durée</Label>
-                <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} placeholder="2h30" />
-              </div>
-              <div>
-                <Label className="text-sm font-bold text-gray-700">Ordre</Label>
-                <Input type="number" className="mt-2 rounded-2xl border-gray-200 h-11" value={form.order} onChange={e => setForm(f => ({ ...f, order: e.target.value }))} placeholder="0" />
-              </div>
-            </div>
+
             <div>
-              <Label className="text-sm font-bold text-gray-700">Image miniature <span className="font-normal text-gray-400">(URL, optionnel)</span></Label>
-              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.thumbnailUrl} onChange={e => setForm(f => ({ ...f, thumbnailUrl: e.target.value }))} placeholder="https://…" />
+              <Label className="text-sm font-bold text-gray-700">Durée <span className="font-normal text-gray-400">(optionnel, ex: 2h30)</span></Label>
+              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.duration}
+                onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} placeholder="2h30" />
             </div>
+
             <div>
               <Label className="text-sm font-bold text-gray-700">Lien vidéo <span className="font-normal text-gray-400">(YouTube, TikTok…)</span></Label>
-              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.videoUrl} onChange={e => setForm(f => ({ ...f, videoUrl: e.target.value }))} placeholder="https://youtube.com/watch?v=…" />
+              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.videoUrl}
+                onChange={e => setForm(f => ({ ...f, videoUrl: e.target.value }))}
+                placeholder="https://youtube.com/watch?v=…" />
             </div>
 
             {/* Content: URL or File */}
             <div>
-              <Label className="text-sm font-bold text-gray-700">Document / Fichier</Label>
+              <Label className="text-sm font-bold text-gray-700">Document / Fichier <span className="font-normal text-gray-400">(optionnel)</span></Label>
               <div className="mt-2 flex gap-2">
                 <button onClick={() => setContentMode("url")}
                   className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all",
@@ -282,6 +252,7 @@ export default function AdminFormations() {
               </div>
             </div>
           </div>
+
           <DialogFooter className="gap-2 pt-2">
             <Button variant="outline" className="rounded-2xl flex-1 h-11 font-bold" onClick={() => setOpen(false)}>Annuler</Button>
             <Button className="rounded-2xl flex-1 h-11 font-bold bg-gradient-to-r from-orange-500 to-amber-500 border-0"
