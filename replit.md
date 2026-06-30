@@ -1,6 +1,6 @@
-# [Project name]
+# Nexarix
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Plateforme de revenus digitaux — gestion d'utilisateurs, tâches, points, retraits, parrainage et tableau de bord admin.
 
 ## Run & Operate
 
