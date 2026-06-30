@@ -142,7 +142,7 @@ router.post("/admin/verify-otp", async (req, res) => {
   sendTelegramNotification(
     `✅ <b>Connexion admin réussie</b>\n` +
     `👤 Admin: <b>${user.username}</b>\n` +
-    `📅 ${new Date().toLocaleString("fr-FR", { timeZone: "Africa/Lomé" })}`
+    `📅 ${new Date().toLocaleString("fr-FR", { timeZone: "UTC" })}`
   );
 
   res.json({ token, user: formatUser(user) });
