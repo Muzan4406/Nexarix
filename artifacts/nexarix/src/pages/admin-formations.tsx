@@ -11,12 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Edit, Trash2, GraduationCap, Upload, Play, FileText, Link as LinkIcon, Tag } from "lucide-react";
+import { Plus, Edit, Trash2, GraduationCap, Upload, Play, FileText, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const emptyForm = {
-  title: "", description: "", videoUrl: "", contentUrl: "",
-  duration: "", isFree: true, isActive: true, price: "",
+  title: "", description: "", videoUrl: "",
+  isFree: true, isActive: true, price: "",
 };
 
 const card = {
@@ -33,7 +33,6 @@ export default function AdminFormations() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [file, setFile] = useState<File | null>(null);
-  const [contentMode, setContentMode] = useState<"url" | "file">("url");
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,7 +48,7 @@ export default function AdminFormations() {
 
   const openCreate = () => {
     setEditItem(null); setForm(emptyForm);
-    setFile(null); setContentMode("url"); setOpen(true);
+    setFile(null); setOpen(true);
   };
 
   const openEdit = (f: any) => {
@@ -57,12 +56,10 @@ export default function AdminFormations() {
     setForm({
       title: f.title, description: f.description || "",
       videoUrl: f.videoUrl || "",
-      contentUrl: f.contentUrl?.startsWith("/api/") ? "" : (f.contentUrl || ""),
-      duration: f.duration || "", isFree: f.isFree, isActive: f.isActive,
+      isFree: f.isFree, isActive: f.isActive,
       price: f.price ? String(f.price) : "",
     });
     setFile(null);
-    setContentMode(f.contentUrl?.startsWith("/api/") ? "file" : "url");
     setOpen(true);
   };
 
@@ -74,17 +71,19 @@ export default function AdminFormations() {
       fd.append("title", form.title);
       fd.append("description", form.description);
       fd.append("videoUrl", form.videoUrl);
-      fd.append("duration", form.duration);
       fd.append("isFree", String(form.isFree));
       fd.append("isActive", String(form.isActive));
       fd.append("price", form.price || "");
-      if (contentMode === "url") fd.append("contentUrl", form.contentUrl);
       if (file) fd.append("file", file);
 
       const url = editItem ? `/api/admin/formations/${editItem.id}` : "/api/admin/formations";
       const method = editItem ? "PATCH" : "POST";
       const res = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: fd });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erreur"); }
+      if (!res.ok) {
+        let errorMsg = "Erreur serveur";
+        try { const e = await res.json(); errorMsg = e.error || errorMsg; } catch {}
+        throw new Error(errorMsg);
+      }
 
       queryClient.invalidateQueries({ queryKey: ["admin-formations"] });
       queryClient.invalidateQueries({ queryKey: ["formations"] });
@@ -158,7 +157,6 @@ export default function AdminFormations() {
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
-                      {f.duration && <span>{f.duration}</span>}
                       {f.videoUrl && <span className="flex items-center gap-1 text-red-400"><Play className="h-3 w-3" />Vidéo</span>}
                       {f.contentUrl && <span className="flex items-center gap-1 text-orange-400"><FileText className="h-3 w-3" />Document</span>}
                     </div>
@@ -199,53 +197,27 @@ export default function AdminFormations() {
             </div>
 
             <div>
-              <Label className="text-sm font-bold text-gray-700">Durée <span className="font-normal text-gray-400">(optionnel, ex: 2h30)</span></Label>
-              <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.duration}
-                onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} placeholder="2h30" />
-            </div>
-
-            <div>
               <Label className="text-sm font-bold text-gray-700">Lien vidéo <span className="font-normal text-gray-400">(YouTube, TikTok…)</span></Label>
               <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.videoUrl}
                 onChange={e => setForm(f => ({ ...f, videoUrl: e.target.value }))}
                 placeholder="https://youtube.com/watch?v=…" />
             </div>
 
-            {/* Content: URL or File */}
+            {/* File upload */}
             <div>
               <Label className="text-sm font-bold text-gray-700">Document / Fichier <span className="font-normal text-gray-400">(optionnel)</span></Label>
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => setContentMode("url")}
-                  className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all",
-                    contentMode === "url" ? "bg-orange-50 border-orange-300 text-orange-600" : "border-gray-200 text-gray-400 hover:border-gray-300"
-                  )}>
-                  <LinkIcon className="h-3.5 w-3.5" />Lien externe
-                </button>
-                <button onClick={() => setContentMode("file")}
-                  className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all",
-                    contentMode === "file" ? "bg-orange-50 border-orange-300 text-orange-600" : "border-gray-200 text-gray-400 hover:border-gray-300"
-                  )}>
-                  <Upload className="h-3.5 w-3.5" />Upload direct
+              <div className="mt-2">
+                <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.zip,*"
+                  onChange={e => setFile(e.target.files?.[0] || null)} />
+                <button onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-gray-200 hover:border-orange-300 rounded-2xl py-4 flex flex-col items-center gap-2 transition-all group">
+                  <Upload className="h-6 w-6 text-gray-300 group-hover:text-orange-400 transition-colors" />
+                  <span className="text-xs font-semibold text-gray-400">
+                    {file ? file.name : editItem?.contentUrl ? "Fichier déjà uploadé — cliquer pour remplacer" : "Cliquez pour choisir un fichier (PDF, Word, ZIP…)"}
+                  </span>
+                  {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB</span>}
                 </button>
               </div>
-              {contentMode === "url" ? (
-                <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.contentUrl}
-                  onChange={e => setForm(f => ({ ...f, contentUrl: e.target.value }))}
-                  placeholder="https://drive.google.com/… ou lien PDF" />
-              ) : (
-                <div className="mt-2">
-                  <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.zip,*"
-                    onChange={e => setFile(e.target.files?.[0] || null)} />
-                  <button onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-gray-200 hover:border-orange-300 rounded-2xl py-4 flex flex-col items-center gap-2 transition-all group">
-                    <Upload className="h-6 w-6 text-gray-300 group-hover:text-orange-400 transition-colors" />
-                    <span className="text-xs font-semibold text-gray-400">
-                      {file ? file.name : "Cliquez pour choisir un fichier (PDF, Word, ZIP…)"}
-                    </span>
-                    {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB</span>}
-                  </button>
-                </div>
-              )}
             </div>
 
             {/* Price */}

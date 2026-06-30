@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Edit, Trash2, ShoppingBag, Upload, Download, Link as LinkIcon, ImagePlus } from "lucide-react";
+import { Plus, Edit, Trash2, ShoppingBag, Upload, Download, ImagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["app", "game", "tool", "other"];
@@ -19,7 +19,7 @@ const FILE_TYPES = ["apk", "pdf", "zip", "exe", "other"];
 
 const emptyForm = {
   title: "", category: "app", price: "0", isFree: true,
-  downloadUrl: "", fileType: "apk", fileSize: "",
+  fileType: "apk", fileSize: "",
   isActive: true, isPremium: true,
 };
 
@@ -39,7 +39,6 @@ export default function AdminStore() {
   const [file, setFile] = useState<File | null>(null);
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [uploadMode, setUploadMode] = useState<"url" | "file">("url");
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
@@ -57,7 +56,7 @@ export default function AdminStore() {
   const openCreate = () => {
     setEditItem(null); setForm(emptyForm);
     setFile(null); setThumbnail(null); setThumbnailPreview(null);
-    setUploadMode("url"); setOpen(true);
+    setOpen(true);
   };
 
   const openEdit = (item: any) => {
@@ -65,14 +64,12 @@ export default function AdminStore() {
     setForm({
       title: item.title, category: item.category,
       price: String(item.price || 0), isFree: item.isFree,
-      downloadUrl: item.downloadUrl?.startsWith("/api/") ? "" : (item.downloadUrl || ""),
       fileType: item.fileType || "apk", fileSize: item.fileSize || "",
       isActive: item.isActive, isPremium: item.isPremium,
     });
     setFile(null);
     setThumbnail(null);
     setThumbnailPreview(item.thumbnailUrl || null);
-    setUploadMode(item.downloadUrl?.startsWith("/api/") ? "file" : "url");
     setOpen(true);
   };
 
@@ -96,14 +93,17 @@ export default function AdminStore() {
       fd.append("fileSize", form.fileSize);
       fd.append("isActive", String(form.isActive));
       fd.append("isPremium", String(form.isPremium));
-      if (uploadMode === "url") fd.append("downloadUrl", form.downloadUrl);
       if (file) fd.append("file", file);
       if (thumbnail) fd.append("thumbnail", thumbnail);
 
       const url = editItem ? `/api/admin/store/${editItem.id}` : "/api/admin/store";
       const method = editItem ? "PATCH" : "POST";
       const res = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: fd });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Erreur"); }
+      if (!res.ok) {
+        let errorMsg = "Erreur serveur";
+        try { const e = await res.json(); errorMsg = e.error || errorMsg; } catch {}
+        throw new Error(errorMsg);
+      }
 
       queryClient.invalidateQueries({ queryKey: ["admin-store"] });
       queryClient.invalidateQueries({ queryKey: ["store-items"] });
@@ -179,7 +179,7 @@ export default function AdminStore() {
                       {item.fileSize && <span>{item.fileSize}</span>}
                       {item.downloadUrl && (
                         <span className="flex items-center gap-1 text-emerald-500">
-                          <Download className="h-3 w-3" />Lien configuré
+                          <Download className="h-3 w-3" />Fichier configuré
                         </span>
                       )}
                     </div>
@@ -213,6 +213,7 @@ export default function AdminStore() {
               <div className="mt-2">
                 <input ref={thumbInputRef} type="file" className="hidden" accept="image/*" onChange={handleThumbnailChange} />
                 <button
+                  type="button"
                   onClick={() => thumbInputRef.current?.click()}
                   className="w-full rounded-2xl border-2 border-dashed border-gray-200 hover:border-purple-300 transition-all overflow-hidden group"
                 >
@@ -268,41 +269,23 @@ export default function AdminStore() {
                 onChange={e => setForm(f => ({ ...f, fileSize: e.target.value }))} placeholder="45 MB" />
             </div>
 
-            {/* Download link: URL or File upload */}
+            {/* File upload only */}
             <div>
               <Label className="text-sm font-bold text-gray-700">Fichier à télécharger</Label>
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => setUploadMode("url")}
-                  className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all",
-                    uploadMode === "url" ? "bg-purple-50 border-purple-300 text-purple-600" : "border-gray-200 text-gray-400 hover:border-gray-300"
-                  )}>
-                  <LinkIcon className="h-3.5 w-3.5" />Lien externe
-                </button>
-                <button onClick={() => setUploadMode("file")}
-                  className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold border transition-all",
-                    uploadMode === "file" ? "bg-purple-50 border-purple-300 text-purple-600" : "border-gray-200 text-gray-400 hover:border-gray-300"
-                  )}>
-                  <Upload className="h-3.5 w-3.5" />Upload direct
+              <div className="mt-2">
+                <input ref={fileInputRef} type="file" className="hidden" accept=".apk,.pdf,.zip,.exe,*"
+                  onChange={e => setFile(e.target.files?.[0] || null)} />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-gray-200 hover:border-purple-300 rounded-2xl py-4 flex flex-col items-center gap-2 transition-all group">
+                  <Upload className="h-6 w-6 text-gray-300 group-hover:text-purple-400 transition-colors" />
+                  <span className="text-xs font-semibold text-gray-400">
+                    {file ? file.name : editItem?.downloadUrl ? "Fichier déjà uploadé — cliquer pour remplacer" : "Cliquez pour choisir un fichier (APK, PDF, ZIP…)"}
+                  </span>
+                  {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB</span>}
                 </button>
               </div>
-              {uploadMode === "url" ? (
-                <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.downloadUrl}
-                  onChange={e => setForm(f => ({ ...f, downloadUrl: e.target.value }))}
-                  placeholder="https://drive.google.com/… ou lien direct" />
-              ) : (
-                <div className="mt-2">
-                  <input ref={fileInputRef} type="file" className="hidden" accept=".apk,.pdf,.zip,.exe,*"
-                    onChange={e => setFile(e.target.files?.[0] || null)} />
-                  <button onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-gray-200 hover:border-purple-300 rounded-2xl py-4 flex flex-col items-center gap-2 transition-all group">
-                    <Upload className="h-6 w-6 text-gray-300 group-hover:text-purple-400 transition-colors" />
-                    <span className="text-xs font-semibold text-gray-400">
-                      {file ? file.name : "Cliquez pour choisir un fichier (APK, PDF, ZIP…)"}
-                    </span>
-                    {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB</span>}
-                  </button>
-                </div>
-              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

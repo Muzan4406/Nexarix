@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
@@ -34,5 +34,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// JSON error handler — must be last
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  logger.error(err);
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Erreur interne du serveur";
+  res.status(status).json({ error: message });
+});
 
 export default app;
