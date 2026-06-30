@@ -1,10 +1,15 @@
+import { logger } from "./logger";
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 export async function sendTelegramNotification(message: string): Promise<void> {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+    logger.warn("Telegram non configuré : TELEGRAM_BOT_TOKEN ou TELEGRAM_CHAT_ID manquant");
+    return;
+  }
   try {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -13,5 +18,11 @@ export async function sendTelegramNotification(message: string): Promise<void> {
         parse_mode: "HTML",
       }),
     });
-  } catch (_) {}
+    if (!res.ok) {
+      const body = await res.text();
+      logger.error({ status: res.status, body }, "Telegram sendMessage failed");
+    }
+  } catch (err) {
+    logger.error({ err }, "Telegram sendMessage exception");
+  }
 }

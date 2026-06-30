@@ -2,8 +2,8 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
-import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable } from "@workspace/db";
-import { eq, or, ilike, sql, inArray } from "drizzle-orm";
+import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable, adminOtpSessionsTable } from "@workspace/db";
+import { eq, or, ilike, sql, inArray, lt } from "drizzle-orm";
 import { signToken, authMiddleware, adminMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
 
@@ -12,15 +12,11 @@ const ADMIN_EMAIL = "godmuzan42@gmail.com";
 const ADMIN_USERNAME = "Muzan4406";
 const ADMIN_PASSWORD = "@admin4406";
 
-// In-memory OTP store: sessionToken -> { otp, userId, isAdmin, expiresAt }
-const otpSessions = new Map<string, { otp: string; userId: number; isAdmin: boolean; expiresAt: number }>();
-
-// Clean up expired sessions every 10 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of otpSessions.entries()) {
-    if (val.expiresAt < now) otpSessions.delete(key);
-  }
+// Clean up expired OTP sessions every 10 minutes
+setInterval(async () => {
+  try {
+    await db.delete(adminOtpSessionsTable).where(lt(adminOtpSessionsTable.expiresAt, Date.now()));
+  } catch (_) {}
 }, 10 * 60 * 1000);
 
 function generateOtp(): string {
@@ -81,14 +77,15 @@ router.post("/admin/login", async (req, res) => {
     username = adminUser.username;
   }
 
-  // Generate OTP and send via Telegram
+  // Generate OTP and persist to DB
   const otp = generateOtp();
   const sessionToken = randomUUID();
-  otpSessions.set(sessionToken, {
+  await db.insert(adminOtpSessionsTable).values({
+    sessionToken,
     otp,
     userId,
-    isAdmin: isAdminUser,
-    expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+    isAdmin: 1,
+    expiresAt: Date.now() + 5 * 60 * 1000,
   });
 
   await sendTelegramNotification(
@@ -110,14 +107,19 @@ router.post("/admin/verify-otp", async (req, res) => {
     return;
   }
 
-  const session = otpSessions.get(sessionToken);
+  const [session] = await db
+    .select()
+    .from(adminOtpSessionsTable)
+    .where(eq(adminOtpSessionsTable.sessionToken, sessionToken))
+    .limit(1);
+
   if (!session) {
     res.status(401).json({ error: "Session invalide ou expirée" });
     return;
   }
 
   if (Date.now() > session.expiresAt) {
-    otpSessions.delete(sessionToken);
+    await db.delete(adminOtpSessionsTable).where(eq(adminOtpSessionsTable.sessionToken, sessionToken));
     res.status(401).json({ error: "Code OTP expiré — veuillez vous reconnecter" });
     return;
   }
@@ -127,7 +129,7 @@ router.post("/admin/verify-otp", async (req, res) => {
     return;
   }
 
-  otpSessions.delete(sessionToken);
+  await db.delete(adminOtpSessionsTable).where(eq(adminOtpSessionsTable.sessionToken, sessionToken));
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, session.userId)).limit(1);
   if (!user) {
