@@ -2,11 +2,14 @@ import { defineConfig } from "drizzle-kit";
 import path from "path";
 
 function getConnectionString(): string {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL environment variable must be set.");
+  const ref = process.env.SUPABASE_PROJECT_REF;
+  const pass = process.env.SUPABASE_DB_PASSWORD;
+  if (ref && pass) {
+    return `postgresql://postgres.${ref}:${pass}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`;
   }
-  return url;
+  const url = process.env.DATABASE_URL;
+  if (url) return url;
+  throw new Error("SUPABASE_PROJECT_REF + SUPABASE_DB_PASSWORD or DATABASE_URL must be set.");
 }
 
 export default defineConfig({
