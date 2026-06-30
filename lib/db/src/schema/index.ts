@@ -6,3 +6,4 @@ export * from "./task-completions";
 export * from "./transactions";
 export * from "./store";
 export * from "./formations";
+export * from "./formation-purchases";
