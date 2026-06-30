@@ -71,12 +71,117 @@ router.post("/telegram/webhook", async (req, res) => {
     }
 
     const lines = pending.map((p, i) =>
-      `${i + 1}. <b>${p.username}</b> — ${parseFloat(p.w.amountNet || "0").toLocaleString()} FCFA (${p.w.operator} ${p.w.phone})`
+      `${i + 1}. [#${p.w.id}] <b>${p.username}</b> — ${parseFloat(p.w.amountNet || "0").toLocaleString()} FCFA (${p.w.operator} ${p.w.phone})`
     ).join("\n");
 
     await sendReply(chatId,
       `⏳ <b>${pending.length} retrait(s) en attente</b>\n\n${lines}\n\n` +
-      `Utilisez /approve &lt;id&gt; ou /reject &lt;id&gt; &lt;raison&gt;`
+      `✅ /approve &lt;id&gt;\n` +
+      `❌ /reject &lt;id&gt; &lt;raison&gt;`
+    );
+    return;
+  }
+
+  if (command === "/approve") {
+    const id = parseInt(args[0]);
+    if (isNaN(id)) {
+      await sendReply(chatId, "❌ Usage : /approve &lt;id&gt;\nEx: /approve 12");
+      return;
+    }
+
+    const [withdrawal] = await db.select({
+      w: withdrawalsTable,
+      username: usersTable.username,
+    }).from(withdrawalsTable)
+      .innerJoin(usersTable, eq(withdrawalsTable.userId, usersTable.id))
+      .where(eq(withdrawalsTable.id, id))
+      .limit(1);
+
+    if (!withdrawal) {
+      await sendReply(chatId, `❌ Retrait #${id} introuvable.`);
+      return;
+    }
+
+    if (withdrawal.w.status !== "pending") {
+      await sendReply(chatId, `⚠️ Le retrait #${id} est déjà <b>${withdrawal.w.status}</b>.`);
+      return;
+    }
+
+    await db.update(withdrawalsTable)
+      .set({ status: "paid" })
+      .where(eq(withdrawalsTable.id, id));
+
+    await sendReply(chatId,
+      `✅ <b>Retrait #${id} approuvé</b>\n` +
+      `👤 ${withdrawal.username}\n` +
+      `💰 ${parseFloat(withdrawal.w.amountNet || "0").toLocaleString()} FCFA\n` +
+      `📱 ${withdrawal.w.operator} — ${withdrawal.w.phone}`
+    );
+
+    sendTelegramNotification(
+      `✅ <b>Retrait approuvé</b> par l'admin\n` +
+      `🆔 ID: #${id} | 👤 ${withdrawal.username}\n` +
+      `💰 ${parseFloat(withdrawal.w.amountNet || "0").toLocaleString()} FCFA → ${withdrawal.w.operator} ${withdrawal.w.phone}`
+    );
+    return;
+  }
+
+  if (command === "/reject") {
+    const id = parseInt(args[0]);
+    const reason = args.slice(1).join(" ").trim();
+
+    if (isNaN(id)) {
+      await sendReply(chatId, "❌ Usage : /reject &lt;id&gt; &lt;raison&gt;\nEx: /reject 12 Numéro invalide");
+      return;
+    }
+
+    if (!reason) {
+      await sendReply(chatId, "❌ Une raison est obligatoire.\nEx: /reject 12 Numéro invalide");
+      return;
+    }
+
+    const [withdrawal] = await db.select({
+      w: withdrawalsTable,
+      user: usersTable,
+    }).from(withdrawalsTable)
+      .innerJoin(usersTable, eq(withdrawalsTable.userId, usersTable.id))
+      .where(eq(withdrawalsTable.id, id))
+      .limit(1);
+
+    if (!withdrawal) {
+      await sendReply(chatId, `❌ Retrait #${id} introuvable.`);
+      return;
+    }
+
+    if (withdrawal.w.status !== "pending") {
+      await sendReply(chatId, `⚠️ Le retrait #${id} est déjà <b>${withdrawal.w.status}</b>.`);
+      return;
+    }
+
+    // Reject and restore user's balance
+    await db.update(withdrawalsTable)
+      .set({ status: "rejected", rejectionReason: reason })
+      .where(eq(withdrawalsTable.id, id));
+
+    await db.update(usersTable)
+      .set({
+        balance: sql`${usersTable.balance} + ${withdrawal.w.amountGross}`,
+        totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${withdrawal.w.amountNet}`,
+      })
+      .where(eq(usersTable.id, withdrawal.user.id));
+
+    await sendReply(chatId,
+      `❌ <b>Retrait #${id} rejeté</b>\n` +
+      `👤 ${withdrawal.user.username}\n` +
+      `💰 ${parseFloat(withdrawal.w.amountGross || "0").toLocaleString()} FCFA remboursé\n` +
+      `📝 Raison: ${reason}`
+    );
+
+    sendTelegramNotification(
+      `❌ <b>Retrait rejeté</b> par l'admin\n` +
+      `🆔 ID: #${id} | 👤 ${withdrawal.user.username}\n` +
+      `💰 ${parseFloat(withdrawal.w.amountGross || "0").toLocaleString()} FCFA remboursé\n` +
+      `📝 ${reason}`
     );
     return;
   }
@@ -101,6 +206,8 @@ router.post("/telegram/webhook", async (req, res) => {
       `🤖 <b>Commandes disponibles</b>\n\n` +
       `📊 /stats — statistiques globales\n` +
       `⏳ /pending — retraits en attente\n` +
+      `✅ /approve &lt;id&gt; — approuver un retrait\n` +
+      `❌ /reject &lt;id&gt; &lt;raison&gt; — rejeter un retrait\n` +
       `👥 /membres — 5 derniers inscrits\n` +
       `❓ /aide — afficher ce menu`
     );
