@@ -40,6 +40,7 @@ export default function AdminStore() {
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,40 +81,59 @@ export default function AdminStore() {
     setThumbnailPreview(URL.createObjectURL(f));
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!form.title) { toast({ title: "Le titre est requis", variant: "destructive" }); return; }
     setSaving(true);
-    try {
-      const fd = new FormData();
-      fd.append("title", form.title);
-      fd.append("category", form.category);
-      fd.append("price", form.price);
-      fd.append("isFree", String(form.isFree));
-      fd.append("fileType", form.fileType);
-      fd.append("fileSize", form.fileSize);
-      fd.append("isActive", String(form.isActive));
-      fd.append("isPremium", String(form.isPremium));
-      if (file) fd.append("file", file);
-      if (thumbnail) fd.append("thumbnail", thumbnail);
+    setUploadProgress(0);
 
-      const url = editItem ? `/api/admin/store/${editItem.id}` : "/api/admin/store";
-      const method = editItem ? "PATCH" : "POST";
-      const res = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: fd });
-      if (!res.ok) {
-        let errorMsg = "Erreur serveur";
-        try { const e = await res.json(); errorMsg = e.error || errorMsg; } catch {}
-        throw new Error(errorMsg);
+    const fd = new FormData();
+    fd.append("title", form.title);
+    fd.append("category", form.category);
+    fd.append("price", form.price);
+    fd.append("isFree", String(form.isFree));
+    fd.append("fileType", form.fileType);
+    fd.append("fileSize", form.fileSize);
+    fd.append("isActive", String(form.isActive));
+    fd.append("isPremium", String(form.isPremium));
+    if (file) fd.append("file", file);
+    if (thumbnail) fd.append("thumbnail", thumbnail);
+
+    const url = editItem ? `/api/admin/store/${editItem.id}` : "/api/admin/store";
+    const method = editItem ? "PATCH" : "POST";
+
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        setUploadProgress(Math.round((e.loaded / e.total) * 100));
       }
+    };
 
-      queryClient.invalidateQueries({ queryKey: ["admin-store"] });
-      queryClient.invalidateQueries({ queryKey: ["store-items"] });
-      toast({ title: editItem ? "✅ Article mis à jour" : "✅ Article créé" });
-      setOpen(false);
-    } catch (e: any) {
-      toast({ title: "Erreur", description: e.message, variant: "destructive" });
-    } finally {
+    xhr.onload = () => {
       setSaving(false);
-    }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        queryClient.invalidateQueries({ queryKey: ["admin-store"] });
+        queryClient.invalidateQueries({ queryKey: ["store-items"] });
+        toast({ title: editItem ? "✅ Article mis à jour" : "✅ Article créé" });
+        setOpen(false);
+        setUploadProgress(0);
+      } else {
+        let errorMsg = "Erreur serveur";
+        try { errorMsg = JSON.parse(xhr.responseText)?.error || errorMsg; } catch {}
+        toast({ title: "Erreur", description: errorMsg, variant: "destructive" });
+        setUploadProgress(0);
+      }
+    };
+
+    xhr.onerror = () => {
+      setSaving(false);
+      setUploadProgress(0);
+      toast({ title: "Erreur réseau", description: "Vérifiez votre connexion et réessayez.", variant: "destructive" });
+    };
+
+    xhr.send(fd);
   };
 
   const handleDelete = async () => {
@@ -308,11 +328,30 @@ export default function AdminStore() {
             )}
           </div>
 
+          {/* Progress bar */}
+          {saving && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+                <span>{uploadProgress < 100 ? "Envoi du fichier…" : "Traitement sur le serveur…"}</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 transition-all duration-300"
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              {uploadProgress === 100 && (
+                <p className="text-[10px] text-gray-400 text-center">Upload terminé — finalisation en cours…</p>
+              )}
+            </div>
+          )}
+
           <DialogFooter className="gap-2 pt-2">
-            <Button variant="outline" className="rounded-2xl flex-1 h-11 font-bold" onClick={() => setOpen(false)}>Annuler</Button>
+            <Button variant="outline" className="rounded-2xl flex-1 h-11 font-bold" onClick={() => setOpen(false)} disabled={saving}>Annuler</Button>
             <Button className="rounded-2xl flex-1 h-11 font-bold bg-gradient-to-r from-purple-600 to-fuchsia-600 border-0"
               onClick={handleSave} disabled={saving}>
-              {saving ? "Enregistrement…" : "Enregistrer"}
+              {saving ? (uploadProgress < 100 ? `${uploadProgress}%` : "Finalisation…") : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>
