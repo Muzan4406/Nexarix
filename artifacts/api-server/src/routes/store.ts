@@ -35,23 +35,25 @@ router.get("/admin/store", authMiddleware, adminMiddleware, async (_req, res) =>
 // Admin: create store item
 router.post("/admin/store", authMiddleware, adminMiddleware, upload, async (req, res) => {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const { title, category, price, isFree, fileType, fileSize, isActive, isPremium } = req.body;
+  const { title, category, price, isFree, fileType, fileSize, isActive, isPremium,
+          downloadUrl: bodyDownloadUrl, thumbnailUrl: bodyThumbnailUrl } = req.body;
 
   if (!title) {
     res.status(400).json({ error: "Le titre est requis" });
     return;
   }
 
-  let downloadUrl: string | null = null;
-  if (files?.file?.[0]) {
+  // Accept URL directly (presigned upload) or fall back to server-side upload
+  let downloadUrl: string | null = bodyDownloadUrl || null;
+  if (!downloadUrl && files?.file?.[0]) {
     const f = files.file[0];
     const ext = path.extname(f.originalname);
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     downloadUrl = await uploadToStorage(BUCKETS.store, filename, f.buffer, f.mimetype);
   }
 
-  let thumbnailUrl: string | null = null;
-  if (files?.thumbnail?.[0]) {
+  let thumbnailUrl: string | null = bodyThumbnailUrl || null;
+  if (!thumbnailUrl && files?.thumbnail?.[0]) {
     const t = files.thumbnail[0];
     const ext = path.extname(t.originalname);
     const filename = `thumb-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
@@ -79,7 +81,8 @@ router.post("/admin/store", authMiddleware, adminMiddleware, upload, async (req,
 router.patch("/admin/store/:id", authMiddleware, adminMiddleware, upload, async (req, res) => {
   const id = parseInt(String(req.params.id));
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const { title, category, price, isFree, fileType, fileSize, isActive, isPremium } = req.body;
+  const { title, category, price, isFree, fileType, fileSize, isActive, isPremium,
+          downloadUrl: bodyDownloadUrl, thumbnailUrl: bodyThumbnailUrl } = req.body;
 
   const updates: any = {};
   if (title !== undefined) updates.title = title;
@@ -91,14 +94,19 @@ router.patch("/admin/store/:id", authMiddleware, adminMiddleware, upload, async 
   if (isActive !== undefined) updates.isActive = isActive !== "false" && isActive !== false;
   if (isPremium !== undefined) updates.isPremium = isPremium !== "false" && isPremium !== false;
 
-  if (files?.file?.[0]) {
+  // Accept URL directly (presigned upload) or fall back to server-side upload
+  if (bodyDownloadUrl) {
+    updates.downloadUrl = bodyDownloadUrl;
+  } else if (files?.file?.[0]) {
     const f = files.file[0];
     const ext = path.extname(f.originalname);
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     updates.downloadUrl = await uploadToStorage(BUCKETS.store, filename, f.buffer, f.mimetype);
   }
 
-  if (files?.thumbnail?.[0]) {
+  if (bodyThumbnailUrl) {
+    updates.thumbnailUrl = bodyThumbnailUrl;
+  } else if (files?.thumbnail?.[0]) {
     const t = files.thumbnail[0];
     const ext = path.extname(t.originalname);
     const filename = `thumb-${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;

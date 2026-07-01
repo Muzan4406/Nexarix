@@ -28,6 +28,33 @@ async function ensureBucket(bucket: string) {
   });
 }
 
+export async function getPresignedUploadUrl(
+  bucket: string,
+  filename: string,
+): Promise<{ signedUrl: string; publicUrl: string }> {
+  await ensureBucket(bucket);
+  const res = await fetch(
+    `${STORAGE_URL}/object/sign/upload/${bucket}/${encodeURIComponent(filename)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        apikey: SERVICE_KEY!,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Presign échoué: ${err}`);
+  }
+  const json = (await res.json()) as any;
+  // Supabase returns { signedURL: "/storage/v1/object/sign/upload/..." }
+  const signedUrl = `https://${PROJECT_REF}.supabase.co${json.url ?? json.signedURL}`;
+  const publicUrl = `https://${PROJECT_REF}.supabase.co/storage/v1/object/public/${bucket}/${filename}`;
+  return { signedUrl, publicUrl };
+}
+
 export async function uploadToStorage(
   bucket: string,
   filename: string,

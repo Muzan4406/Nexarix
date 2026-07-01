@@ -64,56 +64,89 @@ export default function AdminFormations() {
     setOpen(true);
   };
 
-  const handleSave = () => {
+  // Upload a file directly to Supabase via presigned URL, with XHR progress
+  const uploadFileDirect = (
+    fileObj: File,
+    bucket: string,
+    onProgress: (pct: number) => void,
+  ): Promise<string> =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const presignRes = await fetch("/api/admin/upload/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ bucket, originalName: fileObj.name }),
+        });
+        if (!presignRes.ok) {
+          const e = await presignRes.json() as any;
+          reject(new Error(e.error || "Presign échoué"));
+          return;
+        }
+        const { signedUrl, publicUrl } = await presignRes.json() as any;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", signedUrl);
+        xhr.setRequestHeader("Content-Type", fileObj.type || "application/octet-stream");
+        xhr.setRequestHeader("x-upsert", "true");
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve(publicUrl);
+          else reject(new Error(`Upload échoué (${xhr.status}): ${xhr.responseText}`));
+        };
+        xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
+        xhr.send(fileObj);
+      } catch (e: any) {
+        reject(e);
+      }
+    });
+
+  const handleSave = async () => {
     if (!form.title) { toast({ title: "Le titre est requis", variant: "destructive" }); return; }
     setSaving(true);
     setUploadProgress(0);
 
-    const fd = new FormData();
-    fd.append("title", form.title);
-    fd.append("description", form.description);
-    fd.append("videoUrl", form.videoUrl);
-    fd.append("isFree", String(form.isFree));
-    fd.append("isActive", String(form.isActive));
-    fd.append("price", form.price || "");
-    if (file) fd.append("file", file);
+    try {
+      let contentUrl: string | undefined;
 
-    const url = editItem ? `/api/admin/formations/${editItem.id}` : "/api/admin/formations";
-    const method = editItem ? "PATCH" : "POST";
-
-    const xhr = new XMLHttpRequest();
-    xhr.open(method, url);
-    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        setUploadProgress(Math.round((e.loaded / e.total) * 100));
+      if (file) {
+        contentUrl = await uploadFileDirect(file, "formation-files", (pct) => setUploadProgress(pct));
+        setUploadProgress(100);
       }
-    };
 
-    xhr.onload = () => {
-      setSaving(false);
-      if (xhr.status >= 200 && xhr.status < 300) {
-        queryClient.invalidateQueries({ queryKey: ["admin-formations"] });
-        queryClient.invalidateQueries({ queryKey: ["formations"] });
-        toast({ title: editItem ? "✅ Formation mise à jour" : "✅ Formation créée" });
-        setOpen(false);
-        setUploadProgress(0);
-      } else {
+      // Submit form metadata with URL (no file)
+      const fd = new FormData();
+      fd.append("title", form.title);
+      fd.append("description", form.description);
+      fd.append("videoUrl", form.videoUrl);
+      fd.append("isFree", String(form.isFree));
+      fd.append("isActive", String(form.isActive));
+      fd.append("price", form.price || "");
+      if (contentUrl) fd.append("contentUrl", contentUrl);
+
+      const url = editItem ? `/api/admin/formations/${editItem.id}` : "/api/admin/formations";
+      const method = editItem ? "PATCH" : "POST";
+      const res = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: fd });
+
+      if (!res.ok) {
         let errorMsg = "Erreur serveur";
-        try { errorMsg = JSON.parse(xhr.responseText)?.error || errorMsg; } catch {}
-        toast({ title: "Erreur", description: errorMsg, variant: "destructive" });
-        setUploadProgress(0);
+        try { const e = await res.json() as any; errorMsg = e.error || errorMsg; } catch {}
+        throw new Error(errorMsg);
       }
-    };
 
-    xhr.onerror = () => {
-      setSaving(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-formations"] });
+      queryClient.invalidateQueries({ queryKey: ["formations"] });
+      toast({ title: editItem ? "✅ Formation mise à jour" : "✅ Formation créée" });
+      setOpen(false);
       setUploadProgress(0);
-      toast({ title: "Erreur réseau", description: "Vérifiez votre connexion et réessayez.", variant: "destructive" });
-    };
-
-    xhr.send(fd);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+      setUploadProgress(0);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {

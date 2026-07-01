@@ -32,15 +32,16 @@ router.get("/admin/formations", authMiddleware, adminMiddleware, async (_req, re
 
 // Admin: create formation
 router.post("/admin/formations", authMiddleware, adminMiddleware, upload, async (req, res) => {
-  const { title, description, videoUrl, isFree, isActive, price } = req.body;
+  const { title, description, videoUrl, isFree, isActive, price, contentUrl: bodyContentUrl } = req.body;
 
   if (!title) {
     res.status(400).json({ error: "Le titre est requis" });
     return;
   }
 
-  let contentUrl: string | null = null;
-  if (req.file) {
+  // Accept URL directly (presigned upload) or fall back to server-side upload
+  let contentUrl: string | null = bodyContentUrl || null;
+  if (!contentUrl && req.file) {
     const ext = path.extname(req.file.originalname);
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     contentUrl = await uploadToStorage(BUCKETS.formations, filename, req.file.buffer, req.file.mimetype);
@@ -72,7 +73,7 @@ router.post("/admin/formations", authMiddleware, adminMiddleware, upload, async 
 // Admin: update formation
 router.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload, async (req, res) => {
   const id = parseInt(String(req.params.id));
-  const { title, description, videoUrl, isFree, isActive, price } = req.body;
+  const { title, description, videoUrl, isFree, isActive, price, contentUrl: bodyContentUrl } = req.body;
 
   const updates: any = {};
   if (title !== undefined) updates.title = title;
@@ -84,7 +85,10 @@ router.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload, a
     updates.price = price && parseFloat(price) > 0 ? parseFloat(price).toFixed(2) : null;
   }
 
-  if (req.file) {
+  // Accept URL directly (presigned upload) or fall back to server-side upload
+  if (bodyContentUrl) {
+    updates.contentUrl = bodyContentUrl;
+  } else if (req.file) {
     const ext = path.extname(req.file.originalname);
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
     updates.contentUrl = await uploadToStorage(BUCKETS.formations, filename, req.file.buffer, req.file.mimetype);

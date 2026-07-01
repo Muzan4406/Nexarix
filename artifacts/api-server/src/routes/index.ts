@@ -12,6 +12,7 @@ import storeRouter from "./store";
 import formationsRouter from "./formations";
 import formationPurchasesRouter from "./formation-purchases";
 import servicesRouter from "./services";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(storeRouter);
 router.use(formationsRouter);
 router.use(formationPurchasesRouter);
 router.use(servicesRouter);
+router.use(uploadRouter);
 
 export default router;

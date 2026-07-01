@@ -81,59 +81,110 @@ export default function AdminStore() {
     setThumbnailPreview(URL.createObjectURL(f));
   };
 
-  const handleSave = () => {
+  // Upload a file directly to Supabase via presigned URL, with XHR progress
+  const uploadFileDirect = (
+    fileObj: File,
+    bucket: string,
+    onProgress: (pct: number) => void,
+  ): Promise<string> =>
+    new Promise(async (resolve, reject) => {
+      try {
+        const presignRes = await fetch("/api/admin/upload/presign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ bucket, originalName: fileObj.name }),
+        });
+        if (!presignRes.ok) {
+          const e = await presignRes.json() as any;
+          reject(new Error(e.error || "Presign échoué"));
+          return;
+        }
+        const { signedUrl, publicUrl } = await presignRes.json() as any;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", signedUrl);
+        xhr.setRequestHeader("Content-Type", fileObj.type || "application/octet-stream");
+        xhr.setRequestHeader("x-upsert", "true");
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve(publicUrl);
+          else reject(new Error(`Upload échoué (${xhr.status}): ${xhr.responseText}`));
+        };
+        xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
+        xhr.send(fileObj);
+      } catch (e: any) {
+        reject(e);
+      }
+    });
+
+  const handleSave = async () => {
     if (!form.title) { toast({ title: "Le titre est requis", variant: "destructive" }); return; }
     setSaving(true);
     setUploadProgress(0);
 
-    const fd = new FormData();
-    fd.append("title", form.title);
-    fd.append("category", form.category);
-    fd.append("price", form.price);
-    fd.append("isFree", String(form.isFree));
-    fd.append("fileType", form.fileType);
-    fd.append("fileSize", form.fileSize);
-    fd.append("isActive", String(form.isActive));
-    fd.append("isPremium", String(form.isPremium));
-    if (file) fd.append("file", file);
-    if (thumbnail) fd.append("thumbnail", thumbnail);
+    try {
+      const totalFiles = (file ? 1 : 0) + (thumbnail ? 1 : 0);
+      let doneFiles = 0;
 
-    const url = editItem ? `/api/admin/store/${editItem.id}` : "/api/admin/store";
-    const method = editItem ? "PATCH" : "POST";
+      const makeProgress = (pct: number) => {
+        // Overall progress: each file counts equally
+        const base = totalFiles > 0 ? (doneFiles / totalFiles) * 100 : 0;
+        const chunk = totalFiles > 0 ? pct / totalFiles : pct;
+        setUploadProgress(Math.round(base + chunk));
+      };
 
-    const xhr = new XMLHttpRequest();
-    xhr.open(method, url);
-    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      let downloadUrl: string | undefined;
+      let thumbnailUrl: string | undefined;
 
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        setUploadProgress(Math.round((e.loaded / e.total) * 100));
+      if (file) {
+        downloadUrl = await uploadFileDirect(file, "store-files", (pct) => makeProgress(pct));
+        doneFiles++;
+        setUploadProgress(Math.round((doneFiles / Math.max(totalFiles, 1)) * 100));
       }
-    };
 
-    xhr.onload = () => {
-      setSaving(false);
-      if (xhr.status >= 200 && xhr.status < 300) {
-        queryClient.invalidateQueries({ queryKey: ["admin-store"] });
-        queryClient.invalidateQueries({ queryKey: ["store-items"] });
-        toast({ title: editItem ? "✅ Article mis à jour" : "✅ Article créé" });
-        setOpen(false);
-        setUploadProgress(0);
-      } else {
+      if (thumbnail) {
+        thumbnailUrl = await uploadFileDirect(thumbnail, "store-files", (pct) => makeProgress(pct));
+        doneFiles++;
+        setUploadProgress(Math.round((doneFiles / Math.max(totalFiles, 1)) * 100));
+      }
+
+      // Now submit the form metadata (no file — just URLs)
+      const fd = new FormData();
+      fd.append("title", form.title);
+      fd.append("category", form.category);
+      fd.append("price", form.price);
+      fd.append("isFree", String(form.isFree));
+      fd.append("fileType", form.fileType);
+      fd.append("fileSize", form.fileSize);
+      fd.append("isActive", String(form.isActive));
+      fd.append("isPremium", String(form.isPremium));
+      if (downloadUrl) fd.append("downloadUrl", downloadUrl);
+      if (thumbnailUrl) fd.append("thumbnailUrl", thumbnailUrl);
+
+      const url = editItem ? `/api/admin/store/${editItem.id}` : "/api/admin/store";
+      const method = editItem ? "PATCH" : "POST";
+      const res = await fetch(url, { method, headers: { Authorization: `Bearer ${token}` }, body: fd });
+
+      if (!res.ok) {
         let errorMsg = "Erreur serveur";
-        try { errorMsg = JSON.parse(xhr.responseText)?.error || errorMsg; } catch {}
-        toast({ title: "Erreur", description: errorMsg, variant: "destructive" });
-        setUploadProgress(0);
+        try { const e = await res.json() as any; errorMsg = e.error || errorMsg; } catch {}
+        throw new Error(errorMsg);
       }
-    };
 
-    xhr.onerror = () => {
-      setSaving(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-store"] });
+      queryClient.invalidateQueries({ queryKey: ["store-items"] });
+      toast({ title: editItem ? "✅ Article mis à jour" : "✅ Article créé" });
+      setOpen(false);
       setUploadProgress(0);
-      toast({ title: "Erreur réseau", description: "Vérifiez votre connexion et réessayez.", variant: "destructive" });
-    };
-
-    xhr.send(fd);
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e.message, variant: "destructive" });
+      setUploadProgress(0);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
