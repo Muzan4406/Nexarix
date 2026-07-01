@@ -42,6 +42,7 @@ export async function getPresignedUploadUrl(
         apikey: SERVICE_KEY!,
         "Content-Type": "application/json",
       },
+      body: JSON.stringify({}),
     },
   );
   if (!res.ok) {
