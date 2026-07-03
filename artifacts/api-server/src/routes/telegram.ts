@@ -317,11 +317,11 @@ router.post("/telegram/setup-webhook", async (req, res) => {
 export async function autoSetupWebhook(): Promise<void> {
   if (!BOT_TOKEN) return;
 
-  // Prefer the Replit public domain, fall back to nothing
+  // Prefer stable production URL, fall back to dev domain
   const domain =
-    process.env.REPLIT_DEV_DOMAIN ||
     process.env.APP_BASE_URL ||
-    process.env.RAILWAY_PUBLIC_DOMAIN;
+    process.env.RAILWAY_PUBLIC_DOMAIN ||
+    process.env.REPLIT_DEV_DOMAIN;
 
   if (!domain) return;
 
