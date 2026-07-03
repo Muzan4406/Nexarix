@@ -143,16 +143,21 @@ export async function geoGuard(req: Request, res: Response, next: NextFunction):
   let reason = "";
 
   if (geo) {
-    if (geo.proxy && geo.hosting) {
-      blockType = "VPN / Proxy / Hébergeur";
-      reason = `VPN/Proxy/Hosting détecté (${geo.isp})`;
-    } else if (geo.proxy) {
-      blockType = "VPN / Proxy";
-      reason = `Proxy détecté (${geo.isp})`;
-    } else if (geo.hosting) {
+    const countryAllowed = ALLOWED_COUNTRIES.has(geo.countryCode);
+
+    if (geo.proxy) {
+      // Proxy/VPN is always blocked regardless of country
+      blockType = geo.hosting
+        ? "VPN / Proxy / Hébergeur"
+        : "VPN / Proxy";
+      reason = `Proxy/VPN détecté (${geo.isp})`;
+    } else if (geo.hosting && !countryAllowed) {
+      // Hosting IPs from foreign countries are blocked.
+      // Hosting IPs from allowed countries are let through —
+      // many African mobile operators are flagged as "hosting".
       blockType = "VPN / Hébergeur";
-      reason = `IP hébergeur/datacenter (${geo.isp})`;
-    } else if (geo.countryCode && !ALLOWED_COUNTRIES.has(geo.countryCode)) {
+      reason = `IP hébergeur hors zone (${geo.isp}, ${geo.countryCode})`;
+    } else if (!countryAllowed && geo.countryCode) {
       blockType = "Pays non autorisé";
       reason = `Pays: ${geo.countryCode}`;
     }
