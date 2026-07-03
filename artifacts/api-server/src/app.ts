@@ -4,8 +4,12 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { runStartupMigrations } from "./lib/migrate";
+import { geoGuard } from "./middlewares/geo-guard";
 
 const app: Express = express();
+
+// Trust the single reverse-proxy hop (Replit / nginx) so req.ip is the real client IP
+app.set("trust proxy", 1);
 
 // Run DB migrations before anything else
 await runStartupMigrations();
@@ -29,13 +33,18 @@ app.use(
     },
   }),
 );
+
 app.use(cors());
 
+// Raw body for webhook signature verification (must be before express.json)
 app.use("/api/activate/webhook", express.raw({ type: "application/json" }));
 app.use("/api/formations/purchase/webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Geo-IP guard: block requests from outside platform countries + alert Telegram
+app.use("/api", geoGuard);
 
 app.use("/api", router);
 

@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { autoSetupWebhook } from "./routes/telegram";
 import net from "net";
 
 const port = Number(process.env["PORT"] ?? "8080");
@@ -32,4 +33,7 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  // Register Telegram webhook with Replit public URL
+  autoSetupWebhook().catch(() => {});
 });
