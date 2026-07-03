@@ -90,10 +90,15 @@ export default function Services() {
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {items.map((item: any, i: number) => (
+            {items.map((item: any, i: number) => {
+              // Ensure URL has a protocol so browser opens it externally, not as a relative path
+              const href = item.linkUrl && /^https?:\/\//i.test(item.linkUrl)
+                ? item.linkUrl
+                : `https://${item.linkUrl}`;
+              return (
               <motion.a
                 key={item.id}
-                href={item.linkUrl}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
                 custom={i}
@@ -160,7 +165,8 @@ export default function Services() {
                   </div>
                 </div>
               </motion.a>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
