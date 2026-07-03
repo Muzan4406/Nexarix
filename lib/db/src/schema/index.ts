@@ -9,4 +9,3 @@ export * from "./formations";
 export * from "./formation-purchases";
 export * from "./services";
 export * from "./admin-otp-sessions";
-export * from "./blocked-ips";

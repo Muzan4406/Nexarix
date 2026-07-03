@@ -3,7 +3,6 @@ import { db } from "@workspace/db";
 import { usersTable, withdrawalsTable } from "@workspace/db";
 import { eq, sql, desc } from "drizzle-orm";
 import { sendTelegramNotification } from "../lib/telegram";
-import { blockedIps, blockIp, unblockIp, listBlocked, loadBlockedIpsFromDb } from "../lib/ip-block";
 
 const router = Router();
 
@@ -65,9 +64,6 @@ router.post("/telegram/webhook", async (req, res) => {
       `🔍 /user &lt;username&gt; — infos d'un membre\n` +
       `🚫 /ban &lt;username&gt; — désactiver un compte\n` +
       `✅ /unban &lt;username&gt; — réactiver un compte\n` +
-      `🔌 /bloc &lt;ip&gt; — bloquer une IP manuellement\n` +
-      `🔓 /unblock &lt;ip&gt; — débloquer une IP\n` +
-      `📋 /blocklist — liste des IPs bloquées\n` +
       `❓ /aide — afficher ce menu`
     );
     return;
@@ -88,8 +84,6 @@ router.post("/telegram/webhook", async (req, res) => {
       paidAmount: sql<number>`sum(case when status = 'paid' then amount_net::numeric else 0 end)`,
     }).from(withdrawalsTable);
 
-    const blockedCount = blockedIps.size;
-
     await sendReply(chatId,
       `📊 <b>Statistiques Nexarix</b>\n\n` +
       `👥 <b>Membres</b>\n` +
@@ -98,8 +92,7 @@ router.post("/telegram/webhook", async (req, res) => {
       `• Inactifs: ${userStats?.inactive ?? 0}\n\n` +
       `💸 <b>Retraits</b>\n` +
       `• En attente: ${withdrawStats?.pending ?? 0} (${Number(withdrawStats?.pendingAmount ?? 0).toLocaleString()} FCFA)\n` +
-      `• Payés: ${withdrawStats?.paid ?? 0} (${Number(withdrawStats?.paidAmount ?? 0).toLocaleString()} FCFA)\n\n` +
-      `🚫 <b>IPs bloquées:</b> ${blockedCount}`
+      `• Payés: ${withdrawStats?.paid ?? 0} (${Number(withdrawStats?.paidAmount ?? 0).toLocaleString()} FCFA)`
     );
     return;
   }
@@ -294,48 +287,6 @@ router.post("/telegram/webhook", async (req, res) => {
     return;
   }
 
-  // ── /bloc <ip> ─────────────────────────────────────────────────────────────
-  if (command === "/bloc") {
-    const ip = args[0];
-    if (!ip) { await sendReply(chatId, "❌ Usage : /bloc &lt;ip&gt;\nEx: /bloc 185.220.101.5"); return; }
-
-    await blockIp(ip, "Bloqué manuellement par admin", undefined, "Manuel", undefined, true);
-    await sendReply(chatId, `🔌 IP <code>${ip}</code> bloquée définitivement en base de données.`);
-    return;
-  }
-
-  // ── /unblock <ip> ─────────────────────────────────────────────────────────
-  if (command === "/unblock") {
-    const ip = args[0];
-    if (!ip) { await sendReply(chatId, "❌ Usage : /unblock &lt;ip&gt;"); return; }
-
-    const ok = await unblockIp(ip);
-    await sendReply(chatId, ok
-      ? `🔓 IP <code>${ip}</code> débloquée (mémoire + base de données).`
-      : `⚠️ IP <code>${ip}</code> n'était pas bloquée.`
-    );
-    return;
-  }
-
-  // ── /blocklist ─────────────────────────────────────────────────────────────
-  if (command === "/blocklist") {
-    const list = listBlocked();
-    if (list.length === 0) {
-      await sendReply(chatId, "✅ Aucune IP bloquée."); return;
-    }
-
-    const lines = list.slice(0, 20).map((e, i) =>
-      `${i + 1}. <code>${e.ip}</code> (${e.country ?? "?"}) — ${e.manual ? "Manuel" : "Auto"}\n` +
-      `   📅 ${e.blockedAt.toLocaleString("fr-FR")}`
-    ).join("\n");
-
-    await sendReply(chatId,
-      `🔌 <b>${list.length} IP(s) bloquée(s)</b>\n\n${lines}` +
-      (list.length > 20 ? `\n\n…et ${list.length - 20} autres.` : "")
-    );
-    return;
-  }
-
   // Unknown command
   await sendReply(chatId, "❓ Commande inconnue. Tapez /aide pour la liste des commandes.");
 });
@@ -360,10 +311,6 @@ router.post("/telegram/setup-webhook", async (req, res) => {
   const json = await resp.json();
   res.json({ webhookUrl, result: json });
 });
-
-// ─── Startup helpers ──────────────────────────────────────────────────────────
-
-export { loadBlockedIpsFromDb };
 
 // ─── Auto-register webhook on startup ─────────────────────────────────────────
 
