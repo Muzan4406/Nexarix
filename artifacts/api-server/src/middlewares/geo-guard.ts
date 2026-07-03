@@ -1,15 +1,15 @@
 import { type Request, type Response, type NextFunction } from "express";
-import { blockedIps, geoCache, blockIp } from "../lib/ip-block";
+import { blockedIps, blockIp } from "../lib/ip-block";
 import { sendTelegramNotification } from "../lib/telegram";
 
+// ─── Config ───────────────────────────────────────────────────────────────────
+
 // ISO 3166-1 alpha-2 codes as returned by ip-api.com
-// Matches countries defined in activation.ts (COG→CG, COD→CD)
 const ALLOWED_COUNTRIES = new Set([
   "TG", "BJ", "CI", "CM", "BF", "ML", "NE", "SN", "GN",
   "GA", "TD", "CG", "CF", "GQ", "CD",
 ]);
 
-// Country code → display name for Telegram alerts
 const COUNTRY_NAME: Record<string, string> = {
   TG: "Togo", BJ: "Bénin", CI: "Côte d'Ivoire", CM: "Cameroun",
   BF: "Burkina Faso", ML: "Mali", NE: "Niger", SN: "Sénégal",
@@ -17,26 +17,35 @@ const COUNTRY_NAME: Record<string, string> = {
   CF: "Centrafrique", GQ: "Guinée Éq.", CD: "RD Congo",
 };
 
-// Routes that bypass geo check entirely
-const BYPASS_PREFIXES = [
-  "/telegram/", "/health", "/settings/public",
-];
+// Routes entirely bypassed (Telegram webhook must always reach us)
+const BYPASS_PREFIXES = ["/telegram/", "/health", "/settings/public"];
 
-// Routes that trigger geo check
+// Only check sensitive routes — skip static, health, public endpoints
 const SENSITIVE_RE = /\/(auth|activate|admin|withdraw|store|formations|tasks|upload|services)/;
 
-/** Normalise IPv6-mapped IPv4 (::ffff:1.2.3.4 → 1.2.3.4) */
+// ip-api.com geo cache — 1 h TTL per IP
+interface GeoInfo {
+  countryCode: string;
+  country: string;
+  proxy: boolean;
+  hosting: boolean;
+  isp: string;
+  cachedAt: number;
+}
+const geoCache = new Map<string, GeoInfo>();
+
+// ─── IP helpers ───────────────────────────────────────────────────────────────
+
 function normaliseIp(raw: string): string {
   return raw.startsWith("::ffff:") ? raw.slice(7) : raw;
 }
 
-/** RFC-1918 + loopback only — 172.16/12 not the full 172.* block */
 function isPrivateIp(ip: string): boolean {
   const n = normaliseIp(ip);
   if (n === "127.0.0.1" || n === "::1") return true;
   if (n.startsWith("10.")) return true;
   if (n.startsWith("192.168.")) return true;
-  // 172.16.0.0/12 → 172.16.x.x – 172.31.x.x
+  // RFC-1918: 172.16.0.0/12 → 172.16–172.31
   const m = n.match(/^172\.(\d+)\./);
   if (m) {
     const b = parseInt(m[1], 10);
@@ -45,65 +54,116 @@ function isPrivateIp(ip: string): boolean {
   return false;
 }
 
-/** Use Express req.ip (honours trust proxy) then fall back to socket address. */
 export function extractIp(req: Request): string {
-  const ip = req.ip ?? req.socket?.remoteAddress ?? "unknown";
-  return normaliseIp(ip);
+  return normaliseIp(req.ip ?? req.socket?.remoteAddress ?? "unknown");
 }
 
-async function lookupCountry(ip: string): Promise<string | null> {
+// ─── Geo lookup ───────────────────────────────────────────────────────────────
+
+async function lookupGeo(ip: string): Promise<GeoInfo | null> {
   const cached = geoCache.get(ip);
-  if (cached && Date.now() - cached.cachedAt < 3_600_000) return cached.countryCode;
+  if (cached && Date.now() - cached.cachedAt < 3_600_000) return cached;
 
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,countryCode`, {
-      signal: AbortSignal.timeout(3000),
-    });
+    const res = await fetch(
+      `http://ip-api.com/json/${ip}?fields=status,country,countryCode,proxy,hosting,isp`,
+      { signal: AbortSignal.timeout(3000) },
+    );
     const data = (await res.json()) as any;
-    if (data.status === "success" && data.countryCode) {
-      geoCache.set(ip, { countryCode: data.countryCode, cachedAt: Date.now() });
-      return data.countryCode;
+    if (data.status === "success") {
+      const info: GeoInfo = {
+        countryCode: data.countryCode ?? "",
+        country: data.country ?? "",
+        proxy: Boolean(data.proxy),
+        hosting: Boolean(data.hosting),
+        isp: data.isp ?? "",
+        cachedAt: Date.now(),
+      };
+      geoCache.set(ip, info);
+      return info;
     }
   } catch {
-    // Geo lookup failed → fail open (don't block)
+    // Geo lookup timeout / network error → fail open
   }
   return null;
 }
 
+// ─── Alert format (matches user-requested style) ──────────────────────────────
+
+function formatDate(d: Date): string {
+  return d.toLocaleString("fr-FR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+    timeZone: "Africa/Abidjan",
+  }).replace(",", "");
+}
+
+function buildAlert(ip: string, geo: GeoInfo | null, type: string, path: string): string {
+  // Title uses slashes without spaces to match requested format (VPN/PROXY)
+  const titleType = type.replace(/ \/ /g, "/");
+  const country = geo?.countryCode || "Inconnu";
+  const now = formatDate(new Date());
+
+  return (
+    `🔍 <b>${titleType} BLOQUÉ AUTOMATIQUEMENT</b>\n\n` +
+    `IP: <code>${ip}</code>\n` +
+    `Pays: ${country}\n` +
+    `Type: ${type}\n` +
+    `Chemin: ${path}\n` +
+    `Date: ${now}\n\n` +
+    `L'IP a été bloquée définitivement en base de données.`
+  );
+}
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
 export async function geoGuard(req: Request, res: Response, next: NextFunction): Promise<void> {
   const ip = extractIp(req);
+  const path = req.path;
 
   // Always allow private / loopback
   if (isPrivateIp(ip) || ip === "unknown") return next();
 
-  // Allow Telegram webhook and public endpoints
-  const path = req.path; // path relative to /api mount
+  // Allow Telegram webhook and fully public endpoints
   if (BYPASS_PREFIXES.some((p) => path.startsWith(p))) return next();
 
   // Only check sensitive routes
   if (!SENSITIVE_RE.test(path)) return next();
 
-  // Already blocked?
-  const existing = blockedIps.get(ip);
-  if (existing) {
+  // Fast-path: already blocked
+  if (blockedIps.has(ip)) {
     res.status(403).json({ error: "Accès refusé" });
     return;
   }
 
-  const countryCode = await lookupCountry(ip);
+  const geo = await lookupGeo(ip);
 
-  if (countryCode && !ALLOWED_COUNTRIES.has(countryCode)) {
-    blockIp(ip, `Pays non autorisé: ${countryCode}`, countryCode, false);
+  // Determine block reason
+  let blockType: string | null = null;
+  let reason = "";
 
-    const countryLabel = COUNTRY_NAME[countryCode] ?? countryCode;
-    sendTelegramNotification(
-      `🚫 <b>IP bloquée automatiquement</b>\n` +
-      `🌍 Pays: <b>${countryLabel} (${countryCode})</b>\n` +
-      `🔌 IP: <code>${ip}</code>\n` +
-      `📍 Route: <code>${req.method} ${path}</code>`,
-    );
+  if (geo) {
+    if (geo.proxy && geo.hosting) {
+      blockType = "VPN / Proxy / Hébergeur";
+      reason = `VPN/Proxy/Hosting détecté (${geo.isp})`;
+    } else if (geo.proxy) {
+      blockType = "VPN / Proxy";
+      reason = `Proxy détecté (${geo.isp})`;
+    } else if (geo.hosting) {
+      blockType = "VPN / Hébergeur";
+      reason = `IP hébergeur/datacenter (${geo.isp})`;
+    } else if (geo.countryCode && !ALLOWED_COUNTRIES.has(geo.countryCode)) {
+      blockType = "Pays non autorisé";
+      reason = `Pays: ${geo.countryCode}`;
+    }
+  }
 
-    res.status(403).json({ error: "Service non disponible dans votre région" });
+  if (blockType) {
+    // Persist + alert (fire-and-forget — don't block the response)
+    blockIp(ip, reason, geo?.countryCode, blockType, path, false).catch(() => {});
+    sendTelegramNotification(buildAlert(ip, geo, blockType, path));
+
+    res.status(403).json({ error: "Accès refusé" });
     return;
   }
 

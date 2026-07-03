@@ -40,6 +40,18 @@ export async function runStartupMigrations(): Promise<void> {
       );
     `);
 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS blocked_ips (
+        ip TEXT PRIMARY KEY,
+        reason TEXT NOT NULL,
+        country TEXT,
+        type TEXT,
+        path TEXT,
+        blocked_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        manual BOOLEAN NOT NULL DEFAULT FALSE
+      );
+    `);
+
     logger.info("Startup migrations OK");
   } catch (err) {
     logger.error({ err }, "Startup migrations failed");

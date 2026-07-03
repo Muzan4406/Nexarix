@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { usersTable, withdrawalsTable } from "@workspace/db";
 import { eq, sql, desc } from "drizzle-orm";
 import { sendTelegramNotification } from "../lib/telegram";
-import { blockedIps, blockIp, unblockIp, listBlocked } from "../lib/ip-block";
+import { blockedIps, blockIp, unblockIp, listBlocked, loadBlockedIpsFromDb } from "../lib/ip-block";
 
 const router = Router();
 
@@ -299,8 +299,8 @@ router.post("/telegram/webhook", async (req, res) => {
     const ip = args[0];
     if (!ip) { await sendReply(chatId, "❌ Usage : /bloc &lt;ip&gt;\nEx: /bloc 185.220.101.5"); return; }
 
-    blockIp(ip, "Bloqué manuellement par admin", undefined, true);
-    await sendReply(chatId, `🔌 IP <code>${ip}</code> bloquée manuellement.`);
+    await blockIp(ip, "Bloqué manuellement par admin", undefined, "Manuel", undefined, true);
+    await sendReply(chatId, `🔌 IP <code>${ip}</code> bloquée définitivement en base de données.`);
     return;
   }
 
@@ -309,9 +309,9 @@ router.post("/telegram/webhook", async (req, res) => {
     const ip = args[0];
     if (!ip) { await sendReply(chatId, "❌ Usage : /unblock &lt;ip&gt;"); return; }
 
-    const ok = unblockIp(ip);
+    const ok = await unblockIp(ip);
     await sendReply(chatId, ok
-      ? `🔓 IP <code>${ip}</code> débloquée.`
+      ? `🔓 IP <code>${ip}</code> débloquée (mémoire + base de données).`
       : `⚠️ IP <code>${ip}</code> n'était pas bloquée.`
     );
     return;
@@ -360,6 +360,10 @@ router.post("/telegram/setup-webhook", async (req, res) => {
   const json = await resp.json();
   res.json({ webhookUrl, result: json });
 });
+
+// ─── Startup helpers ──────────────────────────────────────────────────────────
+
+export { loadBlockedIpsFromDb };
 
 // ─── Auto-register webhook on startup ─────────────────────────────────────────
 
