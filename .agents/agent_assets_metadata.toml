@@ -11,3 +11,9 @@ id = "arquF7Pbzr7_ej5DDmSed"
 uri = "file://nexarix-deploy.tar.gz"
 type = "unspecified"
 title = "nexarix-deploy.tar.gz — v8 FINALE (SSL + tous les bugs corrigés)"
+
+[[outputs]]
+id = "pbZSpYyApHpsTEVlPLPQ2"
+uri = "file://nexarix-schema.txt"
+type = "text"
+title = "nexarix-schema.txt — SQL à exécuter dans Supabase"
