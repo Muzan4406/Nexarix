@@ -10,8 +10,8 @@ function getConnectionString(): string {
   if (ref && pass) {
     // URL-encode the password to handle special chars like @, #, %, etc.
     const encodedPass = encodeURIComponent(pass);
-    // Direct connection (no pooler) — most compatible with all hosting providers.
-    return `postgresql://postgres:${encodedPass}@db.${ref}.supabase.co:5432/postgres?sslmode=require`;
+    // Transaction pooler — sslmode omitted from URL so the ssl config in Pool takes effect.
+    return `postgresql://postgres.${ref}:${encodedPass}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`;
   }
   const url = process.env.DATABASE_URL;
   if (url) return url;
@@ -20,7 +20,7 @@ function getConnectionString(): string {
 
 export const pool = new Pool({
   connectionString: getConnectionString(),
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: false, checkServerIdentity: () => undefined },
 });
 export const db = drizzle(pool, { schema });
 
