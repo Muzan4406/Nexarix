@@ -1,6 +1,8 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { runStartupMigrations } from "./lib/migrate";
@@ -40,6 +42,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+// Serve frontend static files in production
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const publicDir = path.join(__dirname, "public");
+app.use(express.static(publicDir));
+app.get("*", (_req: Request, res: Response) => {
+  res.sendFile(path.join(publicDir, "index.html"));
+});
 
 // JSON error handler — must be last
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
