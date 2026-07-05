@@ -5,12 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { runStartupMigrations } from "./lib/migrate";
 
 const app: Express = express();
-
-// Run DB migrations before anything else
-await runStartupMigrations();
 
 app.use(
   pinoHttp({
