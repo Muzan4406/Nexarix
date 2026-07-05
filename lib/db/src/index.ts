@@ -8,7 +8,9 @@ function getConnectionString(): string {
   const ref = process.env.SUPABASE_PROJECT_REF;
   const pass = process.env.SUPABASE_DB_PASSWORD;
   if (ref && pass) {
-    return `postgresql://postgres.${ref}:${pass}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`;
+    // URL-encode the password to handle special chars like @, #, %, etc.
+    const encodedPass = encodeURIComponent(pass);
+    return `postgresql://postgres.${ref}:${encodedPass}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`;
   }
   const url = process.env.DATABASE_URL;
   if (url) return url;
