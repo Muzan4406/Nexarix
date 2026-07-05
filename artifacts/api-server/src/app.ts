@@ -53,7 +53,16 @@ app.get("/{*splat}", (_req: Request, res: Response) => {
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   logger.error(err);
   const status = err.status || err.statusCode || 500;
-  const message = err.message || "Erreur interne du serveur";
+
+  // For 5xx errors, always return a generic message — never expose stack traces,
+  // raw SQL, ORM internals, or database details to the client.
+  // 4xx errors (set intentionally by route code) are surfaced as-is.
+  const isServerError = status >= 500;
+  const message =
+    isServerError
+      ? "Erreur interne du serveur"
+      : err.message || "Erreur interne du serveur";
+
   res.status(status).json({ error: message });
 });
 
