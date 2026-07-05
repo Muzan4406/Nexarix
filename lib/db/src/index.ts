@@ -10,7 +10,9 @@ function getConnectionString(): string {
   if (ref && pass) {
     // URL-encode the password to handle special chars like @, #, %, etc.
     const encodedPass = encodeURIComponent(pass);
-    return `postgresql://postgres.${ref}:${encodedPass}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require`;
+    // Port 6543 = session pooler (compatible avec pg.Pool).
+    // Port 5432 = transaction pooler (cause des déconnexions aléatoires avec pg.Pool).
+    return `postgresql://postgres.${ref}:${encodedPass}@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require`;
   }
   const url = process.env.DATABASE_URL;
   if (url) return url;
