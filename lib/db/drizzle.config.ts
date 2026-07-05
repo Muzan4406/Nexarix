@@ -5,7 +5,7 @@ function getConnectionString(): string {
   const ref = process.env.SUPABASE_PROJECT_REF;
   const pass = process.env.SUPABASE_DB_PASSWORD;
   if (ref && pass) {
-    return `postgresql://postgres.${ref}:${encodeURIComponent(pass)}@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require`;
+    return `postgresql://postgres:${encodeURIComponent(pass)}@db.${ref}.supabase.co:5432/postgres?sslmode=require`;
   }
   const url = process.env.DATABASE_URL;
   if (url) return url;
