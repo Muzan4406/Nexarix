@@ -3,6 +3,8 @@
 # compiled output
 dist
 tmp
+# Exception: api-server dist must be committed for Plesk deployment
+!artifacts/api-server/dist/
 out-tsc
 *.tsbuildinfo
 .expo
