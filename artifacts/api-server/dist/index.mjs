@@ -80695,8 +80695,12 @@ router9.post("/telegram/setup-webhook", async (req, res) => {
 });
 async function autoSetupWebhook() {
   if (!BOT_TOKEN) return;
-  const domain2 = process.env.APP_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
-  if (!domain2) return;
+  const raw = process.env.APP_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || process.env.REPLIT_DEV_DOMAIN;
+  if (!raw) {
+    console.warn("[Telegram] Aucun domaine configur\xE9 (APP_BASE_URL manquant) \u2014 webhook non enregistr\xE9");
+    return;
+  }
+  const domain2 = raw.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const webhookUrl = `https://${domain2}/api/telegram/webhook`;
   try {
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {

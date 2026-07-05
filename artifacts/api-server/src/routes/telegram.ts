@@ -318,13 +318,18 @@ export async function autoSetupWebhook(): Promise<void> {
   if (!BOT_TOKEN) return;
 
   // Prefer stable production URL, fall back to dev domain
-  const domain =
+  const raw =
     process.env.APP_BASE_URL ||
     process.env.RAILWAY_PUBLIC_DOMAIN ||
     process.env.REPLIT_DEV_DOMAIN;
 
-  if (!domain) return;
+  if (!raw) {
+    console.warn("[Telegram] Aucun domaine configuré (APP_BASE_URL manquant) — webhook non enregistré");
+    return;
+  }
 
+  // Strip scheme if the user included it (e.g. "https://nexarix.online" → "nexarix.online")
+  const domain = raw.replace(/^https?:\/\//, "").replace(/\/$/, "");
   const webhookUrl = `https://${domain}/api/telegram/webhook`;
 
   try {
