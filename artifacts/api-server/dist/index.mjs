@@ -78890,7 +78890,7 @@ function getConnectionString() {
   const pass = process.env.SUPABASE_DB_PASSWORD;
   if (ref && pass) {
     const encodedPass = encodeURIComponent(pass);
-    return `postgresql://postgres.${ref}:${encodedPass}@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require`;
+    return `postgresql://postgres:${encodedPass}@db.${ref}.supabase.co:5432/postgres?sslmode=require`;
   }
   const url2 = process.env.DATABASE_URL;
   if (url2) return url2;
