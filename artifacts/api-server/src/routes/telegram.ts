@@ -317,14 +317,13 @@ router.post("/telegram/setup-webhook", async (req, res) => {
 export async function autoSetupWebhook(): Promise<void> {
   if (!BOT_TOKEN) return;
 
-  // Prefer stable production URL, fall back to dev domain
-  const raw =
-    process.env.APP_BASE_URL ||
-    process.env.RAILWAY_PUBLIC_DOMAIN ||
-    process.env.REPLIT_DEV_DOMAIN;
+  // Only register if an explicit production domain is configured.
+  // Do NOT fall back to REPLIT_DEV_DOMAIN — the dev server must never steal
+  // the webhook from the production server (Plesk).
+  const raw = process.env.APP_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN;
 
   if (!raw) {
-    console.warn("[Telegram] Aucun domaine configuré (APP_BASE_URL manquant) — webhook non enregistré");
+    console.warn("[Telegram] APP_BASE_URL non défini — webhook non enregistré (normal en dev)");
     return;
   }
 
