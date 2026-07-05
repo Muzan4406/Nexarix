@@ -21,7 +21,19 @@ function getConnectionString(): string {
 export const pool = new Pool({
   connectionString: getConnectionString(),
   ssl: { rejectUnauthorized: false, checkServerIdentity: () => undefined },
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
+
+// Warmup: establish a connection on startup so the first user request doesn't wait
+pool.connect().then((client) => client.release()).catch(() => {});
+
+// Keep-alive: ping every 4 minutes to prevent idle connection drops
+setInterval(() => {
+  pool.query("SELECT 1").catch(() => {});
+}, 4 * 60 * 1000);
+
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";

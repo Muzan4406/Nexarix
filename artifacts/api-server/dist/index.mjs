@@ -78898,8 +78898,17 @@ function getConnectionString() {
 }
 var pool = new Pool3({
   connectionString: getConnectionString(),
-  ssl: { rejectUnauthorized: false, checkServerIdentity: () => void 0 }
+  ssl: { rejectUnauthorized: false, checkServerIdentity: () => void 0 },
+  max: 5,
+  idleTimeoutMillis: 3e4,
+  connectionTimeoutMillis: 1e4
 });
+pool.connect().then((client) => client.release()).catch(() => {
+});
+setInterval(() => {
+  pool.query("SELECT 1").catch(() => {
+  });
+}, 4 * 60 * 1e3);
 var db = drizzle(pool, { schema: schema_exports });
 
 // src/lib/auth.ts
