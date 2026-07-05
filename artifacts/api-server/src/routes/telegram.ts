@@ -303,19 +303,26 @@ async function registerWebhook(host: string, token: string): Promise<{ webhookUr
   return { webhookUrl, result: await resp.json() };
 }
 
+/** Detect the public-facing protocol, accounting for reverse proxies (Plesk, nginx). */
+function publicHost(req: import("express").Request): string {
+  // X-Forwarded-Proto is set by Plesk/nginx when terminating SSL
+  const proto = req.get("x-forwarded-proto") ?? req.protocol;
+  // Telegram requires HTTPS — always force it for safety
+  const scheme = proto === "http" ? "https" : proto;
+  return `${scheme}://${req.get("host")}`;
+}
+
 // GET — ouvrir dans le navigateur : https://nexarix.online/api/telegram/setup-webhook
 router.get("/telegram/setup-webhook", async (req, res) => {
   if (!BOT_TOKEN) { res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" }); return; }
-  const host = `${req.protocol}://${req.get("host")}`;
-  const data = await registerWebhook(host, BOT_TOKEN);
+  const data = await registerWebhook(publicHost(req), BOT_TOKEN);
   res.json(data);
 });
 
 router.post("/telegram/setup-webhook", async (req, res) => {
   if (!BOT_TOKEN) { res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" }); return; }
   const { baseUrl } = req.body as { baseUrl?: string };
-  const host = baseUrl || `${req.protocol}://${req.get("host")}`;
-  const data = await registerWebhook(host, BOT_TOKEN);
+  const data = await registerWebhook(baseUrl ?? publicHost(req), BOT_TOKEN);
   res.json(data);
 });
 
