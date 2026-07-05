@@ -1,8 +1,13 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "iy9q6WA1ORpI6E4qUWFI7"
 uri = "file://artifacts/nexarix/public/opengraph.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "arquF7Pbzr7_ej5DDmSed"
+uri = "file://nexarix-deploy.tar.gz"
+type = "unspecified"
+title = "nexarix-deploy.tar.gz — dist + public à uploader sur Plesk"
