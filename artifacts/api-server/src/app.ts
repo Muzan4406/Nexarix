@@ -41,9 +41,11 @@ app.use("/api", router);
 
 // Serve frontend static files in production
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicDir = path.join(__dirname, "public");
+// After esbuild, __dirname = dist/ and public/ is a sibling folder
+const publicDir = path.join(__dirname, "../public");
 app.use(express.static(publicDir));
-app.get("*", (_req: Request, res: Response) => {
+// Express 5 wildcard — catch all non-API routes and serve the SPA
+app.get("/{*splat}", (_req: Request, res: Response) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
