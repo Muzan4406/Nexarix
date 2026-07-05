@@ -293,23 +293,30 @@ router.post("/telegram/webhook", async (req, res) => {
 
 // ─── Setup webhook ─────────────────────────────────────────────────────────────
 
+async function registerWebhook(host: string, token: string): Promise<{ webhookUrl: string; result: unknown }> {
+  const webhookUrl = `${host}/api/telegram/webhook`;
+  const resp = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message"], drop_pending_updates: true }),
+  });
+  return { webhookUrl, result: await resp.json() };
+}
+
+// GET — ouvrir dans le navigateur : https://nexarix.online/api/telegram/setup-webhook
+router.get("/telegram/setup-webhook", async (req, res) => {
+  if (!BOT_TOKEN) { res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" }); return; }
+  const host = `${req.protocol}://${req.get("host")}`;
+  const data = await registerWebhook(host, BOT_TOKEN);
+  res.json(data);
+});
+
 router.post("/telegram/setup-webhook", async (req, res) => {
   if (!BOT_TOKEN) { res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" }); return; }
   const { baseUrl } = req.body as { baseUrl?: string };
-  const url = baseUrl || `${req.protocol}://${req.get("host")}`;
-  const webhookUrl = `${url}/api/telegram/webhook`;
-
-  const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: webhookUrl,
-      allowed_updates: ["message"],
-      drop_pending_updates: true,
-    }),
-  });
-  const json = await resp.json();
-  res.json({ webhookUrl, result: json });
+  const host = baseUrl || `${req.protocol}://${req.get("host")}`;
+  const data = await registerWebhook(host, BOT_TOKEN);
+  res.json(data);
 });
 
 // ─── Auto-register webhook on startup ─────────────────────────────────────────

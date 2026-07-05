@@ -80673,25 +80673,33 @@ ${lines}`);
   }
   await sendReply(chatId, "\u2753 Commande inconnue. Tapez /aide pour la liste des commandes.");
 });
+async function registerWebhook(host, token) {
+  const webhookUrl = `${host}/api/telegram/webhook`;
+  const resp = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message"], drop_pending_updates: true })
+  });
+  return { webhookUrl, result: await resp.json() };
+}
+router9.get("/telegram/setup-webhook", async (req, res) => {
+  if (!BOT_TOKEN) {
+    res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" });
+    return;
+  }
+  const host = `${req.protocol}://${req.get("host")}`;
+  const data = await registerWebhook(host, BOT_TOKEN);
+  res.json(data);
+});
 router9.post("/telegram/setup-webhook", async (req, res) => {
   if (!BOT_TOKEN) {
     res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" });
     return;
   }
   const { baseUrl } = req.body;
-  const url2 = baseUrl || `${req.protocol}://${req.get("host")}`;
-  const webhookUrl = `${url2}/api/telegram/webhook`;
-  const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/setWebhook`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: webhookUrl,
-      allowed_updates: ["message"],
-      drop_pending_updates: true
-    })
-  });
-  const json3 = await resp.json();
-  res.json({ webhookUrl, result: json3 });
+  const host = baseUrl || `${req.protocol}://${req.get("host")}`;
+  const data = await registerWebhook(host, BOT_TOKEN);
+  res.json(data);
 });
 async function autoSetupWebhook() {
   if (!BOT_TOKEN) return;
