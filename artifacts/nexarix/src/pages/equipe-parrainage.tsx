@@ -188,7 +188,7 @@ export default function EquipeParrainage() {
           <div className="p-3 space-y-2">
             {[
               { level: "Niveau 1", label: "Filleuls directs", amount: "1 300 F", bg: "#dcfce7", border: "#bbf7d0", text: "#14532d", badge: "#16a34a" },
-              { level: "Niveau 2", label: "Filleuls de vos filleuls", amount: "500 F", bg: "#dbeafe", border: "#bfdbfe", text: "#1e3a8a", badge: "#2563eb" },
+              { level: "Niveau 2", label: "Filleuls de vos filleuls", amount: "600 F", bg: "#dbeafe", border: "#bfdbfe", text: "#1e3a8a", badge: "#2563eb" },
               { level: "Niveau 3", label: "3ème génération", amount: "300 F", bg: "#f3e8ff", border: "#e9d5ff", text: "#4c1d95", badge: "#7c3aed" },
             ].map((row) => (
               <div
