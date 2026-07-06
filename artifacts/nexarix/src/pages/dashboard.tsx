@@ -157,12 +157,12 @@ export default function Dashboard() {
         </motion.div>
 
         {/* ── Stat cards ────────────────────────── */}
-        <div className="flex flex-row gap-2 overflow-x-auto pb-1 snap-x snap-mandatory scrollbar-none">
+        <div className="flex flex-col gap-3">
           {[
             {
-              label: "Solde",
+              label: "Solde disponible",
               value: formatCurrency(balance, user?.country),
-              sub: "Disponible",
+              sub: "Retirable maintenant",
               iconUrl: "https://img.icons8.com/color/96/wallet--v1.png",
               bg: "#dcfce7",
               iconBg: "#16a34a",
@@ -172,9 +172,9 @@ export default function Dashboard() {
               i: 1,
             },
             {
-              label: "Retiré",
+              label: "Total retiré",
               value: formatCurrency(totalWithdrawn, user?.country),
-              sub: "Total",
+              sub: "Depuis l'inscription",
               iconUrl: "https://img.icons8.com/color/96/money-transfer.png",
               bg: "#ffedd5",
               iconBg: "#ea580c",
@@ -184,9 +184,9 @@ export default function Dashboard() {
               i: 2,
             },
             {
-              label: "Points",
+              label: "Mes Points",
               value: `${points.toLocaleString()} pts`,
-              sub: "En FCFA",
+              sub: "Convertibles en FCFA",
               iconUrl: "https://img.icons8.com/color/96/lightning-bolt.png",
               bg: "#f3e8ff",
               iconBg: "#7c3aed",
@@ -196,9 +196,9 @@ export default function Dashboard() {
               i: 3,
             },
             {
-              label: "Tâches",
+              label: "Tâches faites",
               value: completedTasks.toLocaleString(),
-              sub: "Complétées",
+              sub: "Tâches complétées",
               iconUrl: "https://img.icons8.com/color/96/checked-checkbox.png",
               bg: "#dbeafe",
               iconBg: "#2563eb",
@@ -207,29 +207,31 @@ export default function Dashboard() {
               subColor: "#60a5fa",
               i: 4,
             },
-          ].map((s, idx) => (
+          ].map((s) => (
             <motion.div
               key={s.label}
               variants={slideUp(s.i)}
               initial="hidden"
               animate="visible"
-              className="rounded-[16px] overflow-hidden shadow-sm shrink-0 snap-start"
-              style={{ background: s.bg, width: "calc(25% - 6px)", minWidth: "76px" }}
+              className="rounded-[18px] overflow-hidden shadow-sm w-full"
+              style={{ background: s.bg }}
             >
-              <div className="p-3 flex flex-col items-center text-center gap-1.5">
+              <div className="px-5 py-4 flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <p className="text-[12px] font-semibold" style={{ color: s.labelColor }}>
+                    {s.label}
+                  </p>
+                  <p className="font-black text-[22px] leading-tight" style={{ color: s.valueColor }}>
+                    {s.value}
+                  </p>
+                  <p className="text-[11px] font-medium" style={{ color: s.subColor }}>{s.sub}</p>
+                </div>
                 <div
-                  className="h-9 w-9 rounded-xl flex items-center justify-center shadow-sm"
+                  className="h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm shrink-0"
                   style={{ background: s.iconBg }}
                 >
-                  <img src={s.iconUrl} alt={s.label} className="h-5 w-5 object-contain" />
+                  <img src={s.iconUrl} alt={s.label} className="h-6 w-6 object-contain" />
                 </div>
-                <p className="font-black text-[14px] leading-tight" style={{ color: s.valueColor }}>
-                  {s.value}
-                </p>
-                <p className="text-[10px] font-semibold uppercase tracking-wide leading-tight" style={{ color: s.labelColor }}>
-                  {s.label}
-                </p>
-                <p className="text-[10px] font-medium leading-tight" style={{ color: s.subColor }}>{s.sub}</p>
               </div>
             </motion.div>
           ))}
