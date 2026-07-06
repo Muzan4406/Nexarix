@@ -78913,7 +78913,9 @@ var db = drizzle(pool, { schema: schema_exports });
 
 // src/lib/auth.ts
 var import_jsonwebtoken = __toESM(require_jsonwebtoken(), 1);
-var JWT_SECRET = process.env.JWT_SECRET || "nexarix-secret-2024";
+var JWT_SECRET = process.env.JWT_SECRET ?? (process.env.NODE_ENV === "production" ? (() => {
+  throw new Error("JWT_SECRET environment variable is required in production");
+})() : "nexarix-dev-secret-change-in-production");
 function signToken(payload) {
   return import_jsonwebtoken.default.sign(payload, JWT_SECRET, { expiresIn: "30d" });
 }
@@ -80144,9 +80146,12 @@ router8.get("/settings/public", async (_req, res) => {
   res.json({
     activationFee: parseFloat(settings.activationFee || "3000"),
     paymentMode: settings.paymentMode || "manual",
-    telegramLink: settings.telegramLink,
-    telegramChannel: settings.telegramChannel,
-    minWithdrawal: parseFloat(settings.minWithdrawal || "3000")
+    minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
+    supportEmail: settings.supportEmail || null,
+    telegramLink: settings.telegramLink || null,
+    telegramChannel: settings.telegramChannel || null,
+    whatsappLink: settings.whatsappLink || null,
+    vcfLink: settings.vcfLink || null
   });
 });
 router8.post("/activate/initiate", authMiddleware, async (req, res) => {
@@ -80687,7 +80692,7 @@ function publicHost(req) {
   const scheme = proto === "http" ? "https" : proto;
   return `${scheme}://${req.get("host")}`;
 }
-router9.get("/telegram/setup-webhook", async (req, res) => {
+router9.get("/telegram/setup-webhook", authMiddleware, adminMiddleware, async (req, res) => {
   if (!BOT_TOKEN) {
     res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" });
     return;
@@ -80695,7 +80700,7 @@ router9.get("/telegram/setup-webhook", async (req, res) => {
   const data = await registerWebhook(publicHost(req), BOT_TOKEN);
   res.json(data);
 });
-router9.post("/telegram/setup-webhook", async (req, res) => {
+router9.post("/telegram/setup-webhook", authMiddleware, adminMiddleware, async (req, res) => {
   if (!BOT_TOKEN) {
     res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" });
     return;
@@ -81541,7 +81546,7 @@ async function runStartupMigrations() {
 }
 
 // src/index.ts
-var port = Number(process.env["PORT"] ?? "8080");
+var port = process.env.NODE_ENV === "production" ? Number(process.env.PORT ?? 8080) : 8080;
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${process.env["PORT"]}"`);
 }
