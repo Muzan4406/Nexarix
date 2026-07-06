@@ -218,19 +218,19 @@ export default function Dashboard() {
             >
               <div className="px-5 py-4 flex items-center justify-between">
                 <div className="flex flex-col gap-1">
-                  <p className="text-[12px] font-semibold" style={{ color: s.labelColor }}>
+                  <p className="text-[11px] font-semibold" style={{ color: s.labelColor }}>
                     {s.label}
                   </p>
-                  <p className="font-black text-[22px] leading-tight" style={{ color: s.valueColor }}>
+                  <p className="font-black text-[18px] leading-tight" style={{ color: s.valueColor }}>
                     {s.value}
                   </p>
-                  <p className="text-[11px] font-medium" style={{ color: s.subColor }}>{s.sub}</p>
+                  <p className="text-[10px] font-medium" style={{ color: s.subColor }}>{s.sub}</p>
                 </div>
                 <div
-                  className="h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm shrink-0"
+                  className="h-10 w-10 rounded-xl flex items-center justify-center shadow-sm shrink-0"
                   style={{ background: s.iconBg }}
                 >
-                  <img src={s.iconUrl} alt={s.label} className="h-6 w-6 object-contain" />
+                  <img src={s.iconUrl} alt={s.label} className="h-5 w-5 object-contain" />
                 </div>
               </div>
             </motion.div>
