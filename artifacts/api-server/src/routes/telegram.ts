@@ -313,13 +313,16 @@ function publicHost(req: import("express").Request): string {
 }
 
 // GET — ouvrir dans le navigateur : https://nexarix.online/api/telegram/setup-webhook
-router.get("/telegram/setup-webhook", async (req, res) => {
+// Protected: requires admin JWT
+import { authMiddleware, adminMiddleware } from "../lib/auth";
+
+router.get("/telegram/setup-webhook", authMiddleware, adminMiddleware, async (req, res) => {
   if (!BOT_TOKEN) { res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" }); return; }
   const data = await registerWebhook(publicHost(req), BOT_TOKEN);
   res.json(data);
 });
 
-router.post("/telegram/setup-webhook", async (req, res) => {
+router.post("/telegram/setup-webhook", authMiddleware, adminMiddleware, async (req, res) => {
   if (!BOT_TOKEN) { res.status(503).json({ error: "TELEGRAM_BOT_TOKEN not set" }); return; }
   const { baseUrl } = req.body as { baseUrl?: string };
   const data = await registerWebhook(baseUrl ?? publicHost(req), BOT_TOKEN);

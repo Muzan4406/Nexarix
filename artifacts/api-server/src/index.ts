@@ -3,7 +3,11 @@ import { logger } from "./lib/logger";
 import { autoSetupWebhook } from "./routes/telegram";
 import { runStartupMigrations } from "./lib/migrate";
 
-const port = Number(process.env["PORT"] ?? "8080");
+// In production (Plesk), use the PORT env var.
+// In dev, default to 8080 — the Vite dev server proxies /api there.
+const port = process.env.NODE_ENV === "production"
+  ? Number(process.env.PORT ?? 8080)
+  : 8080;
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${process.env["PORT"]}"`);

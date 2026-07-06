@@ -51,7 +51,7 @@ const card = {
   hidden: { opacity: 0, y: 16 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+    transition: { delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   }),
 };
 
@@ -82,7 +82,7 @@ export default function WithdrawalHistory() {
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="rounded-3xl bg-gradient-to-br from-indigo-500 via-blue-600 to-cyan-600 p-6 text-white relative overflow-hidden shadow-xl shadow-blue-300/30"
         >
           <div className="absolute -top-8 -right-8 h-36 w-36 rounded-full bg-white/10" />

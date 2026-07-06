@@ -1,45 +1,57 @@
-# Nexarix
+# Nexarix — Digital Revenue Platform
 
-Plateforme de revenus digitaux — gestion d'utilisateurs, tâches, points, retraits, parrainage et tableau de bord admin.
-
-## Run & Operate
-
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+A full-stack platform for managing user memberships, formations, tasks, store, and withdrawals — with a Sendavapay payment integration and Telegram bot notifications.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **Frontend:** React + Vite + Tailwind CSS + shadcn/ui (`artifacts/nexarix`)
+- **Backend:** Express 5 + Drizzle ORM + Supabase Storage (`artifacts/api-server`)
+- **Monorepo:** pnpm workspaces
 
-## Where things live
+## How to run
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+Two workflows are configured and run in parallel:
 
-## Architecture decisions
+| Workflow | Command | Port |
+|---|---|---|
+| `artifacts/nexarix: web` | `pnpm --filter @workspace/nexarix run dev` | 5000 (proxied) |
+| `artifacts/api-server: API Server` | `pnpm --filter @workspace/api-server run dev` | 8080 |
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+The Vite dev server proxies `/api` requests to `http://localhost:8080`.
 
-## Product
+## Required environment variables / secrets
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+These must be set in Replit Secrets for the API server to be fully functional:
+
+| Secret | Purpose |
+|---|---|
+| `SESSION_SECRET` | Express session signing |
+| `JWT_SECRET` | JWT token signing |
+| `SUPABASE_PROJECT_REF` | Supabase project for file storage |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role access |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot for notifications |
+| `TELEGRAM_CHAT_ID` | Target Telegram channel/group |
+
+Payment (Sendavapay) credentials are configured through the admin dashboard settings.
+
+## Project structure
+
+```
+artifacts/
+  nexarix/          # React frontend
+    src/
+      pages/        # Route-level page components
+      components/   # Shared UI components
+      hooks/        # Custom React hooks
+      lib/          # API client, utils
+  api-server/       # Express API
+    src/
+      routes/       # REST route handlers
+      lib/          # Auth, DB, Supabase, migrations
+      middlewares/  # Auth middleware
+libs/               # Shared workspace packages (api-zod, db schema)
+```
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Language: French (app UI is in French)

@@ -71,7 +71,7 @@ export default function Withdrawals() {
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 p-6 text-white relative overflow-hidden shadow-xl shadow-emerald-300/30"
         >
           <div className="absolute -top-8 -right-8 h-36 w-36 rounded-full bg-white/10" />

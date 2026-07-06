@@ -6,36 +6,44 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layout/admin-layout";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, XCircle, Clock, User, Wallet, Zap, AlertTriangle } from "lucide-react";
+import {
+  CheckCircle2, XCircle, Clock, Wallet, Zap, AlertTriangle,
+  Phone, Calendar, ArrowRight, User, Ban,
+} from "lucide-react";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
-function formatFcfa(v: number) { return `${(v || 0).toLocaleString("fr-FR")} XOF`; }
+function fmt(v: number) {
+  return `${(v || 0).toLocaleString("fr-FR")} F`;
+}
 
 const STATUS_CONFIG = {
-  pending:  { label: "En attente", bg: "bg-amber-50 border-amber-100",     pill: "bg-amber-100 text-amber-700",     Icon: Clock },
-  paid:     { label: "Payé",       bg: "bg-emerald-50 border-emerald-100", pill: "bg-emerald-100 text-emerald-700", Icon: CheckCircle2 },
-  rejected: { label: "Rejeté",    bg: "bg-red-50 border-red-100",          pill: "bg-red-100 text-red-600",         Icon: XCircle },
+  pending:  { label: "En attente", pillCls: "bg-amber-100 text-amber-700 border-amber-200",   Icon: Clock,        topBar: "bg-amber-400"   },
+  paid:     { label: "Payé",       pillCls: "bg-emerald-100 text-emerald-700 border-emerald-200", Icon: CheckCircle2, topBar: "bg-emerald-500" },
+  rejected: { label: "Rejeté",    pillCls: "bg-red-100 text-red-600 border-red-200",           Icon: Ban,          topBar: "bg-red-500"     },
 };
 
-const PAYOUT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  queued:           { label: "En file",    color: "bg-blue-100 text-blue-700" },
-  processing:       { label: "En cours",   color: "bg-indigo-100 text-indigo-700" },
-  provider_pending: { label: "Fournisseur",color: "bg-purple-100 text-purple-700" },
-  completed:        { label: "Confirmé ✓", color: "bg-emerald-100 text-emerald-700" },
-  failed:           { label: "Échoué ✗",   color: "bg-red-100 text-red-700" },
-  reversed:         { label: "Remboursé",  color: "bg-orange-100 text-orange-700" },
-  cancelled:        { label: "Annulé",     color: "bg-gray-100 text-gray-600" },
+const PAYOUT_STATUS: Record<string, { label: string; cls: string }> = {
+  queued:           { label: "En file",     cls: "bg-blue-100 text-blue-700 border-blue-200"       },
+  processing:       { label: "En cours",    cls: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+  provider_pending: { label: "Fournisseur", cls: "bg-purple-100 text-purple-700 border-purple-200" },
+  completed:        { label: "Confirmé ✓",  cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  failed:           { label: "Échoué ✗",    cls: "bg-red-100 text-red-700 border-red-200"          },
+  reversed:         { label: "Remboursé",   cls: "bg-orange-100 text-orange-700 border-orange-200" },
+  cancelled:        { label: "Annulé",      cls: "bg-gray-100 text-gray-500 border-gray-200"       },
 };
 
 const card = {
-  hidden:  { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] } }),
+  hidden:  { opacity: 0, y: 10 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.05, duration: 0.35, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  }),
 };
 
 export default function AdminWithdrawals() {
@@ -43,9 +51,10 @@ export default function AdminWithdrawals() {
   const { data: withdrawals, isLoading } = useGetAdminWithdrawals({ status: statusFilter || undefined });
   const { data: settings } = useGetAdminSettings();
   const approveWithdrawal = useApproveWithdrawal();
-  const rejectWithdrawal = useRejectWithdrawal();
+  const rejectWithdrawal  = useRejectWithdrawal();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
   const [rejectData, setRejectData] = useState<{ id: number; reason: string } | null>(null);
   const [confirmAutoId, setConfirmAutoId] = useState<number | null>(null);
 
@@ -57,15 +66,11 @@ export default function AdminWithdrawals() {
       onSuccess: (data: any) => {
         invalidate();
         if (data?.payoutError) {
-          toast({
-            title: "⚠️ Retrait validé — payout échoué",
-            description: data.payoutError,
-            variant: "destructive",
-          });
+          toast({ title: "⚠️ Validé — payout échoué", description: data.payoutError, variant: "destructive" });
         } else if (isAutoMode) {
           toast({ title: "⚡ Payout automatique déclenché" });
         } else {
-          toast({ title: "✅ Retrait validé comme payé" });
+          toast({ title: "✅ Retrait validé" });
         }
         setConfirmAutoId(null);
       },
@@ -74,138 +79,213 @@ export default function AdminWithdrawals() {
   };
 
   const handleApproveClick = (id: number) => {
-    if (isAutoMode) {
-      setConfirmAutoId(id);
-    } else {
-      doApprove(id);
-    }
+    if (isAutoMode) setConfirmAutoId(id);
+    else doApprove(id);
   };
 
   const handleReject = () => {
-    if (!rejectData || !rejectData.reason.trim()) { toast({ title: "Motif requis", variant: "destructive" }); return; }
-    rejectWithdrawal.mutate({ withdrawalId: rejectData.id, data: { reason: rejectData.reason } }, {
-      onSuccess: () => { invalidate(); toast({ title: "⛔ Retrait rejeté" }); setRejectData(null); },
-      onError: (err: any) => toast({ title: "Erreur", description: err?.data?.error, variant: "destructive" }),
-    });
+    if (!rejectData?.reason.trim()) {
+      toast({ title: "Motif requis", variant: "destructive" });
+      return;
+    }
+    rejectWithdrawal.mutate(
+      { withdrawalId: rejectData.id, data: { reason: rejectData.reason } },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast({ title: "⛔ Retrait rejeté" });
+          setRejectData(null);
+        },
+        onError: (err: any) => toast({ title: "Erreur", description: err?.data?.error, variant: "destructive" }),
+      },
+    );
   };
+
+  const list = withdrawals || [];
 
   return (
     <AdminLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto space-y-5">
 
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
+        {/* ── Barre de contrôle ─────────────────── */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <p className="text-sm font-bold text-gray-400">{withdrawals?.length || 0} demande{(withdrawals?.length || 0) !== 1 ? "s" : ""}</p>
+            <h1 className="font-black text-gray-900 text-xl">Retraits</h1>
+            <span className="bg-gray-100 text-gray-500 text-xs font-bold px-2.5 py-1 rounded-full">
+              {list.length} demande{list.length !== 1 ? "s" : ""}
+            </span>
             {isAutoMode && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full px-2.5 py-1">
-                <Zap className="h-3 w-3" />Payout automatique activé
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-blue-100 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1">
+                <Zap className="h-3 w-3" /> Auto
               </span>
             )}
           </div>
+
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40 rounded-2xl border-gray-200 h-10 bg-white font-bold">
+            <SelectTrigger className="w-42 h-10 rounded-2xl border-gray-200 bg-white font-bold text-sm">
               <SelectValue placeholder="Filtrer…" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="">Tous</SelectItem>
-              <SelectItem value="pending">En attente</SelectItem>
-              <SelectItem value="paid">Payés</SelectItem>
-              <SelectItem value="rejected">Rejetés</SelectItem>
+              <SelectItem value="pending">⏳ En attente</SelectItem>
+              <SelectItem value="paid">✅ Payés</SelectItem>
+              <SelectItem value="rejected">⛔ Rejetés</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* List */}
+        {/* ── Liste ─────────────────────────────── */}
         {isLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map(i => <div key={i} className="h-28 bg-white rounded-2xl border border-gray-100 animate-pulse" />)}
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-[180px] bg-white rounded-[20px] border border-gray-100 animate-pulse" />
+            ))}
           </div>
-        ) : (withdrawals || []).length === 0 ? (
-          <div className="text-center py-20">
+        ) : list.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="h-20 w-20 rounded-3xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
               <Wallet className="h-9 w-9 text-gray-300" />
             </div>
             <p className="font-black text-gray-400 text-lg">Aucun retrait</p>
+            <p className="text-gray-400 text-sm mt-1">Changez le filtre pour voir d'autres statuts.</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {(withdrawals || []).map((w: any, i: number) => {
-              const cfg = STATUS_CONFIG[w.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.pending;
+            {list.map((w: any, i: number) => {
+              const cfg      = STATUS_CONFIG[w.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
               const StatusIcon = cfg.Icon;
-              const payoutCfg = w.sendavapayStatus ? PAYOUT_STATUS_CONFIG[w.sendavapayStatus] : null;
+              const payoutCfg  = w.sendavapayStatus ? PAYOUT_STATUS[w.sendavapayStatus] : null;
+              const isPending  = w.status === "pending";
+
               return (
-                <motion.div key={w.id} custom={i} variants={card} initial="hidden" animate="visible"
-                  className={`rounded-2xl border ${cfg.bg} overflow-hidden shadow-sm`}>
-                  <div className="p-4">
-                    <div className="flex items-start gap-4">
-                      {/* Avatar */}
-                      <div className="h-11 w-11 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shrink-0 shadow-sm">
-                        <User className="h-5 w-5 text-gray-400" />
-                      </div>
+                <motion.div
+                  key={w.id}
+                  custom={i}
+                  variants={card}
+                  initial="hidden"
+                  animate="visible"
+                  className="bg-white rounded-[20px] border border-gray-100 shadow-sm overflow-hidden"
+                >
+                  {/* Barre colorée selon statut */}
+                  <div className={`h-1 w-full ${cfg.topBar}`} />
 
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                          <span className="font-black text-sm text-gray-900">{w.username}</span>
-                          <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${cfg.pill}`}>
-                            <StatusIcon className="h-3 w-3" />{cfg.label}
-                          </span>
-                          {payoutCfg && (
-                            <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${payoutCfg.color}`}>
-                              <Zap className="h-3 w-3" />{payoutCfg.label}
+                  <div className="p-4 space-y-3">
+
+                    {/* ── Ligne 1 : utilisateur + badges + date ── */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="h-9 w-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                          <User className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-black text-gray-900 text-[15px] leading-tight truncate">{w.username}</p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.pillCls}`}>
+                              <StatusIcon className="h-2.5 w-2.5" />
+                              {cfg.label}
                             </span>
-                          )}
+                            {payoutCfg && (
+                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${payoutCfg.cls}`}>
+                                <Zap className="h-2.5 w-2.5" />
+                                {payoutCfg.label}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-gray-500">
-                          <span>Opérateur: <span className="font-bold text-gray-700">{w.operator}</span></span>
-                          <span>Téléphone: <span className="font-bold text-gray-700">{w.phone}</span></span>
-                          {w.country && <span>Pays: <span className="font-bold text-gray-700">{w.country}</span></span>}
-                          <span>{format(new Date(w.createdAt), "dd/MM/yyyy HH:mm")}</span>
-                        </div>
-                        {w.sendavapayReference && (
-                          <p className="text-[10px] text-gray-400 mt-1 font-mono truncate">
-                            Réf: {w.sendavapayReference}
-                          </p>
-                        )}
-                        {w.rejectionReason && (
-                          <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1">
-                            <XCircle className="h-3 w-3" />Motif: {w.rejectionReason}
-                          </p>
-                        )}
                       </div>
-
-                      {/* Amounts + Actions */}
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <div className="text-right bg-white rounded-xl p-2.5 border border-gray-200 min-w-[120px]">
-                          <p className="text-xs text-gray-400 font-medium">Brut</p>
-                          <p className="text-sm font-semibold text-gray-600">{formatFcfa(w.amountGross)}</p>
-                          <p className="text-[11px] text-gray-400">Frais 5%: -{formatFcfa(w.fee)}</p>
-                          <div className="border-t border-gray-100 mt-1.5 pt-1.5">
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wide font-bold">Envoyé</p>
-                            <p className="text-base font-black text-emerald-600">{formatFcfa(w.amountNet)}</p>
-                          </div>
+                      {w.createdAt && (
+                        <div className="flex items-center gap-1 text-gray-400 shrink-0">
+                          <Calendar className="h-3 w-3" />
+                          <span className="text-[11px] font-medium">
+                            {format(new Date(w.createdAt), "dd MMM, HH:mm", { locale: fr })}
+                          </span>
                         </div>
-                        {w.status === "pending" && (
-                          <div className="flex gap-1.5">
-                            <Button size="sm" variant="outline"
-                              className="h-8 text-xs rounded-xl border-red-200 text-red-500 hover:bg-red-50 font-bold"
-                              onClick={() => setRejectData({ id: w.id, reason: "" })}>
-                              <XCircle className="h-3 w-3 mr-1" />Rejeter
-                            </Button>
-                            <Button size="sm"
-                              className={`h-8 text-xs rounded-xl font-bold border-0 ${isAutoMode ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"} text-white`}
-                              onClick={() => handleApproveClick(w.id)}
-                              disabled={approveWithdrawal.isPending}>
-                              {isAutoMode
-                                ? <><Zap className="h-3 w-3 mr-1" />Valider auto</>
-                                : <><CheckCircle2 className="h-3 w-3 mr-1" />Valider</>
-                              }
-                            </Button>
-                          </div>
-                        )}
+                      )}
+                    </div>
+
+                    {/* ── Ligne 2 : opérateur + téléphone ── */}
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
+                        <Wallet className="h-3 w-3 text-gray-400" />
+                        <span className="text-[12px] font-semibold text-gray-700">{w.operator || "—"}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
+                        <Phone className="h-3 w-3 text-gray-400" />
+                        <span className="text-[12px] font-semibold text-gray-700">{w.phone || "—"}</span>
                       </div>
                     </div>
+
+                    {/* ── Ligne 3 : montants ── */}
+                    <div className="flex items-center gap-2 bg-gray-50 rounded-2xl px-4 py-3 border border-gray-100">
+                      <div className="flex-1 text-center">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Brut</p>
+                        <p className="font-black text-gray-700 text-[14px]">{fmt(w.amountGross)}</p>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5">
+                        <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
+                        <p className="text-[9px] font-bold text-red-400">−5%</p>
+                      </div>
+                      <div className="flex-1 text-center">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Frais</p>
+                        <p className="font-black text-red-500 text-[14px]">{fmt(w.fee)}</p>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
+                      </div>
+                      <div className="flex-1 text-center">
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Net envoyé</p>
+                        <p className="font-black text-emerald-600 text-[16px]">{fmt(w.amountNet)}</p>
+                      </div>
+                    </div>
+
+                    {/* Référence Sendavapay si présente */}
+                    {w.sendavapayReference && (
+                      <p className="text-[10px] text-gray-400 font-mono truncate px-1">
+                        Réf: {w.sendavapayReference}
+                      </p>
+                    )}
+
+                    {/* Motif de rejet si rejeté */}
+                    {w.rejectionReason && (
+                      <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+                        <XCircle className="h-3.5 w-3.5 text-red-400 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-red-600 font-medium">{w.rejectionReason}</p>
+                      </div>
+                    )}
+
+                    {/* ── Boutons d'action (uniquement si en attente) ── */}
+                    {isPending && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        {/* REJETER */}
+                        <button
+                          onClick={() => setRejectData({ id: w.id, reason: "" })}
+                          className="flex items-center justify-center gap-2 h-11 rounded-2xl border-2 border-red-200 bg-red-50 text-red-600 font-black text-[13px] hover:bg-red-100 hover:border-red-300 transition-all active:scale-[0.97]"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Rejeter
+                        </button>
+
+                        {/* VALIDER */}
+                        <button
+                          onClick={() => handleApproveClick(w.id)}
+                          disabled={approveWithdrawal.isPending}
+                          className="flex items-center justify-center gap-2 h-11 rounded-2xl text-white font-black text-[13px] transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
+                          style={{
+                            background: isAutoMode
+                              ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                              : "linear-gradient(135deg, #10b981, #059669)",
+                          }}
+                        >
+                          {approveWithdrawal.isPending ? (
+                            <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                          ) : isAutoMode ? (
+                            <><Zap className="h-4 w-4" /> Valider auto</>
+                          ) : (
+                            <><CheckCircle2 className="h-4 w-4" /> Valider</>
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -214,65 +294,87 @@ export default function AdminWithdrawals() {
         )}
       </div>
 
-      {/* Reject dialog */}
+      {/* ── Dialog : Rejeter ─────────────────────── */}
       <Dialog open={!!rejectData} onOpenChange={() => setRejectData(null)}>
         <DialogContent className="rounded-3xl border-0 shadow-2xl max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-black flex items-center gap-2">
-              <span className="h-8 w-8 rounded-xl bg-red-100 flex items-center justify-center">
-                <XCircle className="h-4 w-4 text-red-500" />
+            <DialogTitle className="font-black text-[18px] flex items-center gap-2.5">
+              <span className="h-9 w-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <XCircle className="h-5 w-5 text-red-500" />
               </span>
               Rejeter le retrait
             </DialogTitle>
           </DialogHeader>
-          <div>
-            <Label className="text-sm font-bold text-gray-700">Motif de rejet <span className="text-red-500">*</span></Label>
+          <div className="space-y-2">
+            <Label className="text-sm font-bold text-gray-700">
+              Motif de rejet <span className="text-red-500">*</span>
+            </Label>
             <Input
-              className="mt-2 rounded-2xl border-gray-200 h-11"
+              className="rounded-2xl border-gray-200 h-11"
               value={rejectData?.reason || ""}
               onChange={e => setRejectData(d => d ? { ...d, reason: e.target.value } : null)}
-              placeholder="Ex: Numéro incorrect, solde insuffisant…"
+              onKeyDown={e => { if (e.key === "Enter") handleReject(); }}
+              placeholder="Ex: Numéro incorrect, infos invalides…"
               autoFocus
             />
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" className="rounded-2xl flex-1 font-bold" onClick={() => setRejectData(null)}>Annuler</Button>
-            <Button className="rounded-2xl flex-1 font-bold bg-red-500 hover:bg-red-600 border-0"
-              onClick={handleReject} disabled={rejectWithdrawal.isPending}>
-              {rejectWithdrawal.isPending ? "Rejet…" : "Confirmer le rejet"}
-            </Button>
+          <DialogFooter className="gap-2 pt-1">
+            <button
+              className="flex-1 h-11 rounded-2xl border border-gray-200 bg-white font-bold text-gray-700 text-sm hover:bg-gray-50 transition-all"
+              onClick={() => setRejectData(null)}
+            >
+              Annuler
+            </button>
+            <button
+              className="flex-1 h-11 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-black text-sm transition-all disabled:opacity-60 shadow-lg shadow-red-200"
+              onClick={handleReject}
+              disabled={rejectWithdrawal.isPending}
+            >
+              {rejectWithdrawal.isPending
+                ? <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin mx-auto" />
+                : "Confirmer le rejet"
+              }
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Auto-payout confirmation dialog */}
+      {/* ── Dialog : Confirmation payout auto ────── */}
       <Dialog open={confirmAutoId !== null} onOpenChange={() => setConfirmAutoId(null)}>
         <DialogContent className="rounded-3xl border-0 shadow-2xl max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-black flex items-center gap-2">
-              <span className="h-8 w-8 rounded-xl bg-blue-100 flex items-center justify-center">
-                <Zap className="h-4 w-4 text-blue-600" />
+            <DialogTitle className="font-black text-[18px] flex items-center gap-2.5">
+              <span className="h-9 w-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                <Zap className="h-5 w-5 text-blue-600" />
               </span>
-              Déclencher le payout automatique
+              Confirmer le payout auto
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-3 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-700">
-                Ceci va envoyer le <strong>montant net</strong> directement sur le Mobile Money de l'utilisateur via Sendavapay. L'opération est irréversible une fois lancée.
-              </p>
-            </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-700 leading-relaxed">
+              Le <strong>montant net</strong> sera envoyé directement sur le Mobile Money de l'utilisateur via Sendavapay.
+              L'opération est <strong>irréversible</strong> une fois lancée.
+            </p>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" className="rounded-2xl flex-1 font-bold" onClick={() => setConfirmAutoId(null)}>Annuler</Button>
-            <Button
-              className="rounded-2xl flex-1 font-bold bg-blue-600 hover:bg-blue-700 border-0"
+          <DialogFooter className="gap-2 pt-1">
+            <button
+              className="flex-1 h-11 rounded-2xl border border-gray-200 bg-white font-bold text-gray-700 text-sm hover:bg-gray-50 transition-all"
+              onClick={() => setConfirmAutoId(null)}
+            >
+              Annuler
+            </button>
+            <button
+              className="flex-1 h-11 rounded-2xl text-white font-black text-sm transition-all disabled:opacity-60 shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
+              style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
               onClick={() => confirmAutoId !== null && doApprove(confirmAutoId)}
               disabled={approveWithdrawal.isPending}
             >
-              {approveWithdrawal.isPending ? <><Zap className="h-4 w-4 mr-1 animate-pulse" />Envoi…</> : <><Zap className="h-4 w-4 mr-1" />Confirmer le payout</>}
-            </Button>
+              {approveWithdrawal.isPending
+                ? <><Zap className="h-4 w-4 animate-pulse" /> Envoi…</>
+                : <><Zap className="h-4 w-4" /> Envoyer le payout</>
+              }
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

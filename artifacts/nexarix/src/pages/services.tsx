@@ -6,7 +6,7 @@ import { LayoutGrid, ExternalLink, Sparkles } from "lucide-react";
 
 const fadeUp = (i: number) => ({
   hidden:  { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+  visible: { opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 });
 
 function SkeletonCard() {
@@ -44,7 +44,7 @@ export default function Services() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-700 p-5 text-white shadow-xl shadow-sky-200"
         >
           {/* decorative circles */}
@@ -77,7 +77,7 @@ export default function Services() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
             className="flex flex-col items-center justify-center py-20 text-center"
           >
             <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-sky-100 to-blue-100 flex items-center justify-center mx-auto mb-5 shadow-inner">

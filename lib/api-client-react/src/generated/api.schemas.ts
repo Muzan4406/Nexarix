@@ -275,6 +275,17 @@ export interface RejectInput {
 export interface PublicSettings {
   activationFee: number;
   paymentMode: string;
+  minWithdrawal: number;
+  /** @nullable */
+  supportEmail?: string | null;
+  /** @nullable */
+  telegramLink?: string | null;
+  /** @nullable */
+  telegramChannel?: string | null;
+  /** @nullable */
+  whatsappLink?: string | null;
+  /** @nullable */
+  vcfLink?: string | null;
 }
 
 export interface ActivateInitiateResponse {

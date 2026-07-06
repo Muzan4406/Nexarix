@@ -34,9 +34,12 @@ router.get("/settings/public", async (_req, res) => {
   res.json({
     activationFee: parseFloat(settings.activationFee || "3000"),
     paymentMode: settings.paymentMode || "manual",
-    telegramLink: settings.telegramLink,
-    telegramChannel: settings.telegramChannel,
     minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
+    supportEmail: settings.supportEmail || null,
+    telegramLink: settings.telegramLink || null,
+    telegramChannel: settings.telegramChannel || null,
+    whatsappLink: settings.whatsappLink || null,
+    vcfLink: settings.vcfLink || null,
   });
 });
 

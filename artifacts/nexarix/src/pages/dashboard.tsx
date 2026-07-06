@@ -7,16 +7,16 @@ import { useAuth } from "@/hooks/use-auth";
 import {
   Wallet, ArrowDownCircle, Copy, CheckCircle,
   Zap, Sparkles, TrendingUp, Gift,
-  BadgeDollarSign,
+  BadgeDollarSign, ArrowUpRight,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
-const fadeUp = (i: number) => ({
-  hidden: { opacity: 0, y: 18 },
+const rise = (i: number) => ({
+  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1, y: 0,
-    transition: { delay: i * 0.08, duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+    transition: { delay: i * 0.07, duration: 0.42, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   },
 });
 
@@ -39,7 +39,7 @@ export default function Dashboard() {
   if (isLoading) return (
     <AppLayout>
       <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#1565C0] border-t-transparent" />
+        <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-blue-600 border-t-transparent" />
         <p className="text-gray-400 text-sm font-medium">Chargement…</p>
       </div>
     </AppLayout>
@@ -54,170 +54,194 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 pb-4">
+      <div className="space-y-3.5 pb-6">
 
-        {/* ── Hero Banner ──────────────────────────── */}
+        {/* ── Hero ──────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0, y: -15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="rounded-3xl relative overflow-hidden text-white"
-          style={{ background: "linear-gradient(135deg, #060d1f 0%, #0d1b3e 40%, #1565C0 100%)" }}
+          variants={rise(0)} initial="hidden" animate="visible"
+          className="relative overflow-hidden rounded-[28px] text-white"
+          style={{ background: "linear-gradient(145deg, #050d1f 0%, #0c1a3d 45%, #1248a8 100%)" }}
         >
-          {/* Décoration */}
-          <div className="pointer-events-none absolute -top-14 -right-14 h-52 w-52 rounded-full bg-white/5" />
-          <div className="pointer-events-none absolute top-6 right-24 h-5 w-5 rounded-full bg-yellow-400/20" />
-          <div className="pointer-events-none absolute top-16 right-10 h-3 w-3 rounded-full bg-yellow-400/30" />
-          <div className="pointer-events-none absolute -bottom-12 -left-12 h-44 w-44 rounded-full bg-white/5" />
-          <div className="pointer-events-none absolute bottom-8 right-8 h-16 w-16 rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(255,200,50,0.12) 0%, transparent 70%)" }} />
+          {/* déco */}
+          <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(99,155,255,0.18) 0%, transparent 70%)" }} />
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)" }} />
+          <div className="pointer-events-none absolute top-8 right-32 h-2 w-2 rounded-full bg-yellow-400/50" />
+          <div className="pointer-events-none absolute top-16 right-14 h-1.5 w-1.5 rounded-full bg-blue-300/60" />
 
           <div className="relative z-10 p-5">
-            {/* User row */}
-            <div className="flex items-center gap-3 mb-5">
-              <div className="h-13 w-13 h-[52px] w-[52px] rounded-2xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg ring-2 ring-white/20"
-                style={{ background: "linear-gradient(135deg, #1e3a8a, #1565C0)" }}>
-                {user?.username?.[0]?.toUpperCase()}
+            {/* Nom + badge */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div
+                  className="h-11 w-11 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-lg ring-1 ring-white/15"
+                  style={{ background: "linear-gradient(135deg, #1e3a8a, #2563eb)" }}
+                >
+                  {user?.username?.[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-blue-300/80 text-[10px] font-semibold uppercase tracking-[0.12em]">Bonjour 👋</p>
+                  <p className="font-bold text-[17px] leading-tight">{user?.username}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-blue-300 text-[11px] font-bold uppercase tracking-widest">Bienvenue</p>
-                <p className="font-black text-xl leading-tight truncate">{user?.username}</p>
-              </div>
-              <div className="flex items-center gap-1.5 rounded-2xl px-3 py-1.5 shrink-0 border border-yellow-400/30"
-                style={{ background: "rgba(234,179,8,0.15)" }}>
-                <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
-                <span className="text-xs font-black text-yellow-200">Premium</span>
+              <div
+                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1 border border-yellow-400/25"
+                style={{ background: "rgba(234,179,8,0.12)" }}
+              >
+                <Sparkles className="h-3 w-3 text-yellow-300" />
+                <span className="text-[11px] font-bold text-yellow-200">Premium</span>
               </div>
             </div>
 
-            {/* Frais activation + Total gagné */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl p-4 border border-white/10 backdrop-blur-sm"
-                style={{ background: "rgba(255,255,255,0.08)" }}>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Zap className="h-3.5 w-3.5 text-yellow-300" />
-                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">Frais d'activation</p>
+            {/* Balance principale */}
+            <div className="mb-5">
+              <p className="text-blue-300/70 text-[10px] font-semibold uppercase tracking-[0.12em] mb-1">Solde disponible</p>
+              <motion.p
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
+                className="font-black text-[38px] leading-none tracking-tight"
+              >
+                {formatCurrency(balance, user?.country)}
+              </motion.p>
+            </div>
+
+            {/* 2 stats secondaires */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div
+                className="rounded-2xl p-3.5 border border-white/8"
+                style={{ background: "rgba(255,255,255,0.06)" }}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TrendingUp className="h-3 w-3 text-yellow-300/80" />
+                  <p className="text-[9px] font-semibold text-blue-200/70 uppercase tracking-wider">Total gagné</p>
                 </div>
-                <p className="font-black text-2xl leading-tight">{activationFee.toLocaleString("fr-FR")} F</p>
+                <p className="font-black text-[20px] leading-none">{formatCurrency(totalBalance, user?.country)}</p>
               </div>
-              <div className="rounded-2xl p-4 border border-white/10 backdrop-blur-sm"
-                style={{ background: "rgba(255,255,255,0.08)" }}>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <TrendingUp className="h-3.5 w-3.5 text-yellow-300" />
-                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider">Total gagné</p>
+              <div
+                className="rounded-2xl p-3.5 border border-white/8"
+                style={{ background: "rgba(255,255,255,0.06)" }}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Zap className="h-3 w-3 text-yellow-300/80" />
+                  <p className="text-[9px] font-semibold text-blue-200/70 uppercase tracking-wider">Frais d'activation</p>
                 </div>
-                <p className="font-black text-2xl leading-tight">{formatCurrency(totalBalance, user?.country)}</p>
+                <p className="font-black text-[20px] leading-none">{activationFee.toLocaleString("fr-FR")} F</p>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* ── Cartes de stats ──────────────────────── */}
+        {/* ── Stat cards ────────────────────────── */}
         <div className="grid grid-cols-2 gap-3">
           {[
             {
-              label: "Solde disponible",
-              value: formatCurrency(balance, user?.country),
-              sub: "Retirable maintenant",
-              icon: Wallet,
-              iconColor: "text-[#1565C0]",
-              iconBg: "bg-blue-50",
-              accent: "#1565C0",
-              border: "border-blue-100",
-              bg: "bg-white",
+              label: "Total retiré",
+              value: formatCurrency(totalWithdrawn, user?.country),
+              sub: "Depuis l'inscription",
+              icon: ArrowDownCircle,
+              topColor: "#f59e0b",
+              iconBg: "bg-amber-50",
+              iconColor: "text-amber-500",
               i: 1,
             },
             {
-              label: "Total retiré",
-              value: formatCurrency(totalWithdrawn, user?.country),
-              sub: "Depuis votre inscription",
-              icon: ArrowDownCircle,
-              iconColor: "text-amber-600",
-              iconBg: "bg-amber-50",
-              accent: "#d97706",
-              border: "border-amber-100",
-              bg: "bg-white",
-              i: 2,
-            },
-            {
               label: "Mes Points",
-              value: `${points.toLocaleString()} pts`,
-              sub: "Convertibles en FCFA",
+              value: `${points.toLocaleString()}`,
+              sub: "pts convertibles",
               icon: Zap,
-              iconColor: "text-yellow-600",
-              iconBg: "bg-yellow-50",
-              accent: "#ca8a04",
-              border: "border-yellow-100",
-              bg: "bg-white",
-              i: 3,
+              topColor: "#8b5cf6",
+              iconBg: "bg-violet-50",
+              iconColor: "text-violet-500",
+              i: 2,
             },
             {
               label: "Tâches faites",
               value: completedTasks.toLocaleString(),
               sub: "Tâches complétées",
               icon: BadgeDollarSign,
-              iconColor: "text-[#1565C0]",
+              topColor: "#10b981",
+              iconBg: "bg-emerald-50",
+              iconColor: "text-emerald-600",
+              i: 3,
+            },
+            {
+              label: "Total gagné",
+              value: formatCurrency(totalBalance, user?.country),
+              sub: "MLM + tâches + bonus",
+              icon: TrendingUp,
+              topColor: "#2563eb",
               iconBg: "bg-blue-50",
-              accent: "#1565C0",
-              border: "border-blue-100",
-              bg: "bg-white",
+              iconColor: "text-blue-600",
               i: 4,
             },
           ].map((s) => (
             <motion.div
               key={s.label}
-              variants={fadeUp(s.i)}
+              variants={rise(s.i)}
               initial="hidden"
               animate="visible"
-              className={cn("rounded-2xl border p-4 shadow-sm", s.bg, s.border)}
+              className="bg-white rounded-[20px] border border-gray-100/80 shadow-sm overflow-hidden"
             >
-              <div className={cn("h-9 w-9 rounded-xl flex items-center justify-center mb-3 shadow-sm", s.iconBg)}>
-                <s.icon className={cn("h-[18px] w-[18px]", s.iconColor)} />
+              {/* Accent bar */}
+              <div className="h-[3px] w-full" style={{ background: s.topColor }} />
+              <div className="p-3.5">
+                <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center mb-3", s.iconBg)}>
+                  <s.icon className={cn("h-4 w-4", s.iconColor)} />
+                </div>
+                <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-0.5">{s.label}</p>
+                <p className="font-black text-[17px] text-gray-900 leading-tight">{s.value}</p>
+                <p className="text-[10px] text-gray-400 font-medium mt-0.5">{s.sub}</p>
               </div>
-              <p className="text-gray-400 text-[11px] font-semibold mb-0.5">{s.label}</p>
-              <p className="font-black text-base text-gray-900 leading-tight">{s.value}</p>
-              <p className="text-[10px] text-gray-400 font-medium mt-0.5">{s.sub}</p>
             </motion.div>
           ))}
         </div>
 
-
-        {/* ── Lien de parrainage ───────────────────── */}
+        {/* ── Lien de parrainage ───────────────── */}
         <motion.div
-          variants={fadeUp(7)}
+          variants={rise(6)}
           initial="hidden"
           animate="visible"
-          className="rounded-3xl overflow-hidden shadow-sm border border-slate-100"
-          style={{ background: "linear-gradient(135deg, #060d1f 0%, #0d1b3e 50%, #1a2f6e 100%)" }}
+          className="rounded-[24px] overflow-hidden border border-gray-100 shadow-sm"
+          style={{ background: "linear-gradient(145deg, #050d1f 0%, #0c1a3d 55%, #1a2f6e 100%)" }}
         >
           <div className="p-4">
             <div className="flex items-center gap-3 mb-3">
-              <div className="h-10 w-10 rounded-2xl flex items-center justify-center shrink-0 border border-yellow-400/30"
-                style={{ background: "rgba(234,179,8,0.15)" }}>
-                <Gift className="h-5 w-5 text-yellow-300" />
+              <div
+                className="h-9 w-9 rounded-[14px] flex items-center justify-center shrink-0 border border-yellow-400/25"
+                style={{ background: "rgba(234,179,8,0.15)" }}
+              >
+                <Gift className="h-4 w-4 text-yellow-300" />
               </div>
               <div>
-                <p className="font-black text-white text-sm">Mon lien de parrainage</p>
-                <p className="text-[10px] text-blue-300 font-medium">Gagnez jusqu'à 1 300 FCFA par filleul</p>
+                <p className="font-bold text-white text-[13px] leading-tight">Mon lien de parrainage</p>
+                <p className="text-[10px] text-blue-300/80 font-medium">Jusqu'à 1 300 F par filleul direct</p>
               </div>
+              <ArrowUpRight className="h-4 w-4 text-blue-400/60 ml-auto shrink-0" />
             </div>
-            <div className="rounded-2xl px-3 py-2.5 mb-3 border border-white/10"
-              style={{ background: "rgba(255,255,255,0.07)" }}>
-              <p className="font-mono text-xs text-blue-200 truncate">{stats?.referralLink || "Chargement…"}</p>
+
+            {/* Lien */}
+            <div
+              className="rounded-xl px-3 py-2 mb-3 border border-white/8"
+              style={{ background: "rgba(255,255,255,0.05)" }}
+            >
+              <p className="font-mono text-[11px] text-blue-200/80 truncate">{stats?.referralLink || "Chargement…"}</p>
             </div>
+
             <button
               onClick={handleCopy}
               className={cn(
-                "w-full rounded-2xl h-11 flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-[0.98]",
+                "w-full rounded-xl h-10 flex items-center justify-center gap-2 font-bold text-[13px] transition-all active:scale-[0.97]",
                 copied
-                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-900/30"
-                  : "text-[#0d1b3e] shadow-lg shadow-yellow-900/20 hover:shadow-yellow-700/30"
+                  ? "bg-emerald-500 text-white"
+                  : "text-[#0d1b3e]"
               )}
               style={copied ? {} : { background: "linear-gradient(135deg, #fbbf24, #f59e0b)" }}
             >
               {copied
-                ? <><CheckCircle className="h-4 w-4" /> Lien copié !</>
-                : <><Copy className="h-4 w-4" /> Copier mon lien de parrainage</>
+                ? <><CheckCircle className="h-4 w-4" /> Copié !</>
+                : <><Copy className="h-4 w-4" /> Copier le lien</>
               }
             </button>
           </div>

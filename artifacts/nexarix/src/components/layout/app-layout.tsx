@@ -4,6 +4,7 @@ import {
   LogOut, Menu, LayoutDashboard, CheckSquare, Wallet,
   Phone, User, Star, History,
   Users, Zap, ChevronDown, ShoppingBag, GraduationCap, LayoutGrid,
+  Crown, UserX, Trophy,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -20,7 +21,19 @@ type Section  = { kind: "item"; item: NavItem & { gradient: string } }
 const SECTIONS: Section[] = [
   { kind: "item", item: { name: "Vue d'ensemble", href: "/dashboard",  icon: LayoutDashboard, gradient: "from-blue-500 to-indigo-500" } },
   { kind: "item", item: { name: "Mon Compte",     href: "/profile",    icon: User,            gradient: "from-violet-500 to-purple-500" } },
-  { kind: "item", item: { name: "Mes Filleuls",   href: "/downline",   icon: Users,           gradient: "from-cyan-500 to-teal-500" } },
+  {
+    kind: "group",
+    group: {
+      name: "Mon Équipe", icon: Users, accent: "text-cyan-500",
+      items: [
+        { name: "Niveau 1",           href: "/equipe/niveau-1", icon: Crown   },
+        { name: "Niveau 2",           href: "/equipe/niveau-2", icon: Star    },
+        { name: "Niveau 3",           href: "/equipe/niveau-3", icon: Zap     },
+        { name: "Inactifs",           href: "/equipe/inactifs", icon: UserX   },
+        { name: "Bonus Super Parrain",href: "/equipe/bonus",    icon: Trophy  },
+      ],
+    },
+  },
   {
     kind: "group",
     group: {
@@ -100,7 +113,7 @@ function NavGroupSection({ group, location, onClose }: { group: NavGroup; locati
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
             className="overflow-hidden"
           >
             <div className="ml-5 mt-1 space-y-0.5 border-l-2 border-gray-100 pl-3 pb-1">
@@ -234,7 +247,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           key={location}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="flex-1 p-4 md:p-6 max-w-2xl mx-auto w-full"
         >
           {children}

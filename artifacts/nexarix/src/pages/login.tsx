@@ -3,12 +3,12 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, User, Lock, MessageSquare } from "lucide-react";
+import { LogIn, User, Lock, MessageSquare, ArrowRight } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -43,7 +43,6 @@ export default function Login() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Identifiants incorrects");
 
-      // Admin → OTP step
       if (data.otpRequired && data.sessionToken) {
         setSessionToken(data.sessionToken);
         setStep("otp");
@@ -51,13 +50,8 @@ export default function Login() {
         return;
       }
 
-      // Regular user → direct login
       login(data.token, data.user);
-      if (data.user.status === "inactive") {
-        setLocation("/activate");
-      } else {
-        setLocation("/dashboard");
-      }
+      setLocation(data.user.status === "inactive" ? "/activate" : "/dashboard");
     } catch (err: any) {
       toast({ title: "Erreur de connexion", description: err.message, variant: "destructive" });
     } finally {
@@ -79,7 +73,6 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Code OTP invalide");
-
       login(data.token, data.user);
       setLocation("/admin/dashboard");
     } catch (err: any) {
@@ -90,87 +83,113 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#0D1B3E] via-[#1565C0] to-[#0D1B3E] p-4">
+    <div
+      className="min-h-screen flex flex-col items-center justify-center p-5"
+      style={{ background: "linear-gradient(145deg, #050d1f 0%, #0c1a3d 45%, #1248a8 100%)" }}
+    >
+      {/* Décoration background */}
+      <div className="pointer-events-none fixed -top-32 -right-32 h-96 w-96 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(99,155,255,0.12) 0%, transparent 65%)" }} />
+      <div className="pointer-events-none fixed -bottom-24 -left-24 h-72 w-72 rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(99,120,255,0.10) 0%, transparent 65%)" }} />
 
       {/* Logo */}
-      <div className="mb-8 flex flex-col items-center">
-        <img
-          src={`${BASE}logo.png`}
-          alt="Nexarix"
-          className="h-24 w-auto object-contain drop-shadow-2xl"
-        />
-        <p className="text-blue-200 text-sm mt-3 font-medium tracking-wide">Plateforme de revenus digitaux</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
+        className="mb-8 flex flex-col items-center"
+      >
+        <div className="relative mb-3">
+          <div className="absolute inset-0 rounded-[28px] blur-xl opacity-40"
+            style={{ background: "linear-gradient(135deg, #2563eb, #7c3aed)" }} />
+          <img
+            src={`${BASE}logo.png`}
+            alt="Nexarix"
+            className="relative h-20 w-20 object-cover rounded-[28px] shadow-2xl ring-1 ring-white/10"
+          />
+        </div>
+        <h1 className="font-black text-white text-[26px] tracking-tight">NEXARIX</h1>
+        <p className="text-blue-300/70 text-[12px] font-medium mt-0.5 tracking-wide">Plateforme de revenus digitaux</p>
+      </motion.div>
 
       {/* Carte formulaire */}
-      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-3xl shadow-2xl overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-[#1565C0] to-[#1E88E5]" />
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.08, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
+        className="w-full max-w-sm bg-white rounded-[28px] shadow-2xl overflow-hidden"
+      >
+        {/* Accent bar */}
+        <div className="h-1" style={{ background: "linear-gradient(90deg, #2563eb, #7c3aed, #ec4899)" }} />
 
         <div className="p-6">
           {step === "credentials" ? (
             <>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Connexion</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Accédez à votre espace membre</p>
+              <h2 className="font-black text-gray-900 text-[22px] mb-0.5">Connexion</h2>
+              <p className="text-gray-400 text-[13px] font-medium mb-6">Accédez à votre espace membre</p>
 
               <Form {...credForm}>
-                <form onSubmit={credForm.handleSubmit(onSubmitCredentials)} className="space-y-4">
+                <form onSubmit={credForm.handleSubmit(onSubmitCredentials)} className="space-y-3.5">
                   <FormField control={credForm.control} name="identifier" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300 text-sm font-medium">
-                        Nom d'utilisateur ou Email
-                      </FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center">
+                            <User className="h-3.5 w-3.5 text-gray-400" />
+                          </div>
                           <Input
                             data-testid="input-identifier"
-                            placeholder="jean123 ou jean@mail.com"
-                            className="pl-10 rounded-xl border-gray-200 dark:border-gray-700 h-11"
+                            placeholder="Nom d'utilisateur ou Email"
+                            className="pl-14 h-12 rounded-2xl border-gray-200 bg-gray-50 text-[13px] font-medium focus-visible:ring-blue-500"
                             {...field}
                           />
                         </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )} />
 
                   <FormField control={credForm.control} name="password" render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300 text-sm font-medium">
-                        Mot de passe
-                      </FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center">
+                            <Lock className="h-3.5 w-3.5 text-gray-400" />
+                          </div>
                           <Input
                             data-testid="input-password"
                             type="password"
                             placeholder="••••••••"
-                            className="pl-10 rounded-xl border-gray-200 dark:border-gray-700 h-11"
+                            className="pl-14 h-12 rounded-2xl border-gray-200 bg-gray-50 text-[13px] font-medium focus-visible:ring-blue-500"
                             {...field}
                           />
                         </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-xs" />
                     </FormItem>
                   )} />
 
-                  <Button
+                  <button
                     data-testid="button-submit"
                     type="submit"
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1565C0] to-[#1E88E5] hover:from-[#0D47A1] hover:to-[#1565C0] text-white font-bold text-base shadow-lg mt-2"
                     disabled={loadingLogin}
+                    className="w-full h-12 rounded-2xl text-white font-black text-[14px] flex items-center justify-center gap-2 transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none mt-1"
+                    style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
                   >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    {loadingLogin ? "Connexion..." : "Se connecter"}
-                  </Button>
+                    {loadingLogin ? (
+                      <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    ) : (
+                      <><LogIn className="h-4 w-4" /> Se connecter</>
+                    )}
+                  </button>
                 </form>
               </Form>
 
-              <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-5 pt-5 border-t border-gray-100 text-center">
+                <p className="text-[13px] text-gray-400">
                   Pas encore de compte ?{" "}
-                  <a href="/register" className="text-[#1565C0] font-semibold hover:underline">
+                  <a href="/register" className="text-blue-600 font-bold hover:underline">
                     S'inscrire gratuitement
                   </a>
                 </p>
@@ -178,61 +197,52 @@ export default function Login() {
             </>
           ) : (
             <>
-              <div className="flex items-center gap-2 mb-1">
-                <MessageSquare className="h-5 w-5 text-blue-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Code OTP</h2>
+              <div className="flex items-center gap-2.5 mb-1">
+                <div className="h-9 w-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <MessageSquare className="h-4 w-4 text-blue-600" />
+                </div>
+                <h2 className="font-black text-gray-900 text-[20px]">Code OTP</h2>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                Un code à 6 chiffres a été envoyé dans votre groupe Telegram. Il expire dans 5 minutes.
+              <p className="text-[12px] text-gray-400 font-medium mb-5 leading-relaxed">
+                Un code à 6 chiffres a été envoyé dans votre groupe Telegram. Valable 5 minutes.
               </p>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Code OTP
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="123456"
-                    value={otpValue}
-                    onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    onKeyDown={(e) => { if (e.key === "Enter") onSubmitOtp(); }}
-                    autoFocus
-                    style={{
-                      width: "100%",
-                      height: "56px",
-                      fontSize: "28px",
-                      fontWeight: 900,
-                      textAlign: "center",
-                      letterSpacing: "0.3em",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "12px",
-                      outline: "none",
-                      color: "#111827",
-                      background: "#ffffff",
-                      padding: "0 12px",
-                    }}
-                  />
-                  {otpValue.length > 0 && otpValue.length < 6 && (
-                    <p className="text-xs text-red-500 mt-1">{6 - otpValue.length} chiffre(s) manquant(s)</p>
-                  )}
-                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="• • • • • •"
+                  value={otpValue}
+                  onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onKeyDown={(e) => { if (e.key === "Enter") onSubmitOtp(); }}
+                  autoFocus
+                  className="w-full h-16 text-center font-black text-[32px] tracking-[0.25em] rounded-2xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                />
+                {otpValue.length > 0 && otpValue.length < 6 && (
+                  <p className="text-[11px] text-red-500 font-medium text-center">
+                    {6 - otpValue.length} chiffre(s) manquant(s)
+                  </p>
+                )}
 
-                <Button
+                <button
                   type="button"
                   onClick={onSubmitOtp}
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-[#1565C0] to-[#1E88E5] hover:from-[#0D47A1] hover:to-[#1565C0] text-white font-bold text-base shadow-lg"
                   disabled={loadingOtp || otpValue.length !== 6}
+                  className="w-full h-12 rounded-2xl text-white font-black text-[14px] flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
                 >
-                  {loadingOtp ? "Vérification..." : "Valider le code"}
-                </Button>
+                  {loadingOtp ? (
+                    <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  ) : (
+                    <><ArrowRight className="h-4 w-4" /> Valider le code</>
+                  )}
+                </button>
 
                 <button
                   type="button"
                   onClick={() => { setStep("credentials"); setOtpValue(""); }}
-                  className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors mt-1"
+                  className="w-full text-[12px] text-gray-400 hover:text-gray-600 transition-colors font-medium"
                 >
                   ← Retour à la connexion
                 </button>
@@ -240,11 +250,16 @@ export default function Login() {
             </>
           )}
         </div>
-      </div>
+      </motion.div>
 
-      <p className="mt-8 text-blue-300/60 text-xs text-center">
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className="mt-8 text-blue-300/40 text-[11px] text-center"
+      >
         © 2025 Nexarix · Tous droits réservés
-      </p>
+      </motion.p>
     </div>
   );
 }

@@ -60,14 +60,14 @@ const fadeUp = {
   hidden: { opacity: 0, y: 14 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { duration: 0.38, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.38, delay: i * 0.06, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   }),
 };
 
 const listStagger = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const listItem = {
   hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 };
 
 export default function Downline() {
@@ -251,7 +251,7 @@ export default function Downline() {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(bonusProgress / BONUS_STEP) * 100}%` }}
-                  transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+                  transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] as [number, number, number, number], delay: 0.4 }}
                   className="h-full rounded-full bg-gradient-to-r from-yellow-300 to-amber-200"
                 />
               </div>

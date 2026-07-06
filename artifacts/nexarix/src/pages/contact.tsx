@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useGetAdminSettings } from "@workspace/api-client-react";
+import { useGetPublicSettings } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Mail, ExternalLink, Phone, Clock, Shield } from "lucide-react";
 import { SiTelegram, SiWhatsapp } from "react-icons/si";
@@ -8,12 +8,12 @@ const card = {
   hidden: { opacity: 0, y: 18 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+    transition: { delay: i * 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   }),
 };
 
 export default function Contact() {
-  const { data: settings } = useGetAdminSettings();
+  const { data: settings } = useGetPublicSettings();
 
   return (
     <AppLayout>
@@ -23,7 +23,7 @@ export default function Contact() {
         <motion.div
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 p-6 text-white relative overflow-hidden"
         >
           <div className="absolute -top-8 -right-8 h-32 w-32 rounded-full bg-white/10" />

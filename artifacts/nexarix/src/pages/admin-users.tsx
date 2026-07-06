@@ -33,7 +33,7 @@ function StatusPill({ status, isBanned }: { status: string; isBanned?: boolean }
 
 const card = {
   hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] } }),
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } }),
 };
 
 export default function AdminUsers() {

@@ -15,6 +15,11 @@ import Withdrawals from "@/pages/withdrawals";
 import WithdrawalHistory from "@/pages/withdrawal-history";
 import Points from "@/pages/points";
 import Downline from "@/pages/downline";
+import EquipeNiveau1 from "@/pages/equipe-niveau-1";
+import EquipeNiveau2 from "@/pages/equipe-niveau-2";
+import EquipeNiveau3 from "@/pages/equipe-niveau-3";
+import EquipeInactifs from "@/pages/equipe-inactifs";
+import EquipeBonus from "@/pages/equipe-bonus";
 import Profile from "@/pages/profile";
 import Contact from "@/pages/contact";
 import SpinWheel from "@/pages/spin-wheel";
@@ -104,6 +109,11 @@ function Router() {
       <Route path="/withdrawal-history" component={() => <ProtectedRoute component={WithdrawalHistory} />} />
       <Route path="/points" component={() => <ProtectedRoute component={Points} />} />
       <Route path="/downline" component={() => <ProtectedRoute component={Downline} />} />
+      <Route path="/equipe/niveau-1" component={() => <ProtectedRoute component={EquipeNiveau1} />} />
+      <Route path="/equipe/niveau-2" component={() => <ProtectedRoute component={EquipeNiveau2} />} />
+      <Route path="/equipe/niveau-3" component={() => <ProtectedRoute component={EquipeNiveau3} />} />
+      <Route path="/equipe/inactifs" component={() => <ProtectedRoute component={EquipeInactifs} />} />
+      <Route path="/equipe/bonus"    component={() => <ProtectedRoute component={EquipeBonus}    />} />
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
       <Route path="/contact" component={() => <ProtectedRoute component={Contact} />} />
       <Route path="/spin" component={() => <ProtectedRoute component={SpinWheel} />} />

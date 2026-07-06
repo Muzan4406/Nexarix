@@ -1,7 +1,11 @@
 import jwt from "jsonwebtoken";
 import type { Request, Response, NextFunction } from "express";
 
-const JWT_SECRET = process.env.JWT_SECRET || "nexarix-secret-2024";
+const JWT_SECRET = process.env.JWT_SECRET ?? (
+  process.env.NODE_ENV === "production"
+    ? (() => { throw new Error("JWT_SECRET environment variable is required in production"); })()
+    : "nexarix-dev-secret-change-in-production"
+);
 
 export function signToken(payload: { userId: number; isAdmin: boolean }) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });

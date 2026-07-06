@@ -8,7 +8,7 @@ function fmtXof(v: number) { return `${(v || 0).toLocaleString("fr-FR")} XOF`; }
 
 const card = {
   hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] } }),
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } }),
 };
 
 function KpiCard({ label, value, sub, icon: Icon, gradient, index }: {
@@ -162,7 +162,7 @@ export default function AdminDashboard() {
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${activation}%` }}
-              transition={{ delay: 0.5, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ delay: 0.5, duration: 1.2, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
               className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-600"
             />
           </div>

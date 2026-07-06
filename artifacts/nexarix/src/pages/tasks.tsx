@@ -33,7 +33,7 @@ const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+    transition: { delay: i * 0.07, duration: 0.4, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
   }),
 };
 
@@ -225,7 +225,7 @@ export default function Tasks() {
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="rounded-3xl bg-gradient-to-br from-[#1565C0] via-[#1976D2] to-[#0D47A1] p-6 text-white text-center relative overflow-hidden"
         >
           <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/5" />

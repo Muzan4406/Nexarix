@@ -244,7 +244,7 @@ export default function Activate() {
       {/* Logo */}
       <motion.div
         initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
         className="mb-6 flex flex-col items-center"
       >
         <div className="h-20 w-20 rounded-2xl bg-white flex items-center justify-center shadow-2xl mb-3">
@@ -259,7 +259,7 @@ export default function Activate() {
         {/* Carte montant + avantages */}
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ delay: 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="bg-white rounded-3xl shadow-2xl overflow-hidden"
         >
           <div className="h-1.5 bg-gradient-to-r from-amber-400 to-orange-500" />
@@ -294,7 +294,7 @@ export default function Activate() {
         {/* Carte paiement */}
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ delay: 0.18, duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="bg-white rounded-3xl shadow-2xl overflow-hidden"
         >
           <div className={`h-1.5 ${paymentMode === "auto" ? "bg-gradient-to-r from-[#1565C0] to-[#1E88E5]" : "bg-gradient-to-r from-emerald-400 to-teal-500"}`} />
@@ -502,7 +502,7 @@ export default function Activate() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
                     className="text-center py-2 space-y-5"
                   >
                     {/* Icône animée */}
