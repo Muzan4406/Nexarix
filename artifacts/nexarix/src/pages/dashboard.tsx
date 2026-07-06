@@ -4,6 +4,10 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/hooks/use-auth";
 import { Zap, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
+import walletIcon from "@/assets/icons/wallet.png";
+import retraitIcon from "@/assets/icons/retrait.png";
+import pointsIcon from "@/assets/icons/points.jpeg";
+import tasksIcon from "@/assets/icons/tasks.jpeg";
 
 const slideUp = (i: number) => ({
   hidden: { opacity: 0, y: 32, scale: 0.97 },
@@ -148,7 +152,7 @@ export default function Dashboard() {
               label: "Solde disponible",
               value: formatCurrency(balance, user?.country),
               sub: "Retirable maintenant",
-              iconUrl: "/icons/wallet.png",
+              iconUrl: walletIcon,
               bg: "#dcfce7",
               iconBg: "#16a34a",
               labelColor: "#166534",
@@ -160,7 +164,7 @@ export default function Dashboard() {
               label: "Total retiré",
               value: formatCurrency(totalWithdrawn, user?.country),
               sub: "Depuis l'inscription",
-              iconUrl: "/icons/retrait.png",
+              iconUrl: retraitIcon,
               bg: "#ffedd5",
               iconBg: "#ea580c",
               labelColor: "#9a3412",
@@ -172,7 +176,7 @@ export default function Dashboard() {
               label: "Mes Points",
               value: `${points.toLocaleString()} pts`,
               sub: "Convertibles en FCFA",
-              iconUrl: "/icons/points.jpeg",
+              iconUrl: pointsIcon,
               bg: "#f3e8ff",
               iconBg: "#7c3aed",
               labelColor: "#6b21a8",
@@ -184,7 +188,7 @@ export default function Dashboard() {
               label: "Tâches faites",
               value: completedTasks.toLocaleString(),
               sub: "Tâches complétées",
-              iconUrl: "/icons/tasks.jpeg",
+              iconUrl: tasksIcon,
               bg: "#dbeafe",
               iconBg: "#2563eb",
               labelColor: "#1e40af",
