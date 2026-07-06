@@ -2,11 +2,7 @@ import { motion } from "framer-motion";
 import { useGetDashboard, useGetPublicSettings } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  Wallet, ArrowDownCircle,
-  Zap, TrendingUp,
-  BadgeDollarSign,
-} from "lucide-react";
+import { Zap, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 
 const slideUp = (i: number) => ({
@@ -161,13 +157,13 @@ export default function Dashboard() {
         </motion.div>
 
         {/* ── Stat cards ────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-row gap-2 overflow-x-auto pb-1 snap-x snap-mandatory scrollbar-none">
           {[
             {
-              label: "Solde disponible",
+              label: "Solde",
               value: formatCurrency(balance, user?.country),
-              sub: "Retirable maintenant",
-              icon: Wallet,
+              sub: "Disponible",
+              iconUrl: "https://img.icons8.com/color/96/wallet--v1.png",
               bg: "#dcfce7",
               iconBg: "#16a34a",
               labelColor: "#166534",
@@ -176,10 +172,10 @@ export default function Dashboard() {
               i: 1,
             },
             {
-              label: "Total retiré",
+              label: "Retiré",
               value: formatCurrency(totalWithdrawn, user?.country),
-              sub: "Depuis l'inscription",
-              icon: ArrowDownCircle,
+              sub: "Total",
+              iconUrl: "https://img.icons8.com/color/96/money-transfer.png",
               bg: "#ffedd5",
               iconBg: "#ea580c",
               labelColor: "#9a3412",
@@ -188,10 +184,10 @@ export default function Dashboard() {
               i: 2,
             },
             {
-              label: "Mes Points",
+              label: "Points",
               value: `${points.toLocaleString()} pts`,
-              sub: "Convertibles en FCFA",
-              icon: Zap,
+              sub: "En FCFA",
+              iconUrl: "https://img.icons8.com/color/96/lightning-bolt.png",
               bg: "#f3e8ff",
               iconBg: "#7c3aed",
               labelColor: "#6b21a8",
@@ -200,10 +196,10 @@ export default function Dashboard() {
               i: 3,
             },
             {
-              label: "Tâches faites",
+              label: "Tâches",
               value: completedTasks.toLocaleString(),
-              sub: "Tâches complétées",
-              icon: BadgeDollarSign,
+              sub: "Complétées",
+              iconUrl: "https://img.icons8.com/color/96/checked-checkbox.png",
               bg: "#dbeafe",
               iconBg: "#2563eb",
               labelColor: "#1e40af",
@@ -214,28 +210,26 @@ export default function Dashboard() {
           ].map((s, idx) => (
             <motion.div
               key={s.label}
-              variants={idx % 2 === 0 ? slideLeft(s.i) : slideRight(s.i)}
+              variants={slideUp(s.i)}
               initial="hidden"
               animate="visible"
-              className="rounded-[20px] overflow-hidden shadow-sm"
-              style={{ background: s.bg }}
+              className="rounded-[16px] overflow-hidden shadow-sm shrink-0 snap-start"
+              style={{ background: s.bg, width: "calc(25% - 6px)", minWidth: "76px" }}
             >
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: s.labelColor }}>
-                    {s.label}
-                  </p>
-                  <div
-                    className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
-                    style={{ background: s.iconBg }}
-                  >
-                    <s.icon className="h-4 w-4 text-white" />
-                  </div>
+              <div className="p-3 flex flex-col items-center text-center gap-1.5">
+                <div
+                  className="h-9 w-9 rounded-xl flex items-center justify-center shadow-sm"
+                  style={{ background: s.iconBg }}
+                >
+                  <img src={s.iconUrl} alt={s.label} className="h-5 w-5 object-contain" />
                 </div>
-                <p className="font-black text-[18px] leading-tight mb-0.5" style={{ color: s.valueColor }}>
+                <p className="font-black text-[14px] leading-tight" style={{ color: s.valueColor }}>
                   {s.value}
                 </p>
-                <p className="text-[10px] font-medium" style={{ color: s.subColor }}>{s.sub}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide leading-tight" style={{ color: s.labelColor }}>
+                  {s.label}
+                </p>
+                <p className="text-[10px] font-medium leading-tight" style={{ color: s.subColor }}>{s.sub}</p>
               </div>
             </motion.div>
           ))}
