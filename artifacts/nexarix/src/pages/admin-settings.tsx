@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Mail, Download, CreditCard, Key, ToggleLeft, ToggleRight, Globe, Copy, Check, ArrowDownToLine } from "lucide-react";
+import { Save, Mail, Download, CreditCard, Key, ToggleLeft, ToggleRight, Globe, Copy, Check, ArrowDownToLine, Construction } from "lucide-react";
 import { SiTelegram, SiWhatsapp } from "react-icons/si";
 
 export default function AdminSettings() {
@@ -28,6 +28,7 @@ export default function AdminSettings() {
     sendavapayApiKey: "",
     sendavapayWebhookSecret: "",
     appBaseUrl: "",
+    maintenanceMode: false,
   });
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function AdminSettings() {
         sendavapayApiKey: settings.sendavapayApiKey || "",
         sendavapayWebhookSecret: settings.sendavapayWebhookSecret || "",
         appBaseUrl: settings.appBaseUrl || "",
+        maintenanceMode: (settings as any).maintenanceMode ?? false,
       });
     }
   }, [settings]);
@@ -59,7 +61,8 @@ export default function AdminSettings() {
         sendavapayApiKey: form.sendavapayApiKey || null,
         sendavapayWebhookSecret: form.sendavapayWebhookSecret || null,
         appBaseUrl: form.appBaseUrl || null,
-      }
+        maintenanceMode: form.maintenanceMode,
+      } as any
     }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetAdminSettingsQueryKey() });
@@ -325,6 +328,43 @@ export default function AdminSettings() {
                 onChange={e => setForm(f => ({ ...f, vcfLink: e.target.value }))}
                 placeholder="https://..."
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Mode maintenance */}
+        <Card className={form.maintenanceMode ? "border-red-200 bg-red-50/40" : ""}>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Construction className={`h-4 w-4 ${form.maintenanceMode ? "text-red-500" : "text-muted-foreground"}`} />
+              Mode Maintenance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between bg-muted rounded-xl p-4">
+              <div>
+                <p className="font-semibold text-sm">Maintenance de la plateforme</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {form.maintenanceMode
+                    ? "🔴 Activé — La plateforme est inaccessible aux utilisateurs"
+                    : "🟢 Désactivé — La plateforme est accessible normalement"
+                  }
+                </p>
+                {form.maintenanceMode && (
+                  <p className="text-xs text-red-600 font-medium mt-1">
+                    ⚠️ Les utilisateurs voient une page de maintenance. Seuls les admins peuvent accéder à la plateforme.
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setForm(f => ({ ...f, maintenanceMode: !f.maintenanceMode }))}
+                className="shrink-0 text-primary hover:text-primary/80 transition-colors"
+              >
+                {form.maintenanceMode
+                  ? <ToggleRight className="h-10 w-10 text-red-500" />
+                  : <ToggleLeft className="h-10 w-10 text-gray-400" />
+                }
+              </button>
             </div>
           </CardContent>
         </Card>

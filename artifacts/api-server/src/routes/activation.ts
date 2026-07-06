@@ -40,6 +40,7 @@ router.get("/settings/public", async (_req, res) => {
     telegramChannel: settings.telegramChannel || null,
     whatsappLink: settings.whatsappLink || null,
     vcfLink: settings.vcfLink || null,
+    maintenanceMode: settings.maintenanceMode ?? false,
   });
 });
 

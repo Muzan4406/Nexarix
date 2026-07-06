@@ -3,7 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import MaintenancePage from "@/pages/maintenance";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useGetPublicSettings } from "@workspace/api-client-react";
 
 import Login from "@/pages/login";
 import Register from "@/pages/register";
@@ -138,13 +140,28 @@ function Router() {
   );
 }
 
+function MaintenanceGate({ children }: { children: React.ReactNode }) {
+  const { data: publicSettings, isLoading } = useGetPublicSettings();
+  const { isAdmin, isLoading: authLoading } = useAuth();
+
+  if (isLoading || authLoading) return null;
+
+  if ((publicSettings as any)?.maintenanceMode && !isAdmin) {
+    return <MaintenancePage />;
+  }
+
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
+            <MaintenanceGate>
+              <Router />
+            </MaintenanceGate>
           </WouterRouter>
           <Toaster />
         </TooltipProvider>

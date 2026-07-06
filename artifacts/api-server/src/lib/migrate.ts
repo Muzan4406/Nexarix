@@ -40,6 +40,10 @@ export async function runStartupMigrations(): Promise<void> {
       );
     `);
 
+    await db.execute(sql`
+      ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
+    `);
+
     logger.info("Startup migrations OK");
   } catch (err) {
     logger.error({ err }, "Startup migrations failed");

@@ -5,6 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { db } from "@workspace/db";
+import { siteSettingsTable } from "@workspace/db";
+import jwt from "jsonwebtoken";
 
 const app: Express = express();
 
@@ -36,6 +39,40 @@ app.use("/api/formations/purchase/webhook", express.raw({ type: "application/jso
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ─── Maintenance mode middleware ────────────────────────────────────────────
+// Blocks all API calls (except public settings + admin endpoints) when maintenance is on
+app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
+  // Always allow: public settings, auth, admin routes
+  const bypassed = [
+    "/settings/public",
+    "/auth/login",
+    "/auth/register",
+    "/admin",
+  ];
+  if (bypassed.some((p) => req.path.startsWith(p))) return next();
+
+  try {
+    const [settings] = await db.select({ maintenanceMode: siteSettingsTable.maintenanceMode }).from(siteSettingsTable).limit(1);
+    if (!settings?.maintenanceMode) return next();
+
+    // Check if request is from an admin
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret") as any;
+        if (payload?.isAdmin) return next();
+      } catch {
+        // invalid token — fall through to maintenance response
+      }
+    }
+
+    res.status(503).json({ error: "maintenance", message: "La plateforme est en maintenance. Revenez bientôt." });
+  } catch {
+    next();
+  }
+});
 
 app.use("/api", router);
 

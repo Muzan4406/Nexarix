@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, boolean } from "drizzle-orm/pg-core";
 
 export const siteSettingsTable = pgTable("site_settings", {
   id: serial("id").primaryKey(),
@@ -13,6 +13,7 @@ export const siteSettingsTable = pgTable("site_settings", {
   sendavapayApiKey: text("sendavapay_api_key"),
   sendavapayWebhookSecret: text("sendavapay_webhook_secret"),
   appBaseUrl: text("app_base_url"),
+  maintenanceMode: boolean("maintenance_mode").notNull().default(false),
 });
 
 export type SiteSettings = typeof siteSettingsTable.$inferSelect;

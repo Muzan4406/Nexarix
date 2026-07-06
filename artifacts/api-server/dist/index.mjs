@@ -34522,9 +34522,9 @@ var require_jws = __commonJS({
 var require_decode = __commonJS({
   "../../node_modules/.pnpm/jsonwebtoken@9.0.3/node_modules/jsonwebtoken/decode.js"(exports, module) {
     var jws = require_jws();
-    module.exports = function(jwt3, options) {
+    module.exports = function(jwt4, options) {
       options = options || {};
-      var decoded = jws.decode(jwt3, options);
+      var decoded = jws.decode(jwt4, options);
       if (!decoded) {
         return null;
       }
@@ -55049,11 +55049,11 @@ function isValidIP(ip, version3) {
   }
   return false;
 }
-function isValidJWT(jwt3, alg) {
-  if (!jwtRegex.test(jwt3))
+function isValidJWT(jwt4, alg) {
+  if (!jwtRegex.test(jwt4))
     return false;
   try {
-    const [header] = jwt3.split(".");
+    const [header] = jwt4.split(".");
     if (!header)
       return false;
     const base643 = header.replace(/-/g, "+").replace(/_/g, "/").padEnd(header.length + (4 - header.length % 4) % 4, "=");
@@ -78792,7 +78792,8 @@ var siteSettingsTable = pgTable("site_settings", {
   paymentMode: text("payment_mode").notNull().default("manual"),
   sendavapayApiKey: text("sendavapay_api_key"),
   sendavapayWebhookSecret: text("sendavapay_webhook_secret"),
-  appBaseUrl: text("app_base_url")
+  appBaseUrl: text("app_base_url"),
+  maintenanceMode: boolean("maintenance_mode").notNull().default(false)
 });
 
 // ../../lib/db/src/schema/task-completions.ts
@@ -80004,7 +80005,7 @@ router7.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res)
   });
 });
 router7.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res) => {
-  const { supportEmail, telegramLink, telegramChannel, whatsappLink, vcfLink, activationFee, minWithdrawal, paymentMode, sendavapayApiKey, sendavapayWebhookSecret, appBaseUrl } = req.body;
+  const { supportEmail, telegramLink, telegramChannel, whatsappLink, vcfLink, activationFee, minWithdrawal, paymentMode, sendavapayApiKey, sendavapayWebhookSecret, appBaseUrl, maintenanceMode } = req.body;
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
   const updates = {};
   if (supportEmail !== void 0) updates.supportEmail = supportEmail;
@@ -80018,6 +80019,7 @@ router7.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, re
   if (sendavapayApiKey !== void 0) updates.sendavapayApiKey = sendavapayApiKey;
   if (sendavapayWebhookSecret !== void 0) updates.sendavapayWebhookSecret = sendavapayWebhookSecret;
   if (appBaseUrl !== void 0) updates.appBaseUrl = appBaseUrl;
+  if (maintenanceMode !== void 0) updates.maintenanceMode = maintenanceMode;
   if (!settings) {
     [settings] = await db.insert(siteSettingsTable).values(updates).returning();
   } else {
@@ -80151,7 +80153,8 @@ router8.get("/settings/public", async (_req, res) => {
     telegramLink: settings.telegramLink || null,
     telegramChannel: settings.telegramChannel || null,
     whatsappLink: settings.whatsappLink || null,
-    vcfLink: settings.vcfLink || null
+    vcfLink: settings.vcfLink || null,
+    maintenanceMode: settings.maintenanceMode ?? false
   });
 });
 router8.post("/activate/initiate", authMiddleware, async (req, res) => {
@@ -81462,6 +81465,7 @@ router15.use(upload_default);
 var routes_default = router15;
 
 // src/app.ts
+var import_jsonwebtoken2 = __toESM(require_jsonwebtoken(), 1);
 var app = (0, import_express16.default)();
 app.use(
   (0, import_pino_http.default)({
@@ -81487,6 +81491,31 @@ app.use("/api/activate/webhook", import_express16.default.raw({ type: "applicati
 app.use("/api/formations/purchase/webhook", import_express16.default.raw({ type: "application/json" }));
 app.use(import_express16.default.json());
 app.use(import_express16.default.urlencoded({ extended: true }));
+app.use("/api", async (req, res, next) => {
+  const bypassed = [
+    "/settings/public",
+    "/auth/login",
+    "/auth/register",
+    "/admin"
+  ];
+  if (bypassed.some((p) => req.path.startsWith(p))) return next();
+  try {
+    const [settings] = await db.select({ maintenanceMode: siteSettingsTable.maintenanceMode }).from(siteSettingsTable).limit(1);
+    if (!settings?.maintenanceMode) return next();
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      try {
+        const payload = import_jsonwebtoken2.default.verify(token, process.env.JWT_SECRET || "dev-secret");
+        if (payload?.isAdmin) return next();
+      } catch {
+      }
+    }
+    res.status(503).json({ error: "maintenance", message: "La plateforme est en maintenance. Revenez bient\xF4t." });
+  } catch {
+    next();
+  }
+});
 app.use("/api", routes_default);
 var __dirname2 = path4.dirname(fileURLToPath(import.meta.url));
 var publicDir = path4.join(__dirname2, "../public");
@@ -81538,6 +81567,9 @@ async function runStartupMigrations() {
         payment_token TEXT,
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+    `);
+    await db.execute(sql`
+      ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
     `);
     logger.info("Startup migrations OK");
   } catch (err) {
