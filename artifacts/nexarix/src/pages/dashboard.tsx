@@ -6,8 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import {
   Wallet, ArrowDownCircle, Copy, CheckCircle,
-  Zap, Sparkles, TrendingUp, Gift,
-  BadgeDollarSign, ArrowUpRight,
+  Zap, TrendingUp, Gift, Users,
+  BadgeDollarSign,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
@@ -104,34 +104,22 @@ export default function Dashboard() {
             style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)" }} />
 
           <div className="relative z-10 p-5">
-            {/* Nom + badge */}
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  variants={slideLeft(1)}
-                  initial="hidden"
-                  animate="visible"
-                  className="h-12 w-12 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-lg ring-2 ring-white/10"
-                  style={{ background: "linear-gradient(135deg, #1e3a8a, #2563eb)" }}
-                >
-                  {user?.username?.[0]?.toUpperCase()}
-                </motion.div>
-                <motion.div variants={slideLeft(1.5)} initial="hidden" animate="visible">
-                  <p className="text-blue-300/80 text-[10px] font-semibold uppercase tracking-[0.14em] mb-0.5">
-                    Bienvenue sur Nexarix
-                  </p>
-                  <p className="font-bold text-[17px] leading-tight">{user?.username}</p>
-                </motion.div>
-              </div>
+            {/* Nom — sans badge Premium */}
+            <div className="flex items-center gap-3 mb-5">
               <motion.div
-                variants={slideRight(1)}
+                variants={slideLeft(1)}
                 initial="hidden"
                 animate="visible"
-                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 border border-yellow-400/25"
-                style={{ background: "rgba(234,179,8,0.12)" }}
+                className="h-12 w-12 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-lg ring-2 ring-white/10"
+                style={{ background: "linear-gradient(135deg, #1e3a8a, #2563eb)" }}
               >
-                <Sparkles className="h-3 w-3 text-yellow-300" />
-                <span className="text-[11px] font-bold text-yellow-200">Premium</span>
+                {user?.username?.[0]?.toUpperCase()}
+              </motion.div>
+              <motion.div variants={slideLeft(1.5)} initial="hidden" animate="visible">
+                <p className="text-blue-300/80 text-[10px] font-semibold uppercase tracking-[0.14em] mb-0.5">
+                  Bienvenue sur Nexarix
+                </p>
+                <p className="font-bold text-[17px] leading-tight">{user?.username}</p>
               </motion.div>
             </div>
 
@@ -148,33 +136,40 @@ export default function Dashboard() {
               </p>
             </motion.div>
 
-            {/* 2 stats secondaires */}
+            {/* 2 mini-cartes — styles distincts */}
             <div className="grid grid-cols-2 gap-2.5">
+              {/* Frais d'activation — style amber/doré */}
               <motion.div
                 variants={slideLeft(2)}
                 initial="hidden"
                 animate="visible"
-                className="rounded-2xl p-3.5 border border-white/8"
-                style={{ background: "rgba(255,255,255,0.07)" }}
+                className="rounded-2xl p-3.5 border border-yellow-400/20"
+                style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(245,158,11,0.10))" }}
               >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <TrendingUp className="h-3 w-3 text-yellow-300/80" />
-                  <p className="text-[9px] font-semibold text-blue-200/70 uppercase tracking-wider">Total gagné</p>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: "rgba(251,191,36,0.25)" }}>
+                    <Zap className="h-3 w-3 text-yellow-300" />
+                  </div>
+                  <p className="text-[9px] font-semibold text-yellow-200/80 uppercase tracking-wider">Frais d'activation</p>
                 </div>
-                <p className="font-black text-[20px] leading-none">{formatCurrency(totalBalance, user?.country)}</p>
+                <p className="font-black text-[20px] leading-none text-yellow-100">{activationFee.toLocaleString("fr-FR")} F</p>
               </motion.div>
+
+              {/* Total gagné — style vert émeraude */}
               <motion.div
                 variants={slideRight(2)}
                 initial="hidden"
                 animate="visible"
-                className="rounded-2xl p-3.5 border border-white/8"
-                style={{ background: "rgba(255,255,255,0.07)" }}
+                className="rounded-2xl p-3.5 border border-emerald-400/20"
+                style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(16,185,129,0.10))" }}
               >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Zap className="h-3 w-3 text-yellow-300/80" />
-                  <p className="text-[9px] font-semibold text-blue-200/70 uppercase tracking-wider">Frais d'activation</p>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: "rgba(52,211,153,0.25)" }}>
+                    <TrendingUp className="h-3 w-3 text-emerald-300" />
+                  </div>
+                  <p className="text-[9px] font-semibold text-emerald-200/80 uppercase tracking-wider">Total gagné</p>
                 </div>
-                <p className="font-black text-[20px] leading-none">{activationFee.toLocaleString("fr-FR")} F</p>
+                <p className="font-black text-[20px] leading-none text-emerald-100">{formatCurrency(totalBalance, user?.country)}</p>
               </motion.div>
             </div>
           </div>
@@ -261,53 +256,51 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* ── Lien de parrainage ───────────────── */}
+        {/* ── Lien de parrainage — nouveau design ── */}
         <motion.div
           variants={slideUp(5)}
           initial="hidden"
           animate="visible"
-          className="rounded-[24px] overflow-hidden border border-gray-100 shadow-sm"
-          style={{ background: "linear-gradient(145deg, #050d1f 0%, #0c1a3d 55%, #1a2f6e 100%)" }}
+          className="rounded-[24px] overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", border: "1.5px solid #bbf7d0" }}
         >
-          <div className="p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <motion.div
-                variants={slideLeft(5.5)}
-                initial="hidden"
-                animate="visible"
-                className="h-10 w-10 rounded-[14px] flex items-center justify-center shrink-0 border border-yellow-400/25"
-                style={{ background: "rgba(234,179,8,0.15)" }}
-              >
-                <Gift className="h-4.5 w-4.5 text-yellow-300" />
-              </motion.div>
-              <motion.div variants={slideLeft(6)} initial="hidden" animate="visible">
-                <p className="font-bold text-white text-[13px] leading-tight">Mon lien de parrainage</p>
-                <p className="text-[10px] text-blue-300/80 font-medium">Jusqu'à 1 300 F par filleul direct</p>
-              </motion.div>
-              <ArrowUpRight className="h-4 w-4 text-blue-400/60 ml-auto shrink-0" />
+          {/* En-tête coloré */}
+          <div className="px-4 pt-4 pb-3 flex items-center gap-3">
+            <div className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"
+              style={{ background: "linear-gradient(135deg, #16a34a, #15803d)" }}>
+              <Users className="h-5 w-5 text-white" />
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-gray-900 text-[14px] leading-tight">Mon lien de parrainage</p>
+              <p className="text-[11px] text-emerald-700 font-medium mt-0.5">🎁 Jusqu'à 1 300 F par filleul direct</p>
+            </div>
+          </div>
 
-            <div
-              className="rounded-xl px-3 py-2.5 mb-3 border border-white/8"
-              style={{ background: "rgba(255,255,255,0.05)" }}
-            >
-              <p className="font-mono text-[11px] text-blue-200/80 truncate">{stats?.referralLink || "Chargement…"}</p>
+          {/* Séparateur */}
+          <div className="h-px mx-4" style={{ background: "rgba(22,163,74,0.15)" }} />
+
+          {/* Lien */}
+          <div className="px-4 pt-3 pb-4">
+            <div className="rounded-xl px-3 py-2.5 mb-3 flex items-center gap-2"
+              style={{ background: "rgba(22,163,74,0.08)", border: "1px solid rgba(22,163,74,0.2)" }}>
+              <Gift className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+              <p className="font-mono text-[11px] text-emerald-800 truncate flex-1">{stats?.referralLink || "Chargement…"}</p>
             </div>
 
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={handleCopy}
               className={cn(
-                "w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-[13px] transition-colors",
+                "w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-[13px] transition-colors shadow-sm",
                 copied
                   ? "bg-emerald-500 text-white"
-                  : "text-[#0d1b3e]"
+                  : "text-white"
               )}
-              style={copied ? {} : { background: "linear-gradient(135deg, #fbbf24, #f59e0b)" }}
+              style={copied ? {} : { background: "linear-gradient(135deg, #16a34a, #15803d)" }}
             >
               {copied
-                ? <><CheckCircle className="h-4 w-4" /> Copié !</>
-                : <><Copy className="h-4 w-4" /> Copier mon lien de parrainage</>
+                ? <><CheckCircle className="h-4 w-4" /> Lien copié !</>
+                : <><Copy className="h-4 w-4" /> Copier mon lien</>
               }
             </motion.button>
           </div>
