@@ -12,11 +12,45 @@ import {
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
-const rise = (i: number) => ({
-  hidden: { opacity: 0, y: 20 },
+const slideUp = (i: number) => ({
+  hidden: { opacity: 0, y: 32, scale: 0.97 },
   visible: {
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.07, duration: 0.42, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      delay: i * 0.08,
+      duration: 0.55,
+      ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+    },
+  },
+});
+
+const slideLeft = (i: number) => ({
+  hidden: { opacity: 0, x: -24 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.08,
+      type: "spring" as const,
+      stiffness: 260,
+      damping: 22,
+    },
+  },
+});
+
+const slideRight = (i: number) => ({
+  hidden: { opacity: 0, x: 24 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.08,
+      type: "spring" as const,
+      stiffness: 260,
+      damping: 22,
+    },
   },
 });
 
@@ -58,77 +92,90 @@ export default function Dashboard() {
 
         {/* ── Hero ──────────────────────────────── */}
         <motion.div
-          variants={rise(0)} initial="hidden" animate="visible"
-          className="relative overflow-hidden rounded-[28px] text-white"
+          variants={slideUp(0)} initial="hidden" animate="visible"
+          className="relative overflow-hidden rounded-[26px] text-white"
           style={{ background: "linear-gradient(145deg, #050d1f 0%, #0c1a3d 45%, #1248a8 100%)" }}
         >
-          {/* déco */}
-          <div className="pointer-events-none absolute -top-16 -right-16 h-56 w-56 rounded-full"
-            style={{ background: "radial-gradient(circle, rgba(99,155,255,0.18) 0%, transparent 70%)" }} />
+          <div className="pointer-events-none absolute -top-14 -right-14 h-52 w-52 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(99,155,255,0.2) 0%, transparent 70%)" }} />
+          <div className="pointer-events-none absolute top-8 right-28 h-2 w-2 rounded-full bg-yellow-400/50" />
+          <div className="pointer-events-none absolute top-16 right-12 h-1.5 w-1.5 rounded-full bg-blue-300/60" />
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px"
             style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)" }} />
-          <div className="pointer-events-none absolute top-8 right-32 h-2 w-2 rounded-full bg-yellow-400/50" />
-          <div className="pointer-events-none absolute top-16 right-14 h-1.5 w-1.5 rounded-full bg-blue-300/60" />
 
           <div className="relative z-10 p-5">
             {/* Nom + badge */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div
-                  className="h-11 w-11 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-lg ring-1 ring-white/15"
+                <motion.div
+                  variants={slideLeft(1)}
+                  initial="hidden"
+                  animate="visible"
+                  className="h-12 w-12 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-lg ring-2 ring-white/10"
                   style={{ background: "linear-gradient(135deg, #1e3a8a, #2563eb)" }}
                 >
                   {user?.username?.[0]?.toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-blue-300/80 text-[10px] font-semibold uppercase tracking-[0.12em]">Bonjour 👋</p>
+                </motion.div>
+                <motion.div variants={slideLeft(1.5)} initial="hidden" animate="visible">
+                  <p className="text-blue-300/80 text-[10px] font-semibold uppercase tracking-[0.14em] mb-0.5">
+                    Bienvenue sur Nexarix
+                  </p>
                   <p className="font-bold text-[17px] leading-tight">{user?.username}</p>
-                </div>
+                </motion.div>
               </div>
-              <div
-                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1 border border-yellow-400/25"
+              <motion.div
+                variants={slideRight(1)}
+                initial="hidden"
+                animate="visible"
+                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 border border-yellow-400/25"
                 style={{ background: "rgba(234,179,8,0.12)" }}
               >
                 <Sparkles className="h-3 w-3 text-yellow-300" />
                 <span className="text-[11px] font-bold text-yellow-200">Premium</span>
-              </div>
+              </motion.div>
             </div>
 
             {/* Balance principale */}
-            <div className="mb-5">
-              <p className="text-blue-300/70 text-[10px] font-semibold uppercase tracking-[0.12em] mb-1">Solde disponible</p>
-              <motion.p
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
-                className="font-black text-[38px] leading-none tracking-tight"
-              >
+            <motion.div
+              variants={slideUp(1)}
+              initial="hidden"
+              animate="visible"
+              className="mb-5"
+            >
+              <p className="text-blue-300/70 text-[10px] font-semibold uppercase tracking-[0.14em] mb-1">Solde disponible</p>
+              <p className="font-black text-[40px] leading-none tracking-tight">
                 {formatCurrency(balance, user?.country)}
-              </motion.p>
-            </div>
+              </p>
+            </motion.div>
 
             {/* 2 stats secondaires */}
             <div className="grid grid-cols-2 gap-2.5">
-              <div
+              <motion.div
+                variants={slideLeft(2)}
+                initial="hidden"
+                animate="visible"
                 className="rounded-2xl p-3.5 border border-white/8"
-                style={{ background: "rgba(255,255,255,0.06)" }}
+                style={{ background: "rgba(255,255,255,0.07)" }}
               >
                 <div className="flex items-center gap-1.5 mb-1">
                   <TrendingUp className="h-3 w-3 text-yellow-300/80" />
                   <p className="text-[9px] font-semibold text-blue-200/70 uppercase tracking-wider">Total gagné</p>
                 </div>
                 <p className="font-black text-[20px] leading-none">{formatCurrency(totalBalance, user?.country)}</p>
-              </div>
-              <div
+              </motion.div>
+              <motion.div
+                variants={slideRight(2)}
+                initial="hidden"
+                animate="visible"
                 className="rounded-2xl p-3.5 border border-white/8"
-                style={{ background: "rgba(255,255,255,0.06)" }}
+                style={{ background: "rgba(255,255,255,0.07)" }}
               >
                 <div className="flex items-center gap-1.5 mb-1">
                   <Zap className="h-3 w-3 text-yellow-300/80" />
                   <p className="text-[9px] font-semibold text-blue-200/70 uppercase tracking-wider">Frais d'activation</p>
                 </div>
                 <p className="font-black text-[20px] leading-none">{activationFee.toLocaleString("fr-FR")} F</p>
-              </div>
+              </motion.div>
             </div>
           </div>
         </motion.div>
@@ -137,62 +184,78 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 gap-3">
           {[
             {
+              label: "Solde disponible",
+              value: formatCurrency(balance, user?.country),
+              sub: "Retirable maintenant",
+              icon: Wallet,
+              bg: "#dcfce7",
+              iconBg: "#16a34a",
+              labelColor: "#166534",
+              valueColor: "#14532d",
+              subColor: "#4ade80",
+              i: 1,
+            },
+            {
               label: "Total retiré",
               value: formatCurrency(totalWithdrawn, user?.country),
               sub: "Depuis l'inscription",
               icon: ArrowDownCircle,
-              topColor: "#f59e0b",
-              iconBg: "bg-amber-50",
-              iconColor: "text-amber-500",
-              i: 1,
+              bg: "#ffedd5",
+              iconBg: "#ea580c",
+              labelColor: "#9a3412",
+              valueColor: "#7c2d12",
+              subColor: "#fb923c",
+              i: 2,
             },
             {
               label: "Mes Points",
-              value: `${points.toLocaleString()}`,
-              sub: "pts convertibles",
+              value: `${points.toLocaleString()} pts`,
+              sub: "Convertibles en FCFA",
               icon: Zap,
-              topColor: "#8b5cf6",
-              iconBg: "bg-violet-50",
-              iconColor: "text-violet-500",
-              i: 2,
+              bg: "#f3e8ff",
+              iconBg: "#7c3aed",
+              labelColor: "#6b21a8",
+              valueColor: "#4c1d95",
+              subColor: "#a78bfa",
+              i: 3,
             },
             {
               label: "Tâches faites",
               value: completedTasks.toLocaleString(),
               sub: "Tâches complétées",
               icon: BadgeDollarSign,
-              topColor: "#10b981",
-              iconBg: "bg-emerald-50",
-              iconColor: "text-emerald-600",
-              i: 3,
-            },
-            {
-              label: "Total gagné",
-              value: formatCurrency(totalBalance, user?.country),
-              sub: "MLM + tâches + bonus",
-              icon: TrendingUp,
-              topColor: "#2563eb",
-              iconBg: "bg-blue-50",
-              iconColor: "text-blue-600",
+              bg: "#dbeafe",
+              iconBg: "#2563eb",
+              labelColor: "#1e40af",
+              valueColor: "#1e3a8a",
+              subColor: "#60a5fa",
               i: 4,
             },
-          ].map((s) => (
+          ].map((s, idx) => (
             <motion.div
               key={s.label}
-              variants={rise(s.i)}
+              variants={idx % 2 === 0 ? slideLeft(s.i) : slideRight(s.i)}
               initial="hidden"
               animate="visible"
-              className="bg-white rounded-[20px] border border-gray-100/80 shadow-sm overflow-hidden"
+              className="rounded-[20px] overflow-hidden shadow-sm"
+              style={{ background: s.bg }}
             >
-              {/* Accent bar */}
-              <div className="h-[3px] w-full" style={{ background: s.topColor }} />
-              <div className="p-3.5">
-                <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center mb-3", s.iconBg)}>
-                  <s.icon className={cn("h-4 w-4", s.iconColor)} />
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: s.labelColor }}>
+                    {s.label}
+                  </p>
+                  <div
+                    className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+                    style={{ background: s.iconBg }}
+                  >
+                    <s.icon className="h-4 w-4 text-white" />
+                  </div>
                 </div>
-                <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider mb-0.5">{s.label}</p>
-                <p className="font-black text-[17px] text-gray-900 leading-tight">{s.value}</p>
-                <p className="text-[10px] text-gray-400 font-medium mt-0.5">{s.sub}</p>
+                <p className="font-black text-[18px] leading-tight mb-0.5" style={{ color: s.valueColor }}>
+                  {s.value}
+                </p>
+                <p className="text-[10px] font-medium" style={{ color: s.subColor }}>{s.sub}</p>
               </div>
             </motion.div>
           ))}
@@ -200,7 +263,7 @@ export default function Dashboard() {
 
         {/* ── Lien de parrainage ───────────────── */}
         <motion.div
-          variants={rise(6)}
+          variants={slideUp(5)}
           initial="hidden"
           animate="visible"
           className="rounded-[24px] overflow-hidden border border-gray-100 shadow-sm"
@@ -208,31 +271,34 @@ export default function Dashboard() {
         >
           <div className="p-4">
             <div className="flex items-center gap-3 mb-3">
-              <div
-                className="h-9 w-9 rounded-[14px] flex items-center justify-center shrink-0 border border-yellow-400/25"
+              <motion.div
+                variants={slideLeft(5.5)}
+                initial="hidden"
+                animate="visible"
+                className="h-10 w-10 rounded-[14px] flex items-center justify-center shrink-0 border border-yellow-400/25"
                 style={{ background: "rgba(234,179,8,0.15)" }}
               >
-                <Gift className="h-4 w-4 text-yellow-300" />
-              </div>
-              <div>
+                <Gift className="h-4.5 w-4.5 text-yellow-300" />
+              </motion.div>
+              <motion.div variants={slideLeft(6)} initial="hidden" animate="visible">
                 <p className="font-bold text-white text-[13px] leading-tight">Mon lien de parrainage</p>
                 <p className="text-[10px] text-blue-300/80 font-medium">Jusqu'à 1 300 F par filleul direct</p>
-              </div>
+              </motion.div>
               <ArrowUpRight className="h-4 w-4 text-blue-400/60 ml-auto shrink-0" />
             </div>
 
-            {/* Lien */}
             <div
-              className="rounded-xl px-3 py-2 mb-3 border border-white/8"
+              className="rounded-xl px-3 py-2.5 mb-3 border border-white/8"
               style={{ background: "rgba(255,255,255,0.05)" }}
             >
               <p className="font-mono text-[11px] text-blue-200/80 truncate">{stats?.referralLink || "Chargement…"}</p>
             </div>
 
-            <button
+            <motion.button
+              whileTap={{ scale: 0.97 }}
               onClick={handleCopy}
               className={cn(
-                "w-full rounded-xl h-10 flex items-center justify-center gap-2 font-bold text-[13px] transition-all active:scale-[0.97]",
+                "w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-[13px] transition-colors",
                 copied
                   ? "bg-emerald-500 text-white"
                   : "text-[#0d1b3e]"
@@ -241,9 +307,9 @@ export default function Dashboard() {
             >
               {copied
                 ? <><CheckCircle className="h-4 w-4" /> Copié !</>
-                : <><Copy className="h-4 w-4" /> Copier le lien</>
+                : <><Copy className="h-4 w-4" /> Copier mon lien de parrainage</>
               }
-            </button>
+            </motion.button>
           </div>
         </motion.div>
 
