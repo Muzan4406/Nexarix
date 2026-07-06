@@ -219,7 +219,7 @@ export default function Dashboard() {
                   className="h-14 w-14 rounded-2xl flex items-center justify-center shadow-md shrink-0"
                   style={{ background: s.iconBg }}
                 >
-                  <img src={s.iconUrl} alt={s.label} className="h-7 w-7 object-contain" />
+                  <img src={s.iconUrl} alt={s.label} className="h-8 w-8 object-contain" style={{ mixBlendMode: "multiply" }} />
                 </div>
               </div>
             </motion.div>
