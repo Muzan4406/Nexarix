@@ -52,6 +52,41 @@ artifacts/
 libs/               # Shared workspace packages (api-zod, db schema)
 ```
 
+## Plesk deployment
+
+The production build is committed directly to the repo (`.gitignore` explicitly allows `artifacts/api-server/dist/` and `artifacts/api-server/public/`). No build step needed on the server — everything is pre-bundled.
+
+### Plesk Node.js app configuration
+
+| Setting | Value |
+|---|---|
+| Node.js version | 20 (see `.nvmrc`) |
+| Application root | `/` (repo root) |
+| Application startup file | `artifacts/api-server/dist/index.mjs` |
+| npm install | **Not required** — all dependencies are bundled by esbuild |
+
+### Required environment variables (set in Plesk → Node.js → Environment variables)
+
+| Variable | Purpose |
+|---|---|
+| `NODE_ENV` | `production` |
+| `PORT` | Port assigned by Plesk (e.g. `3000`) |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `SESSION_SECRET` | Express session signing |
+| `JWT_SECRET` | JWT token signing |
+| `SUPABASE_PROJECT_REF` | Supabase project for file storage |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role access |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot for notifications (optional) |
+| `TELEGRAM_CHAT_ID` | Target Telegram channel (optional) |
+
+### Deploy workflow
+
+1. `git push` from Replit
+2. Plesk → Git → **Pull**
+3. Plesk → **Deploy now** (or Restart)
+
+No rebuild, no install — the app starts immediately.
+
 ## User preferences
 
 - Language: French (app UI is in French)
