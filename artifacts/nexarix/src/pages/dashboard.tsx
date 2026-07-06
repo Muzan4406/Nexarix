@@ -84,58 +84,58 @@ export default function Dashboard() {
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px"
             style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)" }} />
 
-          <div className="relative z-10 p-4">
+          <div className="relative z-10 p-6">
             {/* Nom */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-4 mb-6">
               <motion.div
                 variants={slideLeft(1)}
                 initial="hidden"
                 animate="visible"
-                className="h-10 w-10 rounded-xl flex items-center justify-center font-black text-base shrink-0 shadow-lg ring-2 ring-white/10"
+                className="h-14 w-14 rounded-2xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg ring-2 ring-white/10"
                 style={{ background: "linear-gradient(135deg, #5b21b6, #7c3aed)" }}
               >
                 {user?.username?.[0]?.toUpperCase()}
               </motion.div>
               <motion.div variants={slideLeft(1.5)} initial="hidden" animate="visible">
-                <p className="text-violet-300/80 text-[10px] font-semibold uppercase tracking-[0.14em] mb-0.5">
+                <p className="text-violet-300/80 text-[11px] font-semibold uppercase tracking-[0.14em] mb-1">
                   Bienvenue sur Nexarix
                 </p>
-                <p className="font-bold text-[16px] leading-tight">{user?.username}</p>
+                <p className="font-bold text-[20px] leading-tight">{user?.username}</p>
               </motion.div>
             </div>
 
             {/* 2 mini-cartes */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <motion.div
                 variants={slideLeft(2)}
                 initial="hidden"
                 animate="visible"
-                className="rounded-xl p-3 border border-yellow-400/20"
+                className="rounded-2xl p-4 border border-yellow-400/20"
                 style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(245,158,11,0.10))" }}
               >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <div className="h-4 w-4 rounded flex items-center justify-center" style={{ background: "rgba(251,191,36,0.25)" }}>
-                    <Zap className="h-2.5 w-2.5 text-yellow-300" />
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-6 w-6 rounded-lg flex items-center justify-center" style={{ background: "rgba(251,191,36,0.25)" }}>
+                    <Zap className="h-3.5 w-3.5 text-yellow-300" />
                   </div>
-                  <p className="text-[9px] font-semibold text-yellow-200/80 uppercase tracking-wider">Frais d'activation</p>
+                  <p className="text-[10px] font-semibold text-yellow-200/80 uppercase tracking-wider">Frais d'activation</p>
                 </div>
-                <p className="font-black text-[17px] leading-none text-yellow-100">{activationFee.toLocaleString("fr-FR")} F</p>
+                <p className="font-black text-[22px] leading-none text-yellow-100">{activationFee.toLocaleString("fr-FR")} F</p>
               </motion.div>
 
               <motion.div
                 variants={slideRight(2)}
                 initial="hidden"
                 animate="visible"
-                className="rounded-xl p-3 border border-emerald-400/20"
+                className="rounded-2xl p-4 border border-emerald-400/20"
                 style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(16,185,129,0.10))" }}
               >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <div className="h-4 w-4 rounded flex items-center justify-center" style={{ background: "rgba(52,211,153,0.25)" }}>
-                    <TrendingUp className="h-2.5 w-2.5 text-emerald-300" />
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-6 w-6 rounded-lg flex items-center justify-center" style={{ background: "rgba(52,211,153,0.25)" }}>
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-300" />
                   </div>
-                  <p className="text-[9px] font-semibold text-emerald-200/80 uppercase tracking-wider">Total gagné</p>
+                  <p className="text-[10px] font-semibold text-emerald-200/80 uppercase tracking-wider">Total gagné</p>
                 </div>
-                <p className="font-black text-[17px] leading-none text-emerald-100">{formatCurrency(totalBalance, user?.country)}</p>
+                <p className="font-black text-[22px] leading-none text-emerald-100">{formatCurrency(totalBalance, user?.country)}</p>
               </motion.div>
             </div>
           </div>
@@ -198,24 +198,24 @@ export default function Dashboard() {
               variants={slideUp(s.i)}
               initial="hidden"
               animate="visible"
-              className="rounded-[18px] overflow-hidden shadow-sm w-full"
+              className="rounded-[22px] overflow-hidden shadow-sm w-full"
               style={{ background: s.bg }}
             >
-              <div className="px-5 py-4 flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                  <p className="text-[11px] font-semibold" style={{ color: s.labelColor }}>
+              <div className="px-6 py-5 flex items-center justify-between">
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-[13px] font-semibold" style={{ color: s.labelColor }}>
                     {s.label}
                   </p>
-                  <p className="font-black text-[18px] leading-tight" style={{ color: s.valueColor }}>
+                  <p className="font-black text-[26px] leading-tight" style={{ color: s.valueColor }}>
                     {s.value}
                   </p>
-                  <p className="text-[10px] font-medium" style={{ color: s.subColor }}>{s.sub}</p>
+                  <p className="text-[12px] font-medium" style={{ color: s.subColor }}>{s.sub}</p>
                 </div>
                 <div
-                  className="h-10 w-10 rounded-xl flex items-center justify-center shadow-sm shrink-0"
+                  className="h-14 w-14 rounded-2xl flex items-center justify-center shadow-md shrink-0"
                   style={{ background: s.iconBg }}
                 >
-                  <img src={s.iconUrl} alt={s.label} className="h-5 w-5 object-contain" />
+                  <img src={s.iconUrl} alt={s.label} className="h-7 w-7 object-contain" />
                 </div>
               </div>
             </motion.div>
