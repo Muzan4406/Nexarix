@@ -291,22 +291,12 @@ export default function AdminSettings() {
             </div>
             <div>
               <Label className="flex items-center gap-2 mb-1.5">
-                <SiTelegram className="h-4 w-4 text-blue-500" />Support Telegram (contact direct)
+                <SiWhatsapp className="h-4 w-4 text-green-500" />Support WhatsApp (contact direct)
               </Label>
               <Input
                 value={form.telegramLink}
                 onChange={e => setForm(f => ({ ...f, telegramLink: e.target.value }))}
-                placeholder="https://t.me/nexarix_support"
-              />
-            </div>
-            <div>
-              <Label className="flex items-center gap-2 mb-1.5">
-                <SiTelegram className="h-4 w-4 text-cyan-500" />Canal Telegram
-              </Label>
-              <Input
-                value={form.telegramChannel}
-                onChange={e => setForm(f => ({ ...f, telegramChannel: e.target.value }))}
-                placeholder="https://t.me/nexarix_canal"
+                placeholder="https://wa.me/22900000000"
               />
             </div>
             <div>

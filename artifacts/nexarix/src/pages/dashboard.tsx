@@ -75,7 +75,7 @@ export default function Dashboard() {
         <motion.div
           variants={slideUp(0)} initial="hidden" animate="visible"
           className="relative overflow-hidden rounded-[26px] text-white"
-          style={{ background: "linear-gradient(145deg, #050d1f 0%, #0c1a3d 45%, #1248a8 100%)" }}
+          style={{ background: "linear-gradient(145deg, #0f0526 0%, #2d1065 50%, #4c1d95 100%)" }}
         >
           <div className="pointer-events-none absolute -top-14 -right-14 h-52 w-52 rounded-full"
             style={{ background: "radial-gradient(circle, rgba(99,155,255,0.2) 0%, transparent 70%)" }} />
@@ -84,73 +84,58 @@ export default function Dashboard() {
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px"
             style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)" }} />
 
-          <div className="relative z-10 p-5">
-            {/* Nom — sans badge Premium */}
-            <div className="flex items-center gap-3 mb-5">
+          <div className="relative z-10 p-4">
+            {/* Nom */}
+            <div className="flex items-center gap-3 mb-4">
               <motion.div
                 variants={slideLeft(1)}
                 initial="hidden"
                 animate="visible"
-                className="h-12 w-12 rounded-2xl flex items-center justify-center font-black text-lg shrink-0 shadow-lg ring-2 ring-white/10"
-                style={{ background: "linear-gradient(135deg, #1e3a8a, #2563eb)" }}
+                className="h-10 w-10 rounded-xl flex items-center justify-center font-black text-base shrink-0 shadow-lg ring-2 ring-white/10"
+                style={{ background: "linear-gradient(135deg, #5b21b6, #7c3aed)" }}
               >
                 {user?.username?.[0]?.toUpperCase()}
               </motion.div>
               <motion.div variants={slideLeft(1.5)} initial="hidden" animate="visible">
-                <p className="text-blue-300/80 text-[10px] font-semibold uppercase tracking-[0.14em] mb-0.5">
+                <p className="text-violet-300/80 text-[10px] font-semibold uppercase tracking-[0.14em] mb-0.5">
                   Bienvenue sur Nexarix
                 </p>
-                <p className="font-bold text-[17px] leading-tight">{user?.username}</p>
+                <p className="font-bold text-[16px] leading-tight">{user?.username}</p>
               </motion.div>
             </div>
 
-            {/* Balance principale */}
-            <motion.div
-              variants={slideUp(1)}
-              initial="hidden"
-              animate="visible"
-              className="mb-5"
-            >
-              <p className="text-blue-300/70 text-[10px] font-semibold uppercase tracking-[0.14em] mb-1">Solde disponible</p>
-              <p className="font-black text-[40px] leading-none tracking-tight">
-                {formatCurrency(balance, user?.country)}
-              </p>
-            </motion.div>
-
-            {/* 2 mini-cartes — styles distincts */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {/* Frais d'activation — style amber/doré */}
+            {/* 2 mini-cartes */}
+            <div className="grid grid-cols-2 gap-2">
               <motion.div
                 variants={slideLeft(2)}
                 initial="hidden"
                 animate="visible"
-                className="rounded-2xl p-3.5 border border-yellow-400/20"
+                className="rounded-xl p-3 border border-yellow-400/20"
                 style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.18), rgba(245,158,11,0.10))" }}
               >
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: "rgba(251,191,36,0.25)" }}>
-                    <Zap className="h-3 w-3 text-yellow-300" />
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="h-4 w-4 rounded flex items-center justify-center" style={{ background: "rgba(251,191,36,0.25)" }}>
+                    <Zap className="h-2.5 w-2.5 text-yellow-300" />
                   </div>
                   <p className="text-[9px] font-semibold text-yellow-200/80 uppercase tracking-wider">Frais d'activation</p>
                 </div>
-                <p className="font-black text-[20px] leading-none text-yellow-100">{activationFee.toLocaleString("fr-FR")} F</p>
+                <p className="font-black text-[17px] leading-none text-yellow-100">{activationFee.toLocaleString("fr-FR")} F</p>
               </motion.div>
 
-              {/* Total gagné — style vert émeraude */}
               <motion.div
                 variants={slideRight(2)}
                 initial="hidden"
                 animate="visible"
-                className="rounded-2xl p-3.5 border border-emerald-400/20"
+                className="rounded-xl p-3 border border-emerald-400/20"
                 style={{ background: "linear-gradient(135deg, rgba(52,211,153,0.18), rgba(16,185,129,0.10))" }}
               >
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <div className="h-5 w-5 rounded-md flex items-center justify-center" style={{ background: "rgba(52,211,153,0.25)" }}>
-                    <TrendingUp className="h-3 w-3 text-emerald-300" />
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="h-4 w-4 rounded flex items-center justify-center" style={{ background: "rgba(52,211,153,0.25)" }}>
+                    <TrendingUp className="h-2.5 w-2.5 text-emerald-300" />
                   </div>
                   <p className="text-[9px] font-semibold text-emerald-200/80 uppercase tracking-wider">Total gagné</p>
                 </div>
-                <p className="font-black text-[20px] leading-none text-emerald-100">{formatCurrency(totalBalance, user?.country)}</p>
+                <p className="font-black text-[17px] leading-none text-emerald-100">{formatCurrency(totalBalance, user?.country)}</p>
               </motion.div>
             </div>
           </div>

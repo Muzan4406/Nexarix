@@ -226,24 +226,27 @@ export default function Tasks() {
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
-          className="rounded-3xl bg-gradient-to-br from-[#1565C0] via-[#1976D2] to-[#0D47A1] p-6 text-white text-center relative overflow-hidden"
+          className="rounded-3xl p-5 text-white relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #f97316 0%, #dc2626 50%, #9333ea 100%)" }}
         >
-          <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/5" />
-          <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5" />
-          <div className="relative z-10">
-            <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-white/15 backdrop-blur-sm mb-4 mx-auto shadow-lg">
-              <Trophy className="h-7 w-7 text-yellow-300" />
-            </div>
-            <h1 className="font-black text-2xl tracking-tight mb-1">Tâches rémunérées</h1>
-            <p className="text-blue-200 text-sm mb-5">Regarde des vidéos et gagne des points convertibles en FCFA</p>
-            <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto">
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3">
-                <p className="text-3xl font-black tabular-nums">{pending.length}</p>
-                <p className="text-blue-200 text-xs font-medium mt-0.5">Disponibles</p>
+          <div className="absolute -top-8 -right-8 h-36 w-36 rounded-full bg-white/10" />
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-white/15" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Trophy className="h-5 w-5 text-yellow-300" />
+                <h1 className="font-black text-xl tracking-tight">Tâches rémunérées</h1>
               </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3">
-                <p className="text-3xl font-black tabular-nums text-emerald-300">{totalCompleted}</p>
-                <p className="text-blue-200 text-xs font-medium mt-0.5">Complétées</p>
+              <p className="text-white/75 text-xs">Regarde des vidéos · gagne des points FCFA</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-3 py-2 text-center">
+                <p className="text-2xl font-black tabular-nums leading-none">{pending.length}</p>
+                <p className="text-white/75 text-[10px] font-medium mt-0.5">Dispo</p>
+              </div>
+              <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-3 py-2 text-center">
+                <p className="text-2xl font-black tabular-nums text-yellow-300 leading-none">{totalCompleted}</p>
+                <p className="text-white/75 text-[10px] font-medium mt-0.5">Faites</p>
               </div>
             </div>
           </div>
