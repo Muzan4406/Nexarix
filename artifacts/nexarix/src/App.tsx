@@ -20,6 +20,7 @@ import EquipeNiveau2 from "@/pages/equipe-niveau-2";
 import EquipeNiveau3 from "@/pages/equipe-niveau-3";
 import EquipeInactifs from "@/pages/equipe-inactifs";
 import EquipeBonus from "@/pages/equipe-bonus";
+import EquipeParrainage from "@/pages/equipe-parrainage";
 import Profile from "@/pages/profile";
 import Contact from "@/pages/contact";
 import SpinWheel from "@/pages/spin-wheel";
@@ -113,7 +114,8 @@ function Router() {
       <Route path="/equipe/niveau-2" component={() => <ProtectedRoute component={EquipeNiveau2} />} />
       <Route path="/equipe/niveau-3" component={() => <ProtectedRoute component={EquipeNiveau3} />} />
       <Route path="/equipe/inactifs" component={() => <ProtectedRoute component={EquipeInactifs} />} />
-      <Route path="/equipe/bonus"    component={() => <ProtectedRoute component={EquipeBonus}    />} />
+      <Route path="/equipe/bonus"       component={() => <ProtectedRoute component={EquipeBonus}       />} />
+      <Route path="/equipe/parrainage"  component={() => <ProtectedRoute component={EquipeParrainage}  />} />
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
       <Route path="/contact" component={() => <ProtectedRoute component={Contact} />} />
       <Route path="/spin" component={() => <ProtectedRoute component={SpinWheel} />} />

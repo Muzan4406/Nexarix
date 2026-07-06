@@ -4,7 +4,7 @@ import {
   LogOut, Menu, LayoutDashboard, CheckSquare, Wallet,
   Phone, User, Star, History,
   Users, Zap, ChevronDown, ShoppingBag, GraduationCap, LayoutGrid,
-  Crown, UserX, Trophy,
+  Crown, UserX, Trophy, Gift,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -30,7 +30,8 @@ const SECTIONS: Section[] = [
         { name: "Niveau 2",           href: "/equipe/niveau-2", icon: Star    },
         { name: "Niveau 3",           href: "/equipe/niveau-3", icon: Zap     },
         { name: "Inactifs",           href: "/equipe/inactifs", icon: UserX   },
-        { name: "Bonus Super Parrain",href: "/equipe/bonus",    icon: Trophy  },
+        { name: "Bonus Super Parrain",href: "/equipe/bonus",        icon: Trophy  },
+        { name: "Mon lien de parrainage", href: "/equipe/parrainage", icon: Gift },
       ],
     },
   },

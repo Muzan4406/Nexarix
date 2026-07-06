@@ -1,16 +1,13 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { useGetDashboard, useGetPublicSettings } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  Wallet, ArrowDownCircle, Copy, CheckCircle,
-  Zap, TrendingUp, Gift, Users,
+  Wallet, ArrowDownCircle,
+  Zap, TrendingUp,
   BadgeDollarSign,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
-import { cn } from "@/lib/utils";
 
 const slideUp = (i: number) => ({
   hidden: { opacity: 0, y: 32, scale: 0.97 },
@@ -58,18 +55,6 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { data: stats, isLoading } = useGetDashboard();
   const { data: publicSettings } = useGetPublicSettings();
-  const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    if (stats?.referralLink) {
-      navigator.clipboard.writeText(stats.referralLink);
-      setCopied(true);
-      toast({ title: "Lien copié !", description: "Partagez-le pour gagner des commissions." });
-      setTimeout(() => setCopied(false), 2500);
-    }
-  };
-
   if (isLoading) return (
     <AppLayout>
       <div className="flex flex-col items-center justify-center h-64 gap-3">
@@ -255,56 +240,6 @@ export default function Dashboard() {
             </motion.div>
           ))}
         </div>
-
-        {/* ── Lien de parrainage — nouveau design ── */}
-        <motion.div
-          variants={slideUp(5)}
-          initial="hidden"
-          animate="visible"
-          className="rounded-[24px] overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)", border: "1.5px solid #bbf7d0" }}
-        >
-          {/* En-tête coloré */}
-          <div className="px-4 pt-4 pb-3 flex items-center gap-3">
-            <div className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm"
-              style={{ background: "linear-gradient(135deg, #16a34a, #15803d)" }}>
-              <Users className="h-5 w-5 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-gray-900 text-[14px] leading-tight">Mon lien de parrainage</p>
-              <p className="text-[11px] text-emerald-700 font-medium mt-0.5">🎁 Jusqu'à 1 300 F par filleul direct</p>
-            </div>
-          </div>
-
-          {/* Séparateur */}
-          <div className="h-px mx-4" style={{ background: "rgba(22,163,74,0.15)" }} />
-
-          {/* Lien */}
-          <div className="px-4 pt-3 pb-4">
-            <div className="rounded-xl px-3 py-2.5 mb-3 flex items-center gap-2"
-              style={{ background: "rgba(22,163,74,0.08)", border: "1px solid rgba(22,163,74,0.2)" }}>
-              <Gift className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-              <p className="font-mono text-[11px] text-emerald-800 truncate flex-1">{stats?.referralLink || "Chargement…"}</p>
-            </div>
-
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleCopy}
-              className={cn(
-                "w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-[13px] transition-colors shadow-sm",
-                copied
-                  ? "bg-emerald-500 text-white"
-                  : "text-white"
-              )}
-              style={copied ? {} : { background: "linear-gradient(135deg, #16a34a, #15803d)" }}
-            >
-              {copied
-                ? <><CheckCircle className="h-4 w-4" /> Lien copié !</>
-                : <><Copy className="h-4 w-4" /> Copier mon lien</>
-              }
-            </motion.button>
-          </div>
-        </motion.div>
 
       </div>
     </AppLayout>
