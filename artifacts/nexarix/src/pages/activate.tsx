@@ -3,9 +3,10 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetPublicSettings, useCheckActivationStatus } from "@workspace/api-client-react";
 import {
-  Phone, Zap, CheckCircle, CheckCircle2, MessageCircle, CreditCard, Loader,
+  Zap, CheckCircle2, CreditCard, Loader,
   RefreshCw, RotateCcw, Smartphone, AlertCircle, Globe, ChevronDown, PartyPopper,
 } from "lucide-react";
+import { SiWhatsapp } from "react-icons/si";
 import { getCurrencyCode } from "@/lib/currency";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -22,12 +23,6 @@ const COUNTRY_ISO: Record<string, string> = {
 
 const COUNTRY_LIST = Object.keys(COUNTRY_ISO).sort();
 
-const BENEFITS = [
-  "Accès complet au tableau de bord",
-  "Commissions MLM sur 3 niveaux",
-  "Participation aux tâches rémunérées",
-  "Retrait de vos gains à tout moment",
-];
 
 type Phase = "form" | "initiating" | "otp" | "waiting" | "success";
 
@@ -256,37 +251,28 @@ export default function Activate() {
 
       <div className="w-full max-w-sm space-y-4">
 
-        {/* Carte montant + avantages */}
+        {/* Carte montant */}
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
           className="bg-white rounded-3xl shadow-2xl overflow-hidden"
         >
           <div className="h-1.5 bg-gradient-to-r from-amber-400 to-orange-500" />
-          <div className="p-6">
+          <div className="p-5">
             <div className="flex items-center gap-3 mb-4">
-              <div className="h-11 w-11 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
-                <Zap className="h-6 w-6 text-amber-500" />
+              <div className="h-10 w-10 rounded-2xl bg-amber-100 flex items-center justify-center shrink-0">
+                <Zap className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <h2 className="text-lg font-black text-gray-900 leading-tight">Activez votre compte</h2>
-                <p className="text-sm text-gray-500">Paiement unique · Accès à vie</p>
+                <h2 className="text-base font-black text-gray-900 leading-tight">Activez votre compte</h2>
+                <p className="text-xs text-gray-400">Paiement unique · Accès à vie</p>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-[#1565C0] to-[#1E88E5] rounded-2xl p-4 text-center text-white mb-4">
-              <p className="text-blue-100 text-xs mb-1">Frais d'activation</p>
+            <div className="bg-gradient-to-r from-[#1565C0] to-[#1E88E5] rounded-2xl p-4 text-center text-white">
+              <p className="text-blue-200 text-xs mb-1 font-medium">Frais d'activation</p>
               <p className="text-4xl font-black">{activationFee.toLocaleString("fr-FR")}</p>
-              <p className="text-blue-200 text-sm font-semibold">{getCurrencyCode(country || user?.country)} (FCFA)</p>
-            </div>
-
-            <div className="space-y-2">
-              {BENEFITS.map(b => (
-                <div key={b} className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                  <p className="text-sm text-gray-600">{b}</p>
-                </div>
-              ))}
+              <p className="text-blue-200 text-sm font-semibold mt-0.5">{getCurrencyCode(country || user?.country)} (FCFA)</p>
             </div>
           </div>
         </motion.div>
@@ -407,6 +393,18 @@ export default function Activate() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                       <p className="text-[11px] text-gray-400 font-medium">Paiement sécurisé via Sendavapay</p>
+                    </div>
+
+                    <div className="border-t border-gray-100 pt-3">
+                      <a
+                        href={publicSettings?.telegramLink || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full h-11 rounded-2xl border-2 border-green-200 bg-green-50 text-green-700 font-bold text-sm flex items-center justify-center gap-2 hover:bg-green-100 transition-colors"
+                      >
+                        <SiWhatsapp className="h-4 w-4" />
+                        Besoin d'aide ? Support WhatsApp
+                      </a>
                     </div>
                   </motion.div>
                 )}
@@ -563,34 +561,40 @@ export default function Activate() {
 
             ) : (
               /* ── MODE MANUEL ── */
-              <>
-                <div className="flex items-center gap-2 mb-4">
-                  <Phone className="h-5 w-5 text-emerald-500" />
-                  <h3 className="font-black text-gray-900">Paiement manuel</h3>
-                  {country && (
-                    <span className="ml-auto text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200 rounded-xl px-2 py-0.5">{country}</span>
-                  )}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <SiWhatsapp className="h-5 w-5 text-green-500" />
+                  <h3 className="font-black text-gray-900">Paiement via WhatsApp</h3>
                 </div>
 
-                <p className="text-sm text-gray-500 mb-4">
-                  Effectuez un dépôt Mobile Money au compte de l'administrateur, puis contactez le support avec votre preuve de paiement.
-                </p>
+                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+                  <p className="text-xs font-bold text-amber-600 mb-1 uppercase tracking-wide">Montant à envoyer</p>
+                  <p className="text-3xl font-black text-amber-700">{activationFee.toLocaleString("fr-FR")} FCFA</p>
+                </div>
 
-                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4">
-                  <p className="text-xs font-black text-amber-700 mb-1">Montant à envoyer</p>
-                  <p className="text-2xl font-black text-amber-600">{activationFee.toLocaleString("fr-FR")} FCFA</p>
+                <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4 space-y-2">
+                  {[
+                    "Effectuez le dépôt Mobile Money",
+                    "Prenez une capture d'écran de la confirmation",
+                    "Envoyez-la au support WhatsApp ci-dessous",
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <span className="h-5 w-5 rounded-full bg-green-100 text-green-700 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                      <p className="text-xs text-gray-600 font-medium">{step}</p>
+                    </div>
+                  ))}
                 </div>
 
                 <a
                   href={publicSettings?.telegramLink || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black flex items-center justify-center gap-2 shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all"
+                  className="w-full h-13 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black flex items-center justify-center gap-2.5 shadow-lg shadow-green-200 hover:-translate-y-0.5 active:translate-y-0 transition-all py-3"
                 >
-                  <MessageCircle className="h-4 w-4" />
-                  Contacter le support
+                  <SiWhatsapp className="h-5 w-5" />
+                  Contacter le support WhatsApp
                 </a>
-              </>
+              </div>
             )}
 
           </div>

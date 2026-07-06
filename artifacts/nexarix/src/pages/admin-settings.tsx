@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Mail, Download, CreditCard, Key, ToggleLeft, ToggleRight, Globe, Copy, Check, ArrowDownToLine, Construction } from "lucide-react";
-import { SiTelegram, SiWhatsapp } from "react-icons/si";
+import { SiWhatsapp, SiTelegram } from "react-icons/si";
 
 export default function AdminSettings() {
   const { data: settings, isLoading } = useGetAdminSettings();
@@ -297,6 +297,16 @@ export default function AdminSettings() {
                 value={form.telegramLink}
                 onChange={e => setForm(f => ({ ...f, telegramLink: e.target.value }))}
                 placeholder="https://wa.me/22900000000"
+              />
+            </div>
+            <div>
+              <Label className="flex items-center gap-2 mb-1.5">
+                <SiTelegram className="h-4 w-4 text-cyan-500" />Canal Telegram
+              </Label>
+              <Input
+                value={form.telegramChannel}
+                onChange={e => setForm(f => ({ ...f, telegramChannel: e.target.value }))}
+                placeholder="https://t.me/nexarix_canal"
               />
             </div>
             <div>
