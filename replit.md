@@ -10,27 +10,31 @@ A full-stack platform for managing user memberships, formations, tasks, store, a
 
 ## How to run
 
-Two workflows are configured and run in parallel:
+Three workflows are configured (auto-created from the artifact layout) and run in parallel:
 
 | Workflow | Command | Port |
 |---|---|---|
 | `artifacts/nexarix: web` | `pnpm --filter @workspace/nexarix run dev` | 5000 (proxied) |
 | `artifacts/api-server: API Server` | `pnpm --filter @workspace/api-server run dev` | 8080 |
+| `artifacts/mockup-sandbox: Component Preview Server` | `pnpm --filter @workspace/mockup-sandbox run dev` | canvas preview only |
 
 The Vite dev server proxies `/api` requests to `http://localhost:8080`.
 
+Database: uses the built-in Replit PostgreSQL database (`DATABASE_URL`, auto-provisioned) unless `SUPABASE_PROJECT_REF` + `SUPABASE_DB_PASSWORD` are set, in which case it connects to Supabase Postgres instead. Schema is managed by Drizzle — run `pnpm --filter @workspace/db run push` after schema changes to sync tables (the app's own startup migration only adds a couple of incremental columns, it does not create the base tables).
+
 ## Required environment variables / secrets
 
-These must be set in Replit Secrets for the API server to be fully functional:
+Set in Replit Secrets (currently only `SESSION_SECRET` is set — the app runs without the rest in dev, but auth/storage/notifications are degraded until they're added; the user declined providing them during initial setup on 2026-07-13):
 
-| Secret | Purpose |
-|---|---|
-| `SESSION_SECRET` | Express session signing |
-| `JWT_SECRET` | JWT token signing |
-| `SUPABASE_PROJECT_REF` | Supabase project for file storage |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role access |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot for notifications |
-| `TELEGRAM_CHAT_ID` | Target Telegram channel/group |
+| Secret | Purpose | Status |
+|---|---|---|
+| `SESSION_SECRET` | Express session signing | ✅ set |
+| `JWT_SECRET` | JWT token signing (required in production) | ⚠️ not set |
+| `ADMIN_PASSWORD` | Admin dashboard login | ⚠️ not set |
+| `SUPABASE_PROJECT_REF` | Supabase project for file storage | ⚠️ not set |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role access | ⚠️ not set |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot for notifications | ⚠️ not set |
+| `TELEGRAM_CHAT_ID` | Target Telegram channel/group | ⚠️ not set |
 
 Payment (Sendavapay) credentials are configured through the admin dashboard settings.
 
