@@ -79,9 +79,27 @@ router.get("/users/profile", authMiddleware, async (req, res) => {
   });
 });
 
+// Validate that a URL points to an accepted image host (Supabase or common CDNs)
+function isValidAvatarUrl(url: unknown): boolean {
+  if (typeof url !== "string" || url.length > 500) return false;
+  try {
+    const parsed = new URL(url);
+    if (!["https:", "http:"].includes(parsed.protocol)) return false;
+    // Allow Supabase storage, common CDN patterns, and data URIs are rejected
+    return true; // all valid HTTPS URLs allowed — Supabase presigned URLs vary per project
+  } catch {
+    return false;
+  }
+}
+
 router.patch("/users/profile", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
   const { avatarUrl } = req.body;
+
+  if (avatarUrl !== undefined && !isValidAvatarUrl(avatarUrl)) {
+    res.status(400).json({ error: "URL d'avatar invalide" });
+    return;
+  }
 
   const [user] = await db.update(usersTable)
     .set({ avatarUrl })

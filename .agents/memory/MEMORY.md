@@ -1,1 +1,2 @@
 - [Sendavapay integration](sendavapay-integration.md) — correct endpoints, payload fields, webhook HMAC-SHA256 format; no merchant_id needed, webhook URL configured in dashboard
+- [Security hardening](security-hardening.md) — rate limiters, helmet, CORS, hardcoded admin creds moved to env/secrets, Telegram intrusion alerts; see file for required env vars

@@ -6,11 +6,18 @@ import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskComple
 import { eq, or, ilike, sql, inArray, lt } from "drizzle-orm";
 import { signToken, authMiddleware, adminMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
+import { adminLoginLimiter, otpLimiter, alertIntrusion } from "../lib/security";
 
 const router = Router();
-const ADMIN_EMAIL = "godmuzan42@gmail.com";
-const ADMIN_USERNAME = "Muzan4406";
-const ADMIN_PASSWORD = "@admin4406";
+
+// Credentials loaded from environment — NEVER hardcode in source code
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+  console.warn("[security] ADMIN_EMAIL / ADMIN_PASSWORD non définis en variable d'environnement !");
+}
 
 // Clean up expired OTP sessions every 10 minutes
 setInterval(async () => {
@@ -23,7 +30,7 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-router.post("/admin/login", async (req, res) => {
+router.post("/admin/login", adminLoginLimiter, async (req, res) => {
   const { identifier, password } = req.body;
 
   let userId: number;
@@ -32,6 +39,11 @@ router.post("/admin/login", async (req, res) => {
 
   const isAdminIdentifier = identifier === ADMIN_EMAIL || identifier === ADMIN_USERNAME;
   const isAdminPassword = password === ADMIN_PASSWORD;
+
+  if (!identifier || !password) {
+    res.status(400).json({ error: "Identifiant et mot de passe requis" });
+    return;
+  }
 
   if (isAdminIdentifier && isAdminPassword) {
     // Super admin hardcoded login
@@ -62,12 +74,22 @@ router.post("/admin/login", async (req, res) => {
       .limit(1);
 
     if (!adminUser || !adminUser.isAdmin) {
+      await alertIntrusion(
+        "TENTATIVE CONNEXION ADMIN INVALIDE",
+        `👤 Identifiant: <code>${String(identifier).slice(0, 40)}</code>\n❌ Compte inexistant ou non-admin`,
+        req
+      );
       res.status(401).json({ error: "Invalid admin credentials" });
       return;
     }
 
     const valid = await bcrypt.compare(password, adminUser.passwordHash);
     if (!valid) {
+      await alertIntrusion(
+        "TENTATIVE CONNEXION ADMIN — MOT DE PASSE INCORRECT",
+        `👤 Identifiant: <code>${String(identifier).slice(0, 40)}</code>`,
+        req
+      );
       res.status(401).json({ error: "Invalid admin credentials" });
       return;
     }
@@ -99,7 +121,7 @@ router.post("/admin/login", async (req, res) => {
   res.json({ otpRequired: true, sessionToken });
 });
 
-router.post("/admin/verify-otp", async (req, res) => {
+router.post("/admin/verify-otp", otpLimiter, async (req, res) => {
   const { sessionToken, otp } = req.body;
 
   if (!sessionToken || !otp) {

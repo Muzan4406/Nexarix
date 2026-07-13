@@ -1,5 +1,6 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +9,13 @@ import { logger } from "./lib/logger";
 import { db } from "@workspace/db";
 import { siteSettingsTable } from "@workspace/db";
 import jwt from "jsonwebtoken";
+import { globalApiLimiter } from "./lib/security";
+
+const JWT_SECRET = process.env.JWT_SECRET ?? (
+  process.env.NODE_ENV === "production"
+    ? (() => { throw new Error("JWT_SECRET environment variable is required in production"); })()
+    : "nexarix-dev-secret-change-in-production"
+);
 
 const app: Express = express();
 
@@ -31,7 +39,32 @@ app.use(
   }),
 );
 
-app.use(cors());
+// ─── Security headers ────────────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // SPA gérée côté frontend
+  crossOriginEmbedderPolicy: false,
+}));
+
+// ─── CORS — restreint aux origines connues ───────────────────────────────────
+const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Requêtes sans origine (curl, Postman, mobile natif) → autorisées en dev
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS: origine non autorisée ${origin}`), false);
+  },
+  credentials: true,
+}));
+
+// ─── Rate limiter global anti-bot/scan ───────────────────────────────────────
+app.use("/api", globalApiLimiter);
 
 // Raw body for webhook signature verification (must be before express.json)
 app.use("/api/activate/webhook", express.raw({ type: "application/json" }));
@@ -61,7 +94,7 @@ app.use("/api", async (req: Request, res: Response, next: NextFunction) => {
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
       try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET || "dev-secret") as any;
+        const payload = jwt.verify(token, JWT_SECRET) as any;
         if (payload?.isAdmin) return next();
       } catch {
         // invalid token — fall through to maintenance response

@@ -6,6 +6,7 @@ import { usersTable, adminOtpSessionsTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { signToken, authMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
+import { loginLimiter, registerLimiter, otpLimiter, trackFailedLogin, resetFailedLogin, alertIntrusion } from "../lib/security";
 
 function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -13,7 +14,7 @@ function generateOtp(): string {
 
 const router = Router();
 
-router.post("/auth/register", async (req, res, next) => {
+router.post("/auth/register", registerLimiter, async (req, res, next) => {
   try {
     const { username, email, phone, country, password, upline } = req.body;
 
@@ -68,7 +69,7 @@ router.post("/auth/register", async (req, res, next) => {
   }
 });
 
-router.post("/auth/login", async (req, res, next) => {
+router.post("/auth/login", loginLimiter, async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
 
@@ -82,20 +83,25 @@ router.post("/auth/login", async (req, res, next) => {
     ).limit(1);
 
     if (!user) {
+      trackFailedLogin(req, identifier);
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
+      trackFailedLogin(req, identifier);
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
     if (user.isBanned) {
+      await alertIntrusion("CONNEXION COMPTE BANNI", `👤 Identifiant: <code>${identifier.slice(0, 40)}</code>`, req);
       res.status(403).json({ error: "Account is banned" });
       return;
     }
+
+    resetFailedLogin(req);
 
     // Admin users require OTP verification
     if (user.isAdmin) {

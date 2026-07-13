@@ -66,6 +66,8 @@ channel = "stable-25_05"
 [userenv.shared]
 PORT = "5000"
 APP_BASE_URL = "nexarix--goatmuzan62.replit.app"
+ADMIN_EMAIL = "godmuzan42@gmail.com"
+ADMIN_USERNAME = "Muzan4406"
 
 [[ports]]
 localPort = 5000
