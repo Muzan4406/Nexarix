@@ -658,12 +658,17 @@ router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMi
     }
   }
 
+  // Si le payout auto a échoué (ex: solde Sendavapay insuffisant), on NE marque PAS
+  // le retrait comme "paid" — il reste "pending" pour permettre une nouvelle tentative
+  // (ex: après rechargement du solde Sendavapay) sans perdre la trace de l'argent.
+  const payoutFailed = isAutoMode && !!payoutError;
+
   const [updated] = await db.update(withdrawalsTable)
-    .set({
-      status: "paid",
-      sendavapayReference: sendavapayRef,
-      sendavapayStatus: sendavapayStatus,
-    })
+    .set(
+      payoutFailed
+        ? { sendavapayStatus: "failed" }
+        : { status: "paid", sendavapayReference: sendavapayRef, sendavapayStatus: sendavapayStatus }
+    )
     .where(eq(withdrawalsTable.id, withdrawalId))
     .returning();
 

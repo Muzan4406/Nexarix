@@ -67,7 +67,7 @@ export default function AdminWithdrawals() {
       onSuccess: (data: any) => {
         invalidate();
         if (data?.payoutError) {
-          toast({ title: "⚠️ Validé — payout échoué", description: data.payoutError, variant: "destructive" });
+          toast({ title: "⚠️ Payout échoué — retrait resté en attente", description: `${data.payoutError}. Rechargez votre solde Sendavapay puis réessayez.`, variant: "destructive" });
         } else if (isAutoMode) {
           toast({ title: "⚡ Payout automatique déclenché" });
         } else {

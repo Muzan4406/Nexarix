@@ -83546,11 +83546,10 @@ router7.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminM
       payoutError = e.message;
     }
   }
-  const [updated] = await db.update(withdrawalsTable).set({
-    status: "paid",
-    sendavapayReference: sendavapayRef,
-    sendavapayStatus
-  }).where(eq(withdrawalsTable.id, withdrawalId)).returning();
+  const payoutFailed = isAutoMode && !!payoutError;
+  const [updated] = await db.update(withdrawalsTable).set(
+    payoutFailed ? { sendavapayStatus: "failed" } : { status: "paid", sendavapayReference: sendavapayRef, sendavapayStatus }
+  ).where(eq(withdrawalsTable.id, withdrawalId)).returning();
   if (isAutoMode && sendavapayRef) {
     sendTelegramNotification(
       `\u2705 <b>Retrait approuv\xE9 + payout envoy\xE9</b>
