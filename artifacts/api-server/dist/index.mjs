@@ -60982,6 +60982,9 @@ var GetAdminWithdrawalsResponse = arrayType(GetAdminWithdrawalsResponseItem);
 var ApproveWithdrawalParams = objectType({
   "withdrawalId": coerce.number()
 });
+var ApproveWithdrawalBody = objectType({
+  "confirmationCode": stringType()
+});
 var ApproveWithdrawalResponse = objectType({
   "id": numberType(),
   "userId": numberType(),
@@ -82507,6 +82510,21 @@ var otpLimiter = rate_limit_default({
   standardHeaders: true,
   legacyHeaders: false
 });
+var withdrawalConfirmLimiter = rate_limit_default({
+  windowMs: DAY_MS,
+  max: 5,
+  keyGenerator: getClientIp,
+  handler: async (req, res) => {
+    await alertIntrusion(
+      "BRUTE-FORCE CODE RETRAIT",
+      `\u26A0\uFE0F 5 tentatives de code de confirmation de retrait d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h`,
+      req
+    );
+    res.status(429).json({ error: "Trop de tentatives. R\xE9essayez dans 24 heures." });
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 var globalApiLimiter = rate_limit_default({
   windowMs: 60 * 1e3,
   max: 200,
@@ -82994,6 +83012,10 @@ var ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
   console.warn("[security] ADMIN_EMAIL / ADMIN_PASSWORD non d\xE9finis en variable d'environnement !");
 }
+var WITHDRAWAL_CONFIRMATION_CODE = process.env.WITHDRAWAL_CONFIRMATION_CODE ?? "";
+if (!WITHDRAWAL_CONFIRMATION_CODE) {
+  console.warn("[security] WITHDRAWAL_CONFIRMATION_CODE non d\xE9fini \u2014 la confirmation de retrait sera refus\xE9e !");
+}
 setInterval(async () => {
   try {
     await db.delete(adminOtpSessionsTable).where(lt(adminOtpSessionsTable.expiresAt, Date.now()));
@@ -83460,8 +83482,22 @@ function normalizePhone(phone) {
   if (!cleaned.startsWith("+")) return "+" + cleaned;
   return cleaned;
 }
-router7.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMiddleware, async (req, res) => {
+router7.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMiddleware, withdrawalConfirmLimiter, async (req, res) => {
   const withdrawalId = parseInt(req.params.withdrawalId);
+  const { confirmationCode } = req.body;
+  if (!WITHDRAWAL_CONFIRMATION_CODE) {
+    res.status(500).json({ error: "Code de confirmation non configur\xE9 c\xF4t\xE9 serveur. Contactez l'administrateur syst\xE8me." });
+    return;
+  }
+  if (!confirmationCode || confirmationCode !== WITHDRAWAL_CONFIRMATION_CODE) {
+    await alertIntrusion(
+      "CODE DE CONFIRMATION RETRAIT INCORRECT",
+      `\u26A0\uFE0F Tentative de validation du retrait #${withdrawalId} avec un code invalide`,
+      req
+    );
+    res.status(401).json({ error: "Code de confirmation invalide." });
+    return;
+  }
   const [withdrawal] = await db.select({
     withdrawal: withdrawalsTable,
     username: usersTable.username
