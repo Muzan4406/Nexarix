@@ -82454,53 +82454,55 @@ ${details}
 \u{1F5A5}\uFE0F User-Agent: ${ua}`
   );
 }
-function rateLimitHandler(message) {
-  return (_req, res) => {
-    res.status(429).json({ error: message });
-  };
-}
+var DAY_MS = 24 * 60 * 60 * 1e3;
 var loginLimiter = rate_limit_default({
-  windowMs: 15 * 60 * 1e3,
+  windowMs: DAY_MS,
   max: 10,
   keyGenerator: getClientIp,
-  handler: rateLimitHandler("Trop de tentatives de connexion. R\xE9essayez dans 15 minutes."),
+  handler: async (req, res) => {
+    await alertIntrusion("BRUTE-FORCE LOGIN", `\u26A0\uFE0F 10 tentatives de connexion d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h`, req);
+    res.status(429).json({ error: "Trop de tentatives de connexion. R\xE9essayez dans 24 heures." });
+  },
   standardHeaders: true,
   legacyHeaders: false
 });
 var registerLimiter = rate_limit_default({
-  windowMs: 60 * 60 * 1e3,
+  windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
-  handler: rateLimitHandler("Trop d'inscriptions depuis cette adresse. R\xE9essayez dans 1 heure."),
+  handler: async (req, res) => {
+    await alertIntrusion("ABUS INSCRIPTIONS", `\u26A0\uFE0F 5 inscriptions d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h (bot probable)`, req);
+    res.status(429).json({ error: "Trop d'inscriptions depuis cette adresse. R\xE9essayez dans 24 heures." });
+  },
   standardHeaders: true,
   legacyHeaders: false
 });
 var adminLoginLimiter = rate_limit_default({
-  windowMs: 15 * 60 * 1e3,
+  windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
   handler: async (req, res) => {
     await alertIntrusion(
       "BRUTE-FORCE ADMIN LOGIN",
-      `\u26A0\uFE0F 5 tentatives admin d\xE9pass\xE9es \u2014 IP bloqu\xE9e 15 min`,
+      `\u26A0\uFE0F 5 tentatives admin d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h`,
       req
     );
-    res.status(429).json({ error: "Trop de tentatives admin. Acc\xE8s bloqu\xE9 15 minutes." });
+    res.status(429).json({ error: "Trop de tentatives admin. Acc\xE8s bloqu\xE9 24 heures." });
   },
   standardHeaders: true,
   legacyHeaders: false
 });
 var otpLimiter = rate_limit_default({
-  windowMs: 5 * 60 * 1e3,
+  windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
   handler: async (req, res) => {
     await alertIntrusion(
       "BRUTE-FORCE OTP",
-      `\u26A0\uFE0F 5 tentatives OTP d\xE9pass\xE9es \u2014 IP bloqu\xE9e 5 min`,
+      `\u26A0\uFE0F 5 tentatives OTP d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h`,
       req
     );
-    res.status(429).json({ error: "Trop de tentatives OTP. R\xE9essayez dans 5 minutes." });
+    res.status(429).json({ error: "Trop de tentatives OTP. R\xE9essayez dans 24 heures." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82512,7 +82514,7 @@ var globalApiLimiter = rate_limit_default({
   handler: async (req, res) => {
     await alertIntrusion(
       "RATE LIMIT GLOBAL",
-      `\u26A0\uFE0F Plus de 200 requ\xEAtes/min d\xE9tect\xE9es`,
+      `\u26A0\uFE0F Plus de 200 requ\xEAtes/min d\xE9tect\xE9es (scan/bot probable)`,
       req
     );
     res.status(429).json({ error: "Trop de requ\xEAtes. Ralentissez." });
@@ -82538,7 +82540,7 @@ function trackFailedLogin(req, identifier) {
     });
   }
   failedLoginMap.set(ip, entry);
-  setTimeout(() => failedLoginMap.delete(ip), 30 * 60 * 1e3);
+  setTimeout(() => failedLoginMap.delete(ip), DAY_MS);
 }
 function resetFailedLogin(req) {
   failedLoginMap.delete(getClientIp(req));

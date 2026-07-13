@@ -1,6 +1,6 @@
 /**
  * Centralised security helpers:
- *  - Rate limiters (express-rate-limit)
+ *  - Rate limiters (express-rate-limit) — in-memory, per-IP, all windows 24h
  *  - Intrusion alert via Telegram
  *  - IP extraction utility
  */
@@ -30,70 +30,71 @@ export async function alertIntrusion(event: string, details: string, req: Reques
   );
 }
 
-// ─── Generic rate-limit error handler ────────────────────────────────────────
-function rateLimitHandler(message: string) {
-  return (_req: Request, res: Response) => {
-    res.status(429).json({ error: message });
-  };
-}
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-// ─── Rate limiters ───────────────────────────────────────────────────────────
+// ─── Rate limiters (in-memory, per IP, 24h blocking window) ─────────────────
 
-/** Public login: 10 attempts / 15 min per IP */
+/** Public login: 10 tentatives / 24h per IP */
 export const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: DAY_MS,
   max: 10,
   keyGenerator: getClientIp,
-  handler: rateLimitHandler("Trop de tentatives de connexion. Réessayez dans 15 minutes."),
+  handler: async (req: Request, res: Response) => {
+    await alertIntrusion("BRUTE-FORCE LOGIN", `⚠️ 10 tentatives de connexion dépassées — IP bloquée 24h`, req);
+    res.status(429).json({ error: "Trop de tentatives de connexion. Réessayez dans 24 heures." });
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-/** Registration: 5 comptes / heure per IP */
+/** Registration: 5 comptes / 24h per IP */
 export const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
+  windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
-  handler: rateLimitHandler("Trop d'inscriptions depuis cette adresse. Réessayez dans 1 heure."),
+  handler: async (req: Request, res: Response) => {
+    await alertIntrusion("ABUS INSCRIPTIONS", `⚠️ 5 inscriptions dépassées — IP bloquée 24h (bot probable)`, req);
+    res.status(429).json({ error: "Trop d'inscriptions depuis cette adresse. Réessayez dans 24 heures." });
+  },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-/** Admin login: 5 tentatives / 15 min per IP */
+/** Admin login: 5 tentatives / 24h per IP */
 export const adminLoginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
   handler: async (req: Request, res: Response) => {
     await alertIntrusion(
       "BRUTE-FORCE ADMIN LOGIN",
-      `⚠️ 5 tentatives admin dépassées — IP bloquée 15 min`,
+      `⚠️ 5 tentatives admin dépassées — IP bloquée 24h`,
       req
     );
-    res.status(429).json({ error: "Trop de tentatives admin. Accès bloqué 15 minutes." });
+    res.status(429).json({ error: "Trop de tentatives admin. Accès bloqué 24 heures." });
   },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-/** OTP verify: 5 essais / 5 min per IP */
+/** OTP verify: 5 essais / 24h per IP */
 export const otpLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000,
+  windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
   handler: async (req: Request, res: Response) => {
     await alertIntrusion(
       "BRUTE-FORCE OTP",
-      `⚠️ 5 tentatives OTP dépassées — IP bloquée 5 min`,
+      `⚠️ 5 tentatives OTP dépassées — IP bloquée 24h`,
       req
     );
-    res.status(429).json({ error: "Trop de tentatives OTP. Réessayez dans 5 minutes." });
+    res.status(429).json({ error: "Trop de tentatives OTP. Réessayez dans 24 heures." });
   },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-/** API générale: 200 req / min per IP (anti-bot/scan) */
+/** API générale: 200 req / min per IP (anti-bot/scan), IP suspecte 24h */
 export const globalApiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 200,
@@ -101,7 +102,7 @@ export const globalApiLimiter = rateLimit({
   handler: async (req: Request, res: Response) => {
     await alertIntrusion(
       "RATE LIMIT GLOBAL",
-      `⚠️ Plus de 200 requêtes/min détectées`,
+      `⚠️ Plus de 200 requêtes/min détectées (scan/bot probable)`,
       req
     );
     res.status(429).json({ error: "Trop de requêtes. Ralentissez." });
@@ -133,8 +134,8 @@ export function trackFailedLogin(req: Request, identifier: string): void {
   }
 
   failedLoginMap.set(ip, entry);
-  // Auto-clean after 30 min
-  setTimeout(() => failedLoginMap.delete(ip), 30 * 60 * 1000);
+  // Auto-clean after 24h
+  setTimeout(() => failedLoginMap.delete(ip), DAY_MS);
 }
 
 export function resetFailedLogin(req: Request): void {
