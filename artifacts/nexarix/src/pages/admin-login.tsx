@@ -142,8 +142,16 @@ export default function AdminLogin() {
                         <Input
                           placeholder="123456"
                           maxLength={6}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          autoComplete="one-time-code"
+                          autoFocus
                           className="text-center text-2xl font-black tracking-widest h-14 rounded-2xl"
                           {...field}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                            field.onChange(val);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
