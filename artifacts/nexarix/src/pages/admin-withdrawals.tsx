@@ -57,12 +57,13 @@ export default function AdminWithdrawals() {
 
   const [rejectData, setRejectData] = useState<{ id: number; reason: string } | null>(null);
   const [confirmAutoId, setConfirmAutoId] = useState<number | null>(null);
+  const [codeConfirm, setCodeConfirm] = useState<{ id: number; code: string } | null>(null);
 
   const isAutoMode = settings?.paymentMode === "auto";
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetAdminWithdrawalsQueryKey() });
 
-  const doApprove = (id: number) => {
-    approveWithdrawal.mutate({ withdrawalId: id }, {
+  const doApprove = (id: number, confirmationCode: string) => {
+    approveWithdrawal.mutate({ withdrawalId: id, data: { confirmationCode } }, {
       onSuccess: (data: any) => {
         invalidate();
         if (data?.payoutError) {
@@ -73,14 +74,31 @@ export default function AdminWithdrawals() {
           toast({ title: "✅ Retrait validé" });
         }
         setConfirmAutoId(null);
+        setCodeConfirm(null);
       },
       onError: (err: any) => toast({ title: "Erreur", description: err?.data?.error, variant: "destructive" }),
     });
   };
 
+  // Étape 1 : si mode auto, on demande d'abord confirmation ; étape 2 (toujours) : code secret
   const handleApproveClick = (id: number) => {
     if (isAutoMode) setConfirmAutoId(id);
-    else doApprove(id);
+    else setCodeConfirm({ id, code: "" });
+  };
+
+  const handleAutoConfirmed = () => {
+    if (confirmAutoId === null) return;
+    setCodeConfirm({ id: confirmAutoId, code: "" });
+    setConfirmAutoId(null);
+  };
+
+  const handleCodeSubmit = () => {
+    if (!codeConfirm) return;
+    if (!codeConfirm.code.trim()) {
+      toast({ title: "Code requis", variant: "destructive" });
+      return;
+    }
+    doApprove(codeConfirm.id, codeConfirm.code.trim());
   };
 
   const handleReject = () => {
@@ -367,12 +385,57 @@ export default function AdminWithdrawals() {
             <button
               className="flex-1 h-11 rounded-2xl text-white font-black text-sm transition-all disabled:opacity-60 shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
               style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
-              onClick={() => confirmAutoId !== null && doApprove(confirmAutoId)}
+              onClick={handleAutoConfirmed}
+            >
+              <Zap className="h-4 w-4" /> Continuer
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog : Code de confirmation secret ─── */}
+      <Dialog open={!!codeConfirm} onOpenChange={() => setCodeConfirm(null)}>
+        <DialogContent className="rounded-3xl border-0 shadow-2xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-black text-[18px] flex items-center gap-2.5">
+              <span className="h-9 w-9 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+                <Zap className="h-5 w-5 text-indigo-600" />
+              </span>
+              Code de confirmation requis
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-500">
+              Saisissez le code secret pour valider ce retrait{isAutoMode ? " et déclencher le payout automatique" : ""}.
+            </p>
+            <Label className="text-sm font-bold text-gray-700">
+              Code secret <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="password"
+              className="rounded-2xl border-gray-200 h-11 tracking-widest text-center font-bold"
+              value={codeConfirm?.code || ""}
+              onChange={e => setCodeConfirm(d => d ? { ...d, code: e.target.value } : null)}
+              onKeyDown={e => { if (e.key === "Enter") handleCodeSubmit(); }}
+              placeholder="••••••"
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2 pt-1">
+            <button
+              className="flex-1 h-11 rounded-2xl border border-gray-200 bg-white font-bold text-gray-700 text-sm hover:bg-gray-50 transition-all"
+              onClick={() => setCodeConfirm(null)}
+            >
+              Annuler
+            </button>
+            <button
+              className="flex-1 h-11 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-sm transition-all disabled:opacity-60 shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
+              onClick={handleCodeSubmit}
               disabled={approveWithdrawal.isPending}
             >
               {approveWithdrawal.isPending
-                ? <><Zap className="h-4 w-4 animate-pulse" /> Envoi…</>
-                : <><Zap className="h-4 w-4" /> Envoyer le payout</>
+                ? <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                : <><CheckCircle2 className="h-4 w-4" /> Confirmer</>
               }
             </button>
           </DialogFooter>

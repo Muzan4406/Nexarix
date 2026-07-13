@@ -13,6 +13,7 @@ export * from './adminLoginInput';
 export * from './adminUser';
 export * from './adminUserUpdate';
 export * from './adminWithdrawal';
+export * from './approveInput';
 export * from './authResponse';
 export * from './convertPointsResult';
 export * from './dashboardStats';

@@ -253,18 +253,12 @@ export interface AdminWithdrawal {
   type: string;
   operator: string;
   phone: string;
-  /** @nullable */
-  country?: string | null;
   amountGross: number;
   fee: number;
   amountNet: number;
   status: string;
   /** @nullable */
   rejectionReason?: string | null;
-  /** @nullable */
-  sendavapayReference?: string | null;
-  /** @nullable */
-  sendavapayStatus?: string | null;
   createdAt: string;
 }
 
@@ -272,25 +266,18 @@ export interface RejectInput {
   reason: string;
 }
 
+export interface ApproveInput {
+  confirmationCode: string;
+}
+
 export interface PublicSettings {
   activationFee: number;
   paymentMode: string;
-  minWithdrawal: number;
-  /** @nullable */
-  supportEmail?: string | null;
-  /** @nullable */
-  telegramLink?: string | null;
-  /** @nullable */
-  telegramChannel?: string | null;
-  /** @nullable */
-  whatsappLink?: string | null;
-  /** @nullable */
-  vcfLink?: string | null;
 }
 
 export interface ActivateInitiateResponse {
-  paymentToken: string;
-  reference: string;
+  paymentUrl: string;
+  paymentId: string;
 }
 
 export interface ActivateStatusResponse {
@@ -310,7 +297,6 @@ export interface SiteSettings {
   /** @nullable */
   vcfLink?: string | null;
   activationFee: number;
-  minWithdrawal: number;
   paymentMode: string;
   /** @nullable */
   sendavapayApiKey?: string | null;
@@ -327,7 +313,6 @@ export interface SiteSettingsUpdate {
   /** @nullable */
   vcfLink?: string | null;
   activationFee?: number;
-  minWithdrawal?: number;
   paymentMode?: string;
   /** @nullable */
   sendavapayApiKey?: string | null;

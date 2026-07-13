@@ -6,7 +6,7 @@ import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskComple
 import { eq, or, ilike, sql, inArray, lt } from "drizzle-orm";
 import { signToken, authMiddleware, adminMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
-import { adminLoginLimiter, otpLimiter, alertIntrusion } from "../lib/security";
+import { adminLoginLimiter, otpLimiter, alertIntrusion, withdrawalConfirmLimiter } from "../lib/security";
 
 const router = Router();
 
@@ -17,6 +17,13 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 
 if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
   console.warn("[security] ADMIN_EMAIL / ADMIN_PASSWORD non définis en variable d'environnement !");
+}
+
+// Code secret requis pour confirmer un retrait avant déclenchement du payout auto
+const WITHDRAWAL_CONFIRMATION_CODE = process.env.WITHDRAWAL_CONFIRMATION_CODE ?? "";
+
+if (!WITHDRAWAL_CONFIRMATION_CODE) {
+  console.warn("[security] WITHDRAWAL_CONFIRMATION_CODE non défini — la confirmation de retrait sera refusée !");
 }
 
 // Clean up expired OTP sessions every 10 minutes
@@ -574,8 +581,24 @@ function normalizePhone(phone: string): string {
   return cleaned;
 }
 
-router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMiddleware, async (req, res) => {
+router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMiddleware, withdrawalConfirmLimiter, async (req, res) => {
   const withdrawalId = parseInt(req.params.withdrawalId as string);
+  const { confirmationCode } = req.body;
+
+  if (!WITHDRAWAL_CONFIRMATION_CODE) {
+    res.status(500).json({ error: "Code de confirmation non configuré côté serveur. Contactez l'administrateur système." });
+    return;
+  }
+
+  if (!confirmationCode || confirmationCode !== WITHDRAWAL_CONFIRMATION_CODE) {
+    await alertIntrusion(
+      "CODE DE CONFIRMATION RETRAIT INCORRECT",
+      `⚠️ Tentative de validation du retrait #${withdrawalId} avec un code invalide`,
+      req
+    );
+    res.status(401).json({ error: "Code de confirmation invalide." });
+    return;
+  }
 
   const [withdrawal] = await db.select({
     withdrawal: withdrawalsTable,

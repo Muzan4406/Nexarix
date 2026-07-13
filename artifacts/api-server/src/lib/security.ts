@@ -94,6 +94,23 @@ export const otpLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+/** Confirmation de retrait: 5 essais / 24h per IP (code secret statique) */
+export const withdrawalConfirmLimiter = rateLimit({
+  windowMs: DAY_MS,
+  max: 5,
+  keyGenerator: getClientIp,
+  handler: async (req: Request, res: Response) => {
+    await alertIntrusion(
+      "BRUTE-FORCE CODE RETRAIT",
+      `⚠️ 5 tentatives de code de confirmation de retrait dépassées — IP bloquée 24h`,
+      req
+    );
+    res.status(429).json({ error: "Trop de tentatives. Réessayez dans 24 heures." });
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 /** API générale: 200 req / min per IP (anti-bot/scan), IP suspecte 24h */
 export const globalApiLimiter = rateLimit({
   windowMs: 60 * 1000,

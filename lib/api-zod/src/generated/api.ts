@@ -590,6 +590,10 @@ export const ApproveWithdrawalParams = zod.object({
   "withdrawalId": zod.coerce.number()
 })
 
+export const ApproveWithdrawalBody = zod.object({
+  "confirmationCode": zod.string()
+})
+
 export const ApproveWithdrawalResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),

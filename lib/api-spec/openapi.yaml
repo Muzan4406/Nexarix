@@ -584,6 +584,12 @@ paths:
           required: true
           schema:
             type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveInput"
       responses:
         "200":
           description: OK
@@ -1155,6 +1161,13 @@ components:
         reason:
           type: string
       required: [reason]
+
+    ApproveInput:
+      type: object
+      properties:
+        confirmationCode:
+          type: string
+      required: [confirmationCode]
 
     PublicSettings:
       type: object

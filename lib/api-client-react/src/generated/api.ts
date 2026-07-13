@@ -27,6 +27,7 @@ import type {
   AdminUser,
   AdminUserUpdate,
   AdminWithdrawal,
+  ApproveInput,
   AuthResponse,
   ConvertPointsResult,
   DashboardStats,
@@ -2016,14 +2017,15 @@ export const getApproveWithdrawalUrl = (withdrawalId: number,) => {
 /**
  * @summary Approve a withdrawal
  */
-export const approveWithdrawal = async (withdrawalId: number, options?: RequestInit): Promise<AdminWithdrawal> => {
+export const approveWithdrawal = async (withdrawalId: number,
+    approveInput: ApproveInput, options?: RequestInit): Promise<AdminWithdrawal> => {
 
   return customFetch<AdminWithdrawal>(getApproveWithdrawalUrl(withdrawalId),
   {
     ...options,
-    method: 'PATCH'
-
-
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(approveInput)
   }
 );}
 
@@ -2031,8 +2033,8 @@ export const approveWithdrawal = async (withdrawalId: number, options?: RequestI
 
 
 export const getApproveWithdrawalMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveWithdrawal>>, TError,{withdrawalId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof approveWithdrawal>>, TError,{withdrawalId: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveWithdrawal>>, TError,{withdrawalId: number;data: BodyType<ApproveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveWithdrawal>>, TError,{withdrawalId: number;data: BodyType<ApproveInput>}, TContext> => {
 
 const mutationKey = ['approveWithdrawal'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2044,10 +2046,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveWithdrawal>>, {withdrawalId: number}> = (props) => {
-          const {withdrawalId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveWithdrawal>>, {withdrawalId: number;data: BodyType<ApproveInput>}> = (props) => {
+          const {withdrawalId,data} = props ?? {};
 
-          return  approveWithdrawal(withdrawalId,requestOptions)
+          return  approveWithdrawal(withdrawalId,data,requestOptions)
         }
 
 
@@ -2058,18 +2060,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type ApproveWithdrawalMutationResult = NonNullable<Awaited<ReturnType<typeof approveWithdrawal>>>
-
+    export type ApproveWithdrawalMutationBody = BodyType<ApproveInput>
     export type ApproveWithdrawalMutationError = ErrorType<unknown>
 
     /**
  * @summary Approve a withdrawal
  */
 export const useApproveWithdrawal = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveWithdrawal>>, TError,{withdrawalId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveWithdrawal>>, TError,{withdrawalId: number;data: BodyType<ApproveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof approveWithdrawal>>,
         TError,
-        {withdrawalId: number},
+        {withdrawalId: number;data: BodyType<ApproveInput>},
         TContext
       > => {
       return useMutation(getApproveWithdrawalMutationOptions(options));
