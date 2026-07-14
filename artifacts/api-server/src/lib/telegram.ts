@@ -1,5 +1,16 @@
 import { logger } from "./logger";
 
+// Échappe les caractères spéciaux HTML avant de les insérer dans un message
+// Telegram en parse_mode HTML. Sans ça, une IP/User-Agent/identifiant forgé
+// par un attaquant (ex: en-tête X-Forwarded-For) pourrait casser le format
+// du message ou injecter du faux contenu/liens dans les alertes admin.
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 

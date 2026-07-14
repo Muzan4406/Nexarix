@@ -18465,8 +18465,8 @@ var require_escape_html = __commonJS({
   "../../node_modules/.pnpm/escape-html@1.0.3/node_modules/escape-html/index.js"(exports, module) {
     "use strict";
     var matchHtmlRegExp = /["'&<>]/;
-    module.exports = escapeHtml;
-    function escapeHtml(string4) {
+    module.exports = escapeHtml2;
+    function escapeHtml2(string4) {
       var str = "" + string4;
       var match = matchHtmlRegExp.exec(str);
       if (!match) {
@@ -18597,13 +18597,13 @@ var require_finalhandler = __commonJS({
     "use strict";
     var debug = require_src()("finalhandler");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var onFinished = require_on_finished();
     var parseUrl = require_parseurl();
     var statuses = require_statuses();
     var isFinished = onFinished.isFinished;
     function createHtmlDocument(message) {
-      var body = escapeHtml(message).replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
+      var body = escapeHtml2(message).replaceAll("\n", "<br>").replaceAll("  ", " &nbsp;");
       return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>Error</title>\n</head>\n<body>\n<pre>' + body + "</pre>\n</body>\n</html>\n";
     }
     module.exports = finalhandler;
@@ -22591,7 +22591,7 @@ var require_send = __commonJS({
     var createError = require_http_errors();
     var debug = require_src()("send");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
     var fs = __require("fs");
@@ -22644,7 +22644,7 @@ var require_send = __commonJS({
       }
       var res = this.res;
       var msg = statuses.message[status] || String(status);
-      var doc = createHtmlDocument("Error", escapeHtml(msg));
+      var doc = createHtmlDocument("Error", escapeHtml2(msg));
       clearHeaders(res);
       if (err && err.headers) {
         setHeaders(res, err.headers);
@@ -22744,7 +22744,7 @@ var require_send = __commonJS({
         return;
       }
       var loc = encodeUrl(collapseLeadingSlashes(this.path + "/"));
-      var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml(loc));
+      var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml2(loc));
       res.statusCode = 301;
       res.setHeader("Content-Type", "text/html; charset=UTF-8");
       res.setHeader("Content-Length", Buffer.byteLength(doc));
@@ -23148,7 +23148,7 @@ var require_response = __commonJS({
     var createError = require_http_errors();
     var deprecate = require_depd()("express");
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var http = __require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
@@ -23487,7 +23487,7 @@ var require_response = __commonJS({
           body = statuses.message[status] + ". Redirecting to " + address;
         },
         html: function() {
-          var u = escapeHtml(address);
+          var u = escapeHtml2(address);
           body = "<p>" + statuses.message[status] + ". Redirecting to " + u + "</p>";
         },
         default: function() {
@@ -23615,7 +23615,7 @@ var require_serve_static = __commonJS({
   "../../node_modules/.pnpm/serve-static@2.2.1/node_modules/serve-static/index.js"(exports, module) {
     "use strict";
     var encodeUrl = require_encodeurl();
-    var escapeHtml = require_escape_html();
+    var escapeHtml2 = require_escape_html();
     var parseUrl = require_parseurl();
     var resolve = __require("path").resolve;
     var send = require_send();
@@ -23701,7 +23701,7 @@ var require_serve_static = __commonJS({
         originalUrl.path = null;
         originalUrl.pathname = collapseLeadingSlashes(originalUrl.pathname + "/");
         var loc = encodeUrl(url2.format(originalUrl));
-        var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml(loc));
+        var doc = createHtmlDocument("Redirecting", "Redirecting to " + escapeHtml2(loc));
         res.statusCode = 301;
         res.setHeader("Content-Type", "text/html; charset=UTF-8");
         res.setHeader("Content-Length", Buffer.byteLength(doc));
@@ -38191,23 +38191,23 @@ var require_helpers = __commonJS({
   "../../node_modules/.pnpm/ip-address@10.2.0/node_modules/ip-address/dist/v6/helpers.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.escapeHtml = escapeHtml;
+    exports.escapeHtml = escapeHtml2;
     exports.spanAllZeroes = spanAllZeroes;
     exports.spanAll = spanAll;
     exports.spanLeadingZeroes = spanLeadingZeroes;
     exports.simpleGroup = simpleGroup;
-    function escapeHtml(s) {
+    function escapeHtml2(s) {
       return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
     function spanAllZeroes(s) {
-      return escapeHtml(s).replace(/(0+)/g, '<span class="zero">$1</span>');
+      return escapeHtml2(s).replace(/(0+)/g, '<span class="zero">$1</span>');
     }
     function spanAll(s, offset = 0) {
       const letters = s.split("");
-      return letters.map((n, i) => `<span class="digit value-${escapeHtml(n)} position-${i + offset}">${spanAllZeroes(n)}</span>`).join("");
+      return letters.map((n, i) => `<span class="digit value-${escapeHtml2(n)} position-${i + offset}">${spanAllZeroes(n)}</span>`).join("");
     }
     function spanLeadingZeroesSimple(group) {
-      return escapeHtml(group).replace(/^(0+)/, '<span class="zero">$1</span>');
+      return escapeHtml2(group).replace(/^(0+)/, '<span class="zero">$1</span>');
     }
     function spanLeadingZeroes(address) {
       const groups = address.split(":");
@@ -81469,6 +81469,9 @@ var logger = (0, import_pino.default)({
 });
 
 // src/lib/telegram.ts
+function escapeHtml(value) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 var TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 var TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 async function sendTelegramNotification(message) {
@@ -82464,11 +82467,11 @@ async function blockIp(ip, reason, req) {
   } catch (err) {
     console.error("[security] \xC9chec du blocage IP en base:", err);
   }
-  const ua = req ? (req.headers["user-agent"] ?? "\u2014").slice(0, 120) : "\u2014";
+  const ua = req ? escapeHtml((req.headers["user-agent"] ?? "\u2014").slice(0, 120)) : "\u2014";
   await sendTelegramNotification(
     `\u26D4\uFE0F <b>IP BLOQU\xC9E D\xC9FINITIVEMENT</b>
-\u{1F310} IP: <code>${ip}</code>
-\u{1F4C4} Raison: ${reason}
+\u{1F310} IP: <code>${escapeHtml(ip)}</code>
+\u{1F4C4} Raison: ${escapeHtml(reason)}
 \u{1F5A5}\uFE0F User-Agent: ${ua}
 
 Cette IP ne peut plus acc\xE9der au site. D\xE9bloquez-la depuis le panneau admin si n\xE9cessaire.`
@@ -82500,11 +82503,11 @@ async function blockedIpGuard(req, res, next) {
 }
 async function alertIntrusion(event, details, req) {
   const ip = getClientIp(req);
-  const ua = (req.headers["user-agent"] ?? "\u2014").slice(0, 120);
-  const path5 = req.originalUrl?.split("?")[0] ?? req.path;
+  const ua = escapeHtml((req.headers["user-agent"] ?? "\u2014").slice(0, 120));
+  const path5 = escapeHtml(req.originalUrl?.split("?")[0] ?? req.path);
   await sendTelegramNotification(
-    `\u{1F6A8} <b>ALERTE S\xC9CURIT\xC9 \u2014 ${event}</b>
-\u{1F310} IP: <code>${ip}</code>
+    `\u{1F6A8} <b>ALERTE S\xC9CURIT\xC9 \u2014 ${escapeHtml(event)}</b>
+\u{1F310} IP: <code>${escapeHtml(ip)}</code>
 \u{1F4CD} Endpoint: <code>${req.method} ${path5}</code>
 ${details}
 \u{1F5A5}\uFE0F User-Agent: ${ua}`
@@ -82588,7 +82591,7 @@ function trackFailedLogin(req, identifier) {
     entry.alertedAt = now;
     alertIntrusion(
       "TENTATIVES DE CONNEXION SUSPECTES",
-      `\u{1F464} Identifiant: <code>${identifier.slice(0, 40)}</code>
+      `\u{1F464} Identifiant: <code>${escapeHtml(identifier.slice(0, 40))}</code>
 \u{1F522} Tentatives \xE9chou\xE9es: <b>${entry.count}</b>`,
       req
     ).catch(() => {
@@ -82638,11 +82641,11 @@ router2.post("/auth/register", registerLimiter, async (req, res, next) => {
     const token = signToken({ userId: user.id, isAdmin: false });
     sendTelegramNotification(
       `\u{1F195} <b>Nouveau membre inscrit</b>
-\u{1F464} Username: <b>${username}</b>
-\u{1F4E7} Email: ${email3}
-\u{1F4F1} T\xE9l\xE9phone: ${phone}
-\u{1F30D} Pays: ${country}
-\u{1F517} Parrain: ${upline || "Aucun"}`
+\u{1F464} Username: <b>${escapeHtml(username)}</b>
+\u{1F4E7} Email: ${escapeHtml(email3)}
+\u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(phone)}
+\u{1F30D} Pays: ${escapeHtml(country)}
+\u{1F517} Parrain: ${escapeHtml(upline || "Aucun")}`
     );
     res.status(201).json({
       token,
@@ -82674,7 +82677,7 @@ router2.post("/auth/login", loginLimiter, async (req, res, next) => {
       return;
     }
     if (user.isBanned) {
-      await alertIntrusion("CONNEXION COMPTE BANNI", `\u{1F464} Identifiant: <code>${identifier.slice(0, 40)}</code>`, req);
+      await alertIntrusion("CONNEXION COMPTE BANNI", `\u{1F464} Identifiant: <code>${escapeHtml(identifier.slice(0, 40))}</code>`, req);
       res.status(403).json({ error: "Account is banned" });
       return;
     }
@@ -82691,7 +82694,7 @@ router2.post("/auth/login", loginLimiter, async (req, res, next) => {
       });
       await sendTelegramNotification(
         `\u{1F510} <b>Connexion Admin</b>
-\u{1F464} Admin: <b>${user.username}</b>
+\u{1F464} Admin: <b>${escapeHtml(user.username)}</b>
 \u{1F522} Code OTP: <b>${otp}</b>
 \u23F1\uFE0F Valide 5 minutes`
       );

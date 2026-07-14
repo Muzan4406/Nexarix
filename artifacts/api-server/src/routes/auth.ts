@@ -5,7 +5,7 @@ import { db } from "@workspace/db";
 import { usersTable, adminOtpSessionsTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { signToken, authMiddleware } from "../lib/auth";
-import { sendTelegramNotification } from "../lib/telegram";
+import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 import { loginLimiter, registerLimiter, otpLimiter, trackFailedLogin, resetFailedLogin, alertIntrusion } from "../lib/security";
 
 function generateOtp(): string {
@@ -53,11 +53,11 @@ router.post("/auth/register", registerLimiter, async (req, res, next) => {
 
     sendTelegramNotification(
       `🆕 <b>Nouveau membre inscrit</b>\n` +
-      `👤 Username: <b>${username}</b>\n` +
-      `📧 Email: ${email}\n` +
-      `📱 Téléphone: ${phone}\n` +
-      `🌍 Pays: ${country}\n` +
-      `🔗 Parrain: ${upline || "Aucun"}`
+      `👤 Username: <b>${escapeHtml(username)}</b>\n` +
+      `📧 Email: ${escapeHtml(email)}\n` +
+      `📱 Téléphone: ${escapeHtml(phone)}\n` +
+      `🌍 Pays: ${escapeHtml(country)}\n` +
+      `🔗 Parrain: ${escapeHtml(upline || "Aucun")}`
     );
 
     res.status(201).json({
@@ -96,7 +96,7 @@ router.post("/auth/login", loginLimiter, async (req, res, next) => {
     }
 
     if (user.isBanned) {
-      await alertIntrusion("CONNEXION COMPTE BANNI", `👤 Identifiant: <code>${identifier.slice(0, 40)}</code>`, req);
+      await alertIntrusion("CONNEXION COMPTE BANNI", `👤 Identifiant: <code>${escapeHtml(identifier.slice(0, 40))}</code>`, req);
       res.status(403).json({ error: "Account is banned" });
       return;
     }
@@ -117,7 +117,7 @@ router.post("/auth/login", loginLimiter, async (req, res, next) => {
 
       await sendTelegramNotification(
         `🔐 <b>Connexion Admin</b>\n` +
-        `👤 Admin: <b>${user.username}</b>\n` +
+        `👤 Admin: <b>${escapeHtml(user.username)}</b>\n` +
         `🔢 Code OTP: <b>${otp}</b>\n` +
         `⏱️ Valide 5 minutes`
       );

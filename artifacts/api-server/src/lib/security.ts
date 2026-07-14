@@ -7,7 +7,7 @@
 
 import rateLimit from "express-rate-limit";
 import type { Request, Response, NextFunction } from "express";
-import { sendTelegramNotification } from "./telegram";
+import { sendTelegramNotification, escapeHtml } from "./telegram";
 import { db, blockedIpsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -40,11 +40,11 @@ export async function blockIp(ip: string, reason: string, req?: Request): Promis
     console.error("[security] Échec du blocage IP en base:", err);
   }
 
-  const ua = req ? (req.headers["user-agent"] ?? "—").slice(0, 120) : "—";
+  const ua = req ? escapeHtml((req.headers["user-agent"] ?? "—").slice(0, 120)) : "—";
   await sendTelegramNotification(
     `⛔️ <b>IP BLOQUÉE DÉFINITIVEMENT</b>\n` +
-    `🌐 IP: <code>${ip}</code>\n` +
-    `📄 Raison: ${reason}\n` +
+    `🌐 IP: <code>${escapeHtml(ip)}</code>\n` +
+    `📄 Raison: ${escapeHtml(reason)}\n` +
     `🖥️ User-Agent: ${ua}\n` +
     `\nCette IP ne peut plus accéder au site. Débloquez-la depuis le panneau admin si nécessaire.`
   ).catch(() => {});
@@ -84,11 +84,11 @@ export async function blockedIpGuard(req: Request, res: Response, next: NextFunc
 // ─── Intrusion alert ─────────────────────────────────────────────────────────
 export async function alertIntrusion(event: string, details: string, req: Request): Promise<void> {
   const ip = getClientIp(req);
-  const ua = (req.headers["user-agent"] ?? "—").slice(0, 120);
-  const path = req.originalUrl?.split("?")[0] ?? req.path;
+  const ua = escapeHtml((req.headers["user-agent"] ?? "—").slice(0, 120));
+  const path = escapeHtml(req.originalUrl?.split("?")[0] ?? req.path);
   await sendTelegramNotification(
-    `🚨 <b>ALERTE SÉCURITÉ — ${event}</b>\n` +
-    `🌐 IP: <code>${ip}</code>\n` +
+    `🚨 <b>ALERTE SÉCURITÉ — ${escapeHtml(event)}</b>\n` +
+    `🌐 IP: <code>${escapeHtml(ip)}</code>\n` +
     `📍 Endpoint: <code>${req.method} ${path}</code>\n` +
     `${details}\n` +
     `🖥️ User-Agent: ${ua}`
@@ -193,7 +193,7 @@ export function trackFailedLogin(req: Request, identifier: string): void {
     entry.alertedAt = now;
     alertIntrusion(
       "TENTATIVES DE CONNEXION SUSPECTES",
-      `👤 Identifiant: <code>${identifier.slice(0, 40)}</code>\n` +
+      `👤 Identifiant: <code>${escapeHtml(identifier.slice(0, 40))}</code>\n` +
       `🔢 Tentatives échouées: <b>${entry.count}</b>`,
       req
     ).catch(() => {});
