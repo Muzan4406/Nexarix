@@ -84110,9 +84110,7 @@ router9.post("/telegram/webhook", async (req, res) => {
       `\u{1F916} <b>Nexarix Admin Bot</b>
 
 \u{1F4CA} /stats \u2014 statistiques globales
-\u23F3 /pending \u2014 retraits en attente
-\u2705 /approve &lt;id&gt; \u2014 approuver un retrait
-\u274C /reject &lt;id&gt; &lt;raison&gt; \u2014 rejeter un retrait
+\u23F3 /pending \u2014 retraits en attente (\xE0 approuver depuis le site admin)
 \u{1F465} /membres \u2014 10 derniers inscrits
 \u{1F50D} /user &lt;username&gt; \u2014 infos d'un membre
 \u{1F6AB} /ban &lt;username&gt; \u2014 d\xE9sactiver un compte
@@ -84167,83 +84165,12 @@ router9.post("/telegram/webhook", async (req, res) => {
 
 ${lines}
 
-\u2705 /approve &lt;id&gt;   \u274C /reject &lt;id&gt; &lt;raison&gt;`
+\u{1F449} Approuvez ou rejetez depuis le site admin (code secret requis).`
     );
     return;
   }
-  if (command === "/approve") {
-    const id = parseInt(args[0]);
-    if (isNaN(id)) {
-      await sendReply(chatId, "\u274C Usage : /approve &lt;id&gt;\nEx: /approve 12");
-      return;
-    }
-    const [withdrawal] = await db.select({
-      w: withdrawalsTable,
-      username: usersTable.username
-    }).from(withdrawalsTable).innerJoin(usersTable, eq(withdrawalsTable.userId, usersTable.id)).where(eq(withdrawalsTable.id, id)).limit(1);
-    if (!withdrawal) {
-      await sendReply(chatId, `\u274C Retrait #${id} introuvable.`);
-      return;
-    }
-    if (withdrawal.w.status !== "pending") {
-      await sendReply(chatId, `\u26A0\uFE0F Retrait #${id} d\xE9j\xE0 <b>${withdrawal.w.status}</b>.`);
-      return;
-    }
-    await db.update(withdrawalsTable).set({ status: "paid" }).where(eq(withdrawalsTable.id, id));
-    await sendReply(
-      chatId,
-      `\u2705 <b>Retrait #${id} approuv\xE9</b>
-\u{1F464} ${withdrawal.username}
-\u{1F4B0} ${parseFloat(withdrawal.w.amountNet || "0").toLocaleString()} FCFA
-\u{1F4F1} ${withdrawal.w.operator} \u2014 ${withdrawal.w.phone}`
-    );
-    sendTelegramNotification(
-      `\u2705 <b>Retrait approuv\xE9</b>
-\u{1F194} #${id} | \u{1F464} ${withdrawal.username}
-\u{1F4B0} ${parseFloat(withdrawal.w.amountNet || "0").toLocaleString()} FCFA \u2192 ${withdrawal.w.operator} ${withdrawal.w.phone}`
-    );
-    return;
-  }
-  if (command === "/reject") {
-    const id = parseInt(args[0]);
-    const reason = args.slice(1).join(" ").trim();
-    if (isNaN(id)) {
-      await sendReply(chatId, "\u274C Usage : /reject &lt;id&gt; &lt;raison&gt;");
-      return;
-    }
-    if (!reason) {
-      await sendReply(chatId, "\u274C Une raison est obligatoire.\nEx: /reject 12 Num\xE9ro invalide");
-      return;
-    }
-    const [withdrawal] = await db.select({
-      w: withdrawalsTable,
-      user: usersTable
-    }).from(withdrawalsTable).innerJoin(usersTable, eq(withdrawalsTable.userId, usersTable.id)).where(eq(withdrawalsTable.id, id)).limit(1);
-    if (!withdrawal) {
-      await sendReply(chatId, `\u274C Retrait #${id} introuvable.`);
-      return;
-    }
-    if (withdrawal.w.status !== "pending") {
-      await sendReply(chatId, `\u26A0\uFE0F Retrait #${id} d\xE9j\xE0 <b>${withdrawal.w.status}</b>.`);
-      return;
-    }
-    await db.update(withdrawalsTable).set({ status: "rejected", rejectionReason: reason }).where(eq(withdrawalsTable.id, id));
-    await db.update(usersTable).set({
-      balance: sql`${usersTable.balance} + ${withdrawal.w.amountGross}`,
-      totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${withdrawal.w.amountNet}`
-    }).where(eq(usersTable.id, withdrawal.user.id));
-    await sendReply(
-      chatId,
-      `\u274C <b>Retrait #${id} rejet\xE9</b>
-\u{1F464} ${withdrawal.user.username}
-\u{1F4B0} ${parseFloat(withdrawal.w.amountGross || "0").toLocaleString()} FCFA rembours\xE9
-\u{1F4DD} ${reason}`
-    );
-    sendTelegramNotification(
-      `\u274C <b>Retrait rejet\xE9</b>
-\u{1F194} #${id} | \u{1F464} ${withdrawal.user.username}
-\u{1F4DD} ${reason}`
-    );
+  if (command === "/approve" || command === "/reject") {
+    await sendReply(chatId, "\u{1F512} Les retraits se valident uniquement depuis le site admin (code secret requis).");
     return;
   }
   if (command === "/membres") {

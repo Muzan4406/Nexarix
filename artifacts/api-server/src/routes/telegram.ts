@@ -71,9 +71,7 @@ router.post("/telegram/webhook", async (req, res) => {
     await sendReply(chatId,
       `🤖 <b>Nexarix Admin Bot</b>\n\n` +
       `📊 /stats — statistiques globales\n` +
-      `⏳ /pending — retraits en attente\n` +
-      `✅ /approve &lt;id&gt; — approuver un retrait\n` +
-      `❌ /reject &lt;id&gt; &lt;raison&gt; — rejeter un retrait\n` +
+      `⏳ /pending — retraits en attente (à approuver depuis le site admin)\n` +
       `👥 /membres — 10 derniers inscrits\n` +
       `🔍 /user &lt;username&gt; — infos d'un membre\n` +
       `🚫 /ban &lt;username&gt; — désactiver un compte\n` +
@@ -134,93 +132,16 @@ router.post("/telegram/webhook", async (req, res) => {
 
     await sendReply(chatId,
       `⏳ <b>${pending.length} retrait(s) en attente</b>\n\n${lines}\n\n` +
-      `✅ /approve &lt;id&gt;   ❌ /reject &lt;id&gt; &lt;raison&gt;`
+      `👉 Approuvez ou rejetez depuis le site admin (code secret requis).`
     );
     return;
   }
 
-  // ── /approve <id> ──────────────────────────────────────────────────────────
-  if (command === "/approve") {
-    const id = parseInt(args[0]);
-    if (isNaN(id)) {
-      await sendReply(chatId, "❌ Usage : /approve &lt;id&gt;\nEx: /approve 12");
-      return;
-    }
-
-    const [withdrawal] = await db.select({
-      w: withdrawalsTable,
-      username: usersTable.username,
-    }).from(withdrawalsTable)
-      .innerJoin(usersTable, eq(withdrawalsTable.userId, usersTable.id))
-      .where(eq(withdrawalsTable.id, id))
-      .limit(1);
-
-    if (!withdrawal) { await sendReply(chatId, `❌ Retrait #${id} introuvable.`); return; }
-    if (withdrawal.w.status !== "pending") {
-      await sendReply(chatId, `⚠️ Retrait #${id} déjà <b>${withdrawal.w.status}</b>.`);
-      return;
-    }
-
-    await db.update(withdrawalsTable).set({ status: "paid" }).where(eq(withdrawalsTable.id, id));
-
-    await sendReply(chatId,
-      `✅ <b>Retrait #${id} approuvé</b>\n` +
-      `👤 ${withdrawal.username}\n` +
-      `💰 ${parseFloat(withdrawal.w.amountNet || "0").toLocaleString()} FCFA\n` +
-      `📱 ${withdrawal.w.operator} — ${withdrawal.w.phone}`
-    );
-
-    sendTelegramNotification(
-      `✅ <b>Retrait approuvé</b>\n` +
-      `🆔 #${id} | 👤 ${withdrawal.username}\n` +
-      `💰 ${parseFloat(withdrawal.w.amountNet || "0").toLocaleString()} FCFA → ${withdrawal.w.operator} ${withdrawal.w.phone}`
-    );
-    return;
-  }
-
-  // ── /reject <id> <raison> ──────────────────────────────────────────────────
-  if (command === "/reject") {
-    const id = parseInt(args[0]);
-    const reason = args.slice(1).join(" ").trim();
-
-    if (isNaN(id)) { await sendReply(chatId, "❌ Usage : /reject &lt;id&gt; &lt;raison&gt;"); return; }
-    if (!reason) { await sendReply(chatId, "❌ Une raison est obligatoire.\nEx: /reject 12 Numéro invalide"); return; }
-
-    const [withdrawal] = await db.select({
-      w: withdrawalsTable,
-      user: usersTable,
-    }).from(withdrawalsTable)
-      .innerJoin(usersTable, eq(withdrawalsTable.userId, usersTable.id))
-      .where(eq(withdrawalsTable.id, id))
-      .limit(1);
-
-    if (!withdrawal) { await sendReply(chatId, `❌ Retrait #${id} introuvable.`); return; }
-    if (withdrawal.w.status !== "pending") {
-      await sendReply(chatId, `⚠️ Retrait #${id} déjà <b>${withdrawal.w.status}</b>.`);
-      return;
-    }
-
-    await db.update(withdrawalsTable)
-      .set({ status: "rejected", rejectionReason: reason })
-      .where(eq(withdrawalsTable.id, id));
-
-    await db.update(usersTable).set({
-      balance: sql`${usersTable.balance} + ${withdrawal.w.amountGross}`,
-      totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${withdrawal.w.amountNet}`,
-    }).where(eq(usersTable.id, withdrawal.user.id));
-
-    await sendReply(chatId,
-      `❌ <b>Retrait #${id} rejeté</b>\n` +
-      `👤 ${withdrawal.user.username}\n` +
-      `💰 ${parseFloat(withdrawal.w.amountGross || "0").toLocaleString()} FCFA remboursé\n` +
-      `📝 ${reason}`
-    );
-
-    sendTelegramNotification(
-      `❌ <b>Retrait rejeté</b>\n` +
-      `🆔 #${id} | 👤 ${withdrawal.user.username}\n` +
-      `📝 ${reason}`
-    );
+  // Security: /approve and /reject were intentionally removed from the bot —
+  // approving a withdrawal must always go through the admin site, which
+  // requires the secret confirmation code before any payout is triggered.
+  if (command === "/approve" || command === "/reject") {
+    await sendReply(chatId, "🔒 Les retraits se valident uniquement depuis le site admin (code secret requis).");
     return;
   }
 
