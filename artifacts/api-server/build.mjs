@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm, cp } from "node:fs/promises";
+import { rm, cp, stat } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -130,14 +130,20 @@ async function copyFrontend() {
   const frontendDist = path.resolve(workspaceRoot, "artifacts/nexarix/dist/public");
   const publicDest = path.resolve(artifactDir, "public");
 
-  await rm(publicDest, { recursive: true, force: true });
+  const frontendDistExists = await stat(frontendDist)
+    .then(() => true)
+    .catch(() => false);
 
-  try {
-    await cp(frontendDist, publicDest, { recursive: true });
-    console.log("✓ Frontend copied to api-server/public");
-  } catch {
-    console.warn("⚠ Frontend dist not found — skipping copy. Run nexarix build first.");
+  if (!frontendDistExists) {
+    console.warn(
+      "⚠ Frontend dist not found — skipping copy, leaving existing api-server/public untouched. Run nexarix build first.",
+    );
+    return;
   }
+
+  await rm(publicDest, { recursive: true, force: true });
+  await cp(frontendDist, publicDest, { recursive: true });
+  console.log("✓ Frontend copied to api-server/public");
 }
 
 await copyFrontend();

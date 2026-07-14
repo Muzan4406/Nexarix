@@ -24,7 +24,7 @@ Database: uses the built-in Replit PostgreSQL database (`DATABASE_URL`, auto-pro
 
 ## Required environment variables / secrets
 
-Set in Replit Secrets (currently only `SESSION_SECRET` is set — the app runs without the rest in dev, but auth/storage/notifications are degraded until they're added; the user declined providing them during initial setup on 2026-07-13):
+Set in Replit Secrets (currently only `SESSION_SECRET` is set — the app runs without the rest in dev, but auth/storage/notifications are degraded until they're added; the user declined providing them on 2026-07-13 and again on 2026-07-14):
 
 | Secret | Purpose | Status |
 |---|---|---|
