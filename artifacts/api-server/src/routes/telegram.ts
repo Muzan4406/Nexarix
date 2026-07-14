@@ -8,6 +8,14 @@ const router = Router();
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = String(process.env.TELEGRAM_CHAT_ID ?? "").trim();
+// Optional but recommended: Telegram echoes this back on every webhook call via
+// the X-Telegram-Bot-Api-Secret-Token header, so we can reject forged requests
+// that merely guess the admin chat id.
+const WEBHOOK_SECRET_TOKEN = String(process.env.TELEGRAM_WEBHOOK_SECRET ?? "").trim();
+
+if (!WEBHOOK_SECRET_TOKEN) {
+  console.warn("[security] TELEGRAM_WEBHOOK_SECRET non défini — le webhook Telegram n'est protégé que par la vérification du chat_id.");
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,6 +38,12 @@ function isAuthorised(chatId: number | string): boolean {
 // ─── Webhook ──────────────────────────────────────────────────────────────────
 
 router.post("/telegram/webhook", async (req, res) => {
+  // Fail closed: if a secret token is configured, reject requests that don't echo it.
+  if (WEBHOOK_SECRET_TOKEN && req.headers["x-telegram-bot-api-secret-token"] !== WEBHOOK_SECRET_TOKEN) {
+    res.status(401).json({ ok: false });
+    return;
+  }
+
   // Always respond 200 immediately so Telegram doesn't retry
   res.json({ ok: true });
 
@@ -298,7 +312,12 @@ async function registerWebhook(host: string, token: string): Promise<{ webhookUr
   const resp = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message"], drop_pending_updates: true }),
+    body: JSON.stringify({
+      url: webhookUrl,
+      allowed_updates: ["message"],
+      drop_pending_updates: true,
+      ...(WEBHOOK_SECRET_TOKEN ? { secret_token: WEBHOOK_SECRET_TOKEN } : {}),
+    }),
   });
   return { webhookUrl, result: await resp.json() };
 }
@@ -356,6 +375,7 @@ export async function autoSetupWebhook(): Promise<void> {
         url: webhookUrl,
         allowed_updates: ["message"],
         drop_pending_updates: true,
+        ...(WEBHOOK_SECRET_TOKEN ? { secret_token: WEBHOOK_SECRET_TOKEN } : {}),
       }),
     });
     const json = (await res.json()) as any;

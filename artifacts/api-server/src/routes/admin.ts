@@ -37,6 +37,21 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+const MASKED_SECRET_PREFIX = "••••";
+
+// Never send a stored API key / webhook secret back to the browser in full —
+// only a short suffix so the admin can recognize it without exposing it.
+function maskSecret(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return MASKED_SECRET_PREFIX + value.slice(-4);
+}
+
+// Detect when the settings form just echoes back the masked placeholder
+// instead of a real new value, so we don't overwrite the stored secret with it.
+function isMaskedSecret(value: unknown): boolean {
+  return typeof value === "string" && value.startsWith(MASKED_SECRET_PREFIX);
+}
+
 router.post("/admin/login", adminLoginLimiter, async (req, res) => {
   const { identifier, password } = req.body;
 
@@ -761,6 +776,8 @@ router.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res) 
     ...settings,
     activationFee: parseFloat(settings.activationFee || "3000"),
     minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
+    sendavapayApiKey: maskSecret(settings.sendavapayApiKey),
+    sendavapayWebhookSecret: maskSecret(settings.sendavapayWebhookSecret),
   });
 });
 
@@ -777,8 +794,10 @@ router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res
   if (activationFee !== undefined) updates.activationFee = activationFee.toString();
   if (minWithdrawal !== undefined) updates.minWithdrawal = minWithdrawal.toString();
   if (paymentMode !== undefined) updates.paymentMode = paymentMode;
-  if (sendavapayApiKey !== undefined) updates.sendavapayApiKey = sendavapayApiKey;
-  if (sendavapayWebhookSecret !== undefined) updates.sendavapayWebhookSecret = sendavapayWebhookSecret;
+  // Ignore masked placeholders coming back from the settings form (the client
+  // only re-sends these if the admin actually typed a new value).
+  if (sendavapayApiKey !== undefined && !isMaskedSecret(sendavapayApiKey)) updates.sendavapayApiKey = sendavapayApiKey;
+  if (sendavapayWebhookSecret !== undefined && !isMaskedSecret(sendavapayWebhookSecret)) updates.sendavapayWebhookSecret = sendavapayWebhookSecret;
   if (appBaseUrl !== undefined) updates.appBaseUrl = appBaseUrl;
   if (maintenanceMode !== undefined) updates.maintenanceMode = maintenanceMode;
 

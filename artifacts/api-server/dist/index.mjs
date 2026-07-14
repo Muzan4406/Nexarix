@@ -83025,6 +83025,14 @@ setInterval(async () => {
 function generateOtp2() {
   return Math.floor(1e5 + Math.random() * 9e5).toString();
 }
+var MASKED_SECRET_PREFIX = "\u2022\u2022\u2022\u2022";
+function maskSecret(value) {
+  if (!value) return null;
+  return MASKED_SECRET_PREFIX + value.slice(-4);
+}
+function isMaskedSecret(value) {
+  return typeof value === "string" && value.startsWith(MASKED_SECRET_PREFIX);
+}
 router7.post("/admin/login", adminLoginLimiter, async (req, res) => {
   const { identifier, password } = req.body;
   let userId;
@@ -83622,7 +83630,9 @@ router7.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res)
   res.json({
     ...settings,
     activationFee: parseFloat(settings.activationFee || "3000"),
-    minWithdrawal: parseFloat(settings.minWithdrawal || "3000")
+    minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
+    sendavapayApiKey: maskSecret(settings.sendavapayApiKey),
+    sendavapayWebhookSecret: maskSecret(settings.sendavapayWebhookSecret)
   });
 });
 router7.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res) => {
@@ -83637,8 +83647,8 @@ router7.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, re
   if (activationFee !== void 0) updates.activationFee = activationFee.toString();
   if (minWithdrawal !== void 0) updates.minWithdrawal = minWithdrawal.toString();
   if (paymentMode !== void 0) updates.paymentMode = paymentMode;
-  if (sendavapayApiKey !== void 0) updates.sendavapayApiKey = sendavapayApiKey;
-  if (sendavapayWebhookSecret !== void 0) updates.sendavapayWebhookSecret = sendavapayWebhookSecret;
+  if (sendavapayApiKey !== void 0 && !isMaskedSecret(sendavapayApiKey)) updates.sendavapayApiKey = sendavapayApiKey;
+  if (sendavapayWebhookSecret !== void 0 && !isMaskedSecret(sendavapayWebhookSecret)) updates.sendavapayWebhookSecret = sendavapayWebhookSecret;
   if (appBaseUrl !== void 0) updates.appBaseUrl = appBaseUrl;
   if (maintenanceMode !== void 0) updates.maintenanceMode = maintenanceMode;
   if (!settings) {
@@ -83881,7 +83891,11 @@ router8.post("/activate/webhook", async (req, res) => {
   const rawBody = req.body;
   const signature = req.headers["x-sendavapay-signature"];
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (settings?.sendavapayWebhookSecret && signature) {
+  if (settings?.sendavapayWebhookSecret) {
+    if (!signature) {
+      res.status(401).json({ error: "Signature manquante" });
+      return;
+    }
     const expected = "sha256=" + createHmac("sha256", settings.sendavapayWebhookSecret).update(rawBody).digest("hex");
     try {
       if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
@@ -84057,6 +84071,10 @@ var import_express9 = __toESM(require_express2(), 1);
 var router9 = (0, import_express9.Router)();
 var BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 var CHAT_ID = String(process.env.TELEGRAM_CHAT_ID ?? "").trim();
+var WEBHOOK_SECRET_TOKEN = String(process.env.TELEGRAM_WEBHOOK_SECRET ?? "").trim();
+if (!WEBHOOK_SECRET_TOKEN) {
+  console.warn("[security] TELEGRAM_WEBHOOK_SECRET non d\xE9fini \u2014 le webhook Telegram n'est prot\xE9g\xE9 que par la v\xE9rification du chat_id.");
+}
 async function sendReply(chatId, text2) {
   if (!BOT_TOKEN) return;
   await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -84070,6 +84088,10 @@ function isAuthorised(chatId) {
   return String(chatId) === CHAT_ID;
 }
 router9.post("/telegram/webhook", async (req, res) => {
+  if (WEBHOOK_SECRET_TOKEN && req.headers["x-telegram-bot-api-secret-token"] !== WEBHOOK_SECRET_TOKEN) {
+    res.status(401).json({ ok: false });
+    return;
+  }
   res.json({ ok: true });
   const { message } = req.body ?? {};
   if (!message?.text) return;
@@ -84307,7 +84329,12 @@ async function registerWebhook(host, token) {
   const resp = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: webhookUrl, allowed_updates: ["message"], drop_pending_updates: true })
+    body: JSON.stringify({
+      url: webhookUrl,
+      allowed_updates: ["message"],
+      drop_pending_updates: true,
+      ...WEBHOOK_SECRET_TOKEN ? { secret_token: WEBHOOK_SECRET_TOKEN } : {}
+    })
   });
   return { webhookUrl, result: await resp.json() };
 }
@@ -84349,7 +84376,8 @@ async function autoSetupWebhook() {
       body: JSON.stringify({
         url: webhookUrl,
         allowed_updates: ["message"],
-        drop_pending_updates: true
+        drop_pending_updates: true,
+        ...WEBHOOK_SECRET_TOKEN ? { secret_token: WEBHOOK_SECRET_TOKEN } : {}
       })
     });
     const json3 = await res.json();
@@ -84882,7 +84910,11 @@ router12.post("/formations/purchase/webhook", async (req, res) => {
   const rawBody = req.body;
   const signature = req.headers["x-sendavapay-signature"];
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (settings?.sendavapayWebhookSecret && signature) {
+  if (settings?.sendavapayWebhookSecret) {
+    if (!signature) {
+      res.status(401).json({ error: "Signature manquante" });
+      return;
+    }
     const expected = "sha256=" + createHmac2("sha256", settings.sendavapayWebhookSecret).update(rawBody).digest("hex");
     try {
       if (!timingSafeEqual2(Buffer.from(signature), Buffer.from(expected))) {

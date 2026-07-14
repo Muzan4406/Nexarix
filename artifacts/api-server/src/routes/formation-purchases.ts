@@ -245,7 +245,12 @@ router.post("/formations/purchase/webhook", async (req, res) => {
   const signature = req.headers["x-sendavapay-signature"] as string | undefined;
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
 
-  if (settings?.sendavapayWebhookSecret && signature) {
+  if (settings?.sendavapayWebhookSecret) {
+    // Fail closed: if a webhook secret is configured, a valid signature is mandatory.
+    if (!signature) {
+      res.status(401).json({ error: "Signature manquante" });
+      return;
+    }
     const expected =
       "sha256=" +
       createHmac("sha256", settings.sendavapayWebhookSecret)
