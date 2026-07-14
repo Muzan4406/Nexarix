@@ -2,11 +2,11 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
-import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable, adminOtpSessionsTable } from "@workspace/db";
-import { eq, or, ilike, sql, inArray, lt } from "drizzle-orm";
+import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable, adminOtpSessionsTable, blockedIpsTable } from "@workspace/db";
+import { eq, or, ilike, sql, inArray, lt, desc } from "drizzle-orm";
 import { signToken, authMiddleware, adminMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
-import { adminLoginLimiter, otpLimiter, alertIntrusion, withdrawalConfirmLimiter } from "../lib/security";
+import { adminLoginLimiter, otpLimiter, alertIntrusion, withdrawalConfirmLimiter, blockIp } from "../lib/security";
 
 const router = Router();
 
@@ -885,5 +885,53 @@ function formatAdminWithdrawal(w: any) {
     createdAt: w.createdAt?.toISOString(),
   };
 }
+
+// ─── Gestion des IP bloquées ─────────────────────────────────────────────────
+
+router.get("/admin/blocked-ips", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const rows = await db
+      .select()
+      .from(blockedIpsTable)
+      .orderBy(desc(blockedIpsTable.blockedAt));
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        ip: r.ip,
+        reason: r.reason,
+        blockedAt: new Date(r.blockedAt).toISOString(),
+      }))
+    );
+  } catch (err) {
+    console.error("Erreur récupération IP bloquées:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.post("/admin/blocked-ips", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { ip, reason } = req.body ?? {};
+    if (!ip || typeof ip !== "string") {
+      res.status(400).json({ error: "Adresse IP requise" });
+      return;
+    }
+    await blockIp(ip.trim(), (typeof reason === "string" && reason.trim()) || "Blocage manuel par l'administrateur");
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erreur blocage IP:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.delete("/admin/blocked-ips/:ip", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const ip = decodeURIComponent(String(req.params.ip));
+    await db.delete(blockedIpsTable).where(eq(blockedIpsTable.ip, ip));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erreur déblocage IP:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 
 export default router;

@@ -69802,6 +69802,7 @@ function drizzle(...params) {
 var schema_exports = {};
 __export(schema_exports, {
   adminOtpSessionsTable: () => adminOtpSessionsTable,
+  blockedIpsTable: () => blockedIpsTable,
   formationPurchasesTable: () => formationPurchasesTable,
   formationsTable: () => formationsTable,
   insertTaskSchema: () => insertTaskSchema,
@@ -81374,6 +81375,14 @@ var adminOtpSessionsTable = pgTable("admin_otp_sessions", {
   expiresAt: bigint("expires_at", { mode: "number" }).notNull()
 });
 
+// ../../lib/db/src/schema/blocked-ips.ts
+var blockedIpsTable = pgTable("blocked_ips", {
+  id: serial("id").primaryKey(),
+  ip: text("ip").notNull().unique(),
+  reason: text("reason").notNull(),
+  blockedAt: bigint("blocked_at", { mode: "number" }).notNull()
+});
+
 // ../../lib/db/src/index.ts
 var { Pool: Pool3 } = esm_default;
 function getConnectionString() {
@@ -82445,6 +82454,50 @@ function getClientIp(req) {
   if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
   return req.socket?.remoteAddress ?? "unknown";
 }
+var blockedIpCache = /* @__PURE__ */ new Map();
+var CACHE_TTL_MS = 15e3;
+async function blockIp(ip, reason, req) {
+  if (!ip || ip === "unknown") return;
+  try {
+    await db.insert(blockedIpsTable).values({ ip, reason, blockedAt: Date.now() }).onConflictDoNothing({ target: blockedIpsTable.ip });
+    blockedIpCache.set(ip, { blocked: true, checkedAt: Date.now() });
+  } catch (err) {
+    console.error("[security] \xC9chec du blocage IP en base:", err);
+  }
+  const ua = req ? (req.headers["user-agent"] ?? "\u2014").slice(0, 120) : "\u2014";
+  await sendTelegramNotification(
+    `\u26D4\uFE0F <b>IP BLOQU\xC9E D\xC9FINITIVEMENT</b>
+\u{1F310} IP: <code>${ip}</code>
+\u{1F4C4} Raison: ${reason}
+\u{1F5A5}\uFE0F User-Agent: ${ua}
+
+Cette IP ne peut plus acc\xE9der au site. D\xE9bloquez-la depuis le panneau admin si n\xE9cessaire.`
+  ).catch(() => {
+  });
+}
+async function isIpBlocked(ip) {
+  const cached2 = blockedIpCache.get(ip);
+  if (cached2 && Date.now() - cached2.checkedAt < CACHE_TTL_MS) {
+    return cached2.blocked;
+  }
+  try {
+    const rows = await db.select({ ip: blockedIpsTable.ip }).from(blockedIpsTable).where(eq(blockedIpsTable.ip, ip)).limit(1);
+    const blocked = rows.length > 0;
+    blockedIpCache.set(ip, { blocked, checkedAt: Date.now() });
+    return blocked;
+  } catch (err) {
+    console.error("[security] \xC9chec de la v\xE9rification IP bloqu\xE9e:", err);
+    return false;
+  }
+}
+async function blockedIpGuard(req, res, next) {
+  const ip = getClientIp(req);
+  if (await isIpBlocked(ip)) {
+    res.status(403).json({ error: "Acc\xE8s refus\xE9. Cette adresse IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
+    return;
+  }
+  next();
+}
 async function alertIntrusion(event, details, req) {
   const ip = getClientIp(req);
   const ua = (req.headers["user-agent"] ?? "\u2014").slice(0, 120);
@@ -82463,8 +82516,8 @@ var loginLimiter = rate_limit_default({
   max: 10,
   keyGenerator: getClientIp,
   handler: async (req, res) => {
-    await alertIntrusion("BRUTE-FORCE LOGIN", `\u26A0\uFE0F 10 tentatives de connexion d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h`, req);
-    res.status(429).json({ error: "Trop de tentatives de connexion. R\xE9essayez dans 24 heures." });
+    await blockIp(getClientIp(req), "Force brute sur la connexion (10 tentatives d\xE9pass\xE9es)", req);
+    res.status(403).json({ error: "Trop de tentatives de connexion. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82474,8 +82527,8 @@ var registerLimiter = rate_limit_default({
   max: 5,
   keyGenerator: getClientIp,
   handler: async (req, res) => {
-    await alertIntrusion("ABUS INSCRIPTIONS", `\u26A0\uFE0F 5 inscriptions d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h (bot probable)`, req);
-    res.status(429).json({ error: "Trop d'inscriptions depuis cette adresse. R\xE9essayez dans 24 heures." });
+    await blockIp(getClientIp(req), "Abus d'inscriptions (5 comptes d\xE9pass\xE9s, bot probable)", req);
+    res.status(403).json({ error: "Trop d'inscriptions depuis cette adresse. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82485,12 +82538,8 @@ var adminLoginLimiter = rate_limit_default({
   max: 5,
   keyGenerator: getClientIp,
   handler: async (req, res) => {
-    await alertIntrusion(
-      "BRUTE-FORCE ADMIN LOGIN",
-      `\u26A0\uFE0F 5 tentatives admin d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h`,
-      req
-    );
-    res.status(429).json({ error: "Trop de tentatives admin. Acc\xE8s bloqu\xE9 24 heures." });
+    await blockIp(getClientIp(req), "Force brute sur la connexion admin (5 tentatives d\xE9pass\xE9es)", req);
+    res.status(403).json({ error: "Trop de tentatives admin. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82500,12 +82549,8 @@ var otpLimiter = rate_limit_default({
   max: 5,
   keyGenerator: getClientIp,
   handler: async (req, res) => {
-    await alertIntrusion(
-      "BRUTE-FORCE OTP",
-      `\u26A0\uFE0F 5 tentatives OTP d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h`,
-      req
-    );
-    res.status(429).json({ error: "Trop de tentatives OTP. R\xE9essayez dans 24 heures." });
+    await blockIp(getClientIp(req), "Force brute sur le code OTP (5 tentatives d\xE9pass\xE9es)", req);
+    res.status(403).json({ error: "Trop de tentatives OTP. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82515,12 +82560,8 @@ var withdrawalConfirmLimiter = rate_limit_default({
   max: 5,
   keyGenerator: getClientIp,
   handler: async (req, res) => {
-    await alertIntrusion(
-      "BRUTE-FORCE CODE RETRAIT",
-      `\u26A0\uFE0F 5 tentatives de code de confirmation de retrait d\xE9pass\xE9es \u2014 IP bloqu\xE9e 24h`,
-      req
-    );
-    res.status(429).json({ error: "Trop de tentatives. R\xE9essayez dans 24 heures." });
+    await blockIp(getClientIp(req), "Force brute sur le code de confirmation de retrait (5 tentatives d\xE9pass\xE9es)", req);
+    res.status(403).json({ error: "Trop de tentatives. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82530,12 +82571,8 @@ var globalApiLimiter = rate_limit_default({
   max: 200,
   keyGenerator: getClientIp,
   handler: async (req, res) => {
-    await alertIntrusion(
-      "RATE LIMIT GLOBAL",
-      `\u26A0\uFE0F Plus de 200 requ\xEAtes/min d\xE9tect\xE9es (scan/bot probable)`,
-      req
-    );
-    res.status(429).json({ error: "Trop de requ\xEAtes. Ralentissez." });
+    await blockIp(getClientIp(req), "Scan/bot d\xE9tect\xE9 (plus de 200 requ\xEAtes/min)", req);
+    res.status(403).json({ error: "Trop de requ\xEAtes. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -83729,6 +83766,46 @@ function formatAdminWithdrawal(w) {
     createdAt: w.createdAt?.toISOString()
   };
 }
+router7.get("/admin/blocked-ips", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const rows = await db.select().from(blockedIpsTable).orderBy(desc(blockedIpsTable.blockedAt));
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        ip: r.ip,
+        reason: r.reason,
+        blockedAt: new Date(r.blockedAt).toISOString()
+      }))
+    );
+  } catch (err) {
+    console.error("Erreur r\xE9cup\xE9ration IP bloqu\xE9es:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+router7.post("/admin/blocked-ips", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { ip, reason } = req.body ?? {};
+    if (!ip || typeof ip !== "string") {
+      res.status(400).json({ error: "Adresse IP requise" });
+      return;
+    }
+    await blockIp(ip.trim(), typeof reason === "string" && reason.trim() || "Blocage manuel par l'administrateur");
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erreur blocage IP:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+router7.delete("/admin/blocked-ips/:ip", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const ip = decodeURIComponent(String(req.params.ip));
+    await db.delete(blockedIpsTable).where(eq(blockedIpsTable.ip, ip));
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Erreur d\xE9blocage IP:", err);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
 var admin_default = router7;
 
 // src/routes/activation.ts
@@ -85085,6 +85162,7 @@ app.use((0, import_cors.default)({
   },
   credentials: true
 }));
+app.use("/api", blockedIpGuard);
 app.use("/api", globalApiLimiter);
 app.use("/api/activate/webhook", import_express16.default.raw({ type: "application/json" }));
 app.use("/api/formations/purchase/webhook", import_express16.default.raw({ type: "application/json" }));

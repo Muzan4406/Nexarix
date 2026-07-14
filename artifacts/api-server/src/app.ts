@@ -9,7 +9,7 @@ import { logger } from "./lib/logger";
 import { db } from "@workspace/db";
 import { siteSettingsTable } from "@workspace/db";
 import jwt from "jsonwebtoken";
-import { globalApiLimiter } from "./lib/security";
+import { globalApiLimiter, blockedIpGuard } from "./lib/security";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? (
   process.env.NODE_ENV === "production"
@@ -62,6 +62,9 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+// ─── Blocage IP permanent (avant tout le reste : coupe court aux IP bannies) ─
+app.use("/api", blockedIpGuard);
 
 // ─── Rate limiter global anti-bot/scan ───────────────────────────────────────
 app.use("/api", globalApiLimiter);
