@@ -85157,7 +85157,10 @@ app.use(
 app.use(helmet({
   contentSecurityPolicy: false,
   // SPA gérée côté frontend
-  crossOriginEmbedderPolicy: false
+  crossOriginEmbedderPolicy: false,
+  // "no-referrer" (défaut helmet) casse l'intégration des vidéos YouTube (Erreur 153) :
+  // YouTube a besoin du Referer pour valider l'embed.
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" }
 }));
 var allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "").split(",").map((o) => o.trim()).filter(Boolean);
 app.use((0, import_cors.default)({
