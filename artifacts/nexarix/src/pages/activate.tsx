@@ -362,7 +362,7 @@ export default function Activate() {
                                 }`}
                               >
                                 <span className="font-bold text-sm text-gray-800">{op.name}</span>
-                                {selectedOperator?.id === op.id && <CheckCircle className="h-4 w-4 text-blue-500" />}
+                                {selectedOperator?.id === op.id && <CheckCircle2 className="h-4 w-4 text-blue-500" />}
                               </button>
                             ))}
                           </div>

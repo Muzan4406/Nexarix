@@ -82969,10 +82969,10 @@ router5.post("/withdrawals", authMiddleware, async (req, res) => {
   }).returning();
   sendTelegramNotification(
     `\u{1F4B8} <b>Nouvelle demande de retrait</b>
-\u{1F464} Utilisateur: <b>${user.username}</b>
-\u{1F30D} Pays: ${user.country || "\u2014"}
-\u{1F4F1} T\xE9l\xE9phone: ${phone}
-\u{1F3E6} Op\xE9rateur: ${operator}
+\u{1F464} Utilisateur: <b>${escapeHtml(user.username)}</b>
+\u{1F30D} Pays: ${escapeHtml(user.country || "\u2014")}
+\u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(String(phone))}
+\u{1F3E6} Op\xE9rateur: ${escapeHtml(String(operator))}
 \u{1F4B0} Montant brut: <b>${amount.toLocaleString()} FCFA</b>
 \u{1F4C9} Frais (5%): ${fee.toLocaleString()} FCFA
 \u2705 Montant net: <b>${amountNet.toLocaleString()} FCFA</b>`
@@ -83139,7 +83139,7 @@ router7.post("/admin/login", adminLoginLimiter, async (req, res) => {
   });
   await sendTelegramNotification(
     `\u{1F510} <b>Tentative de connexion Admin</b>
-\u{1F464} Admin: <b>${username}</b>
+\u{1F464} Admin: <b>${escapeHtml(username)}</b>
 \u{1F522} Code OTP: <b>${otp}</b>
 \u23F1\uFE0F Valide 5 minutes
 \u26A0\uFE0F Si ce n'est pas vous, ignorez ce message.`
@@ -83175,7 +83175,7 @@ router7.post("/admin/verify-otp", otpLimiter, async (req, res) => {
   const token = signToken({ userId: user.id, isAdmin: true });
   sendTelegramNotification(
     `\u2705 <b>Connexion admin r\xE9ussie</b>
-\u{1F464} Admin: <b>${user.username}</b>
+\u{1F464} Admin: <b>${escapeHtml(user.username)}</b>
 \u{1F4C5} ${(/* @__PURE__ */ new Date()).toLocaleString("fr-FR", { timeZone: "UTC" })}`
   );
   res.json({ token, user: formatUser2(user) });
@@ -83257,10 +83257,10 @@ router7.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (re
       await distributeMLMCommissions(user);
       await sendTelegramNotification(
         `\u{1F4B0} <b>Activation manuelle (Admin)</b>
-\u{1F464} Utilisateur: <b>${user.username}</b>
-\u{1F4E7} Email: ${user.email}
-\u{1F4F1} T\xE9l\xE9phone: ${user.phone || "\u2014"}
-\u{1F30D} Pays: ${user.country || "\u2014"}
+\u{1F464} Utilisateur: <b>${escapeHtml(user.username)}</b>
+\u{1F4E7} Email: ${escapeHtml(user.email)}
+\u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(user.phone || "\u2014")}
+\u{1F30D} Pays: ${escapeHtml(user.country || "\u2014")}
 \u2705 Compte activ\xE9 manuellement`
       );
     }
@@ -83270,8 +83270,8 @@ router7.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (re
     if (user) {
       sendTelegramNotification(
         `\u26D4 <b>Utilisateur banni (Admin)</b>
-\u{1F464} Username: <b>${user.username}</b>
-\u{1F4E7} Email: ${user.email}`
+\u{1F464} Username: <b>${escapeHtml(user.username)}</b>
+\u{1F4E7} Email: ${escapeHtml(user.email)}`
       );
     }
   }
@@ -83428,11 +83428,16 @@ router7.post("/admin/tasks", authMiddleware, adminMiddleware, async (req, res) =
 });
 router7.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req, res) => {
   const taskId = parseInt(req.params.taskId);
+  const { category, title, description, targetUrl, points, isActive, question, correctAnswer } = req.body ?? {};
   const updates = {};
-  const fields = ["category", "title", "description", "targetUrl", "points", "isActive", "question", "correctAnswer"];
-  for (const f of fields) {
-    if (req.body[f] !== void 0) updates[f] = req.body[f];
-  }
+  if (category !== void 0) updates.category = category;
+  if (title !== void 0) updates.title = title;
+  if (description !== void 0) updates.description = description;
+  if (targetUrl !== void 0) updates.targetUrl = targetUrl;
+  if (points !== void 0) updates.points = points;
+  if (isActive !== void 0) updates.isActive = isActive;
+  if (question !== void 0) updates.question = question;
+  if (correctAnswer !== void 0) updates.correctAnswer = correctAnswer;
   const [task] = await db.update(tasksTable).set(updates).where(eq(tasksTable.id, taskId)).returning();
   if (!task) {
     res.status(404).json({ error: "Task not found" });
@@ -84041,19 +84046,19 @@ router8.post("/activate/webhook", async (req, res) => {
           const [user] = await db.select().from(usersTable).where(eq(usersTable.id, withdrawal.userId)).limit(1);
           await sendTelegramNotification(
             `\u274C <b>Retrait \xE9chou\xE9 \u2014 remboursement</b>
-\u{1F464} Utilisateur: <b>${user?.username || withdrawal.userId}</b>
+\u{1F464} Utilisateur: <b>${escapeHtml(String(user?.username || withdrawal.userId))}</b>
 \u{1F4B0} Montant rembours\xE9: <b>${amountToRefund.toLocaleString()} FCFA</b>
-\u{1F4F1} T\xE9l\xE9phone: ${withdrawal.phone}
-\u{1F516} R\xE9f Sendavapay: ${ref}`
+\u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(String(withdrawal.phone))}
+\u{1F516} R\xE9f Sendavapay: ${escapeHtml(String(ref))}`
           );
         }
         if (withdrawal && newStatus === "completed") {
           const [user] = await db.select().from(usersTable).where(eq(usersTable.id, withdrawal.userId)).limit(1);
           await sendTelegramNotification(
             `\u2705 <b>Retrait confirm\xE9 par Sendavapay</b>
-\u{1F464} Utilisateur: <b>${user?.username || withdrawal.userId}</b>
+\u{1F464} Utilisateur: <b>${escapeHtml(String(user?.username || withdrawal.userId))}</b>
 \u{1F4B0} Montant net: <b>${parseFloat(withdrawal.amountNet || "0").toLocaleString()} FCFA</b>
-\u{1F4F1} ${withdrawal.operator} \u2014 ${withdrawal.phone}`
+\u{1F4F1} ${escapeHtml(String(withdrawal.operator))} \u2014 ${escapeHtml(String(withdrawal.phone))}`
           );
         }
       } catch (_) {
@@ -84093,10 +84098,10 @@ async function activateUser(user) {
   }).where(eq(usersTable.id, user.id));
   await sendTelegramNotification(
     `\u{1F4B0} <b>Nouveau d\xE9p\xF4t / Activation</b>
-\u{1F464} Utilisateur: <b>${user.username}</b>
-\u{1F4E7} Email: ${user.email}
-\u{1F4F1} T\xE9l\xE9phone: ${user.phone || "\u2014"}
-\u{1F30D} Pays: ${user.country || "\u2014"}
+\u{1F464} Utilisateur: <b>${escapeHtml(user.username)}</b>
+\u{1F4E7} Email: ${escapeHtml(user.email)}
+\u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(user.phone || "\u2014")}
+\u{1F30D} Pays: ${escapeHtml(user.country || "\u2014")}
 \u2705 Compte activ\xE9 avec succ\xE8s`
   );
   await distributeMLMCommissions2(user);
@@ -84138,7 +84143,7 @@ async function checkAndGrantReferralBonus(uplineUser) {
     }).where(eq(usersTable.id, uplineUser.id));
     await sendTelegramNotification(
       `\u{1F389} <b>Bonus filleuls d\xE9bloqu\xE9 !</b>
-\u{1F464} Utilisateur: <b>${uplineUser.username}</b>
+\u{1F464} Utilisateur: <b>${escapeHtml(uplineUser.username)}</b>
 \u{1F3C6} Palier atteint: <b>${activeCount} filleuls actifs directs</b>
 \u{1F4B5} Bonus cr\xE9dit\xE9: <b>${REFERRAL_BONUS_AMOUNT} FCFA</b>`
     );
@@ -84661,7 +84666,7 @@ router11.post("/admin/formations", authMiddleware, adminMiddleware, upload2, asy
   }).returning();
   sendTelegramNotification(
     `\u{1F4DA} <b>Formation cr\xE9\xE9e (Admin)</b>
-\u{1F4D6} Titre: <b>${title}</b>
+\u{1F4D6} Titre: <b>${escapeHtml(title)}</b>
 \u{1F4B0} Prix: ${priceVal ? `${parseFloat(priceVal).toLocaleString()} FCFA` : "Gratuit"}`
   );
   res.status(201).json(formatFormation(formation));
@@ -84692,7 +84697,7 @@ router11.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload2
   }
   sendTelegramNotification(
     `\u270F\uFE0F <b>Formation modifi\xE9e (Admin)</b>
-\u{1F4D6} Titre: <b>${formation.title}</b>`
+\u{1F4D6} Titre: <b>${escapeHtml(formation.title)}</b>`
   );
   res.json(formatFormation(formation));
 });
@@ -84703,7 +84708,7 @@ router11.delete("/admin/formations/:id", authMiddleware, adminMiddleware, async 
   if (formation) {
     sendTelegramNotification(
       `\u{1F5D1}\uFE0F <b>Formation supprim\xE9e (Admin)</b>
-\u{1F4D6} Titre: <b>${formation.title}</b>`
+\u{1F4D6} Titre: <b>${escapeHtml(formation.title)}</b>`
     );
   }
   res.json({ ok: true });
@@ -85043,9 +85048,9 @@ router13.post(
     }).returning();
     sendTelegramNotification(
       `\u{1F4CC} <b>Nouveau service ajout\xE9 dans Divers</b>
-\u{1F4DD} Titre : <b>${title}</b>
-` + (description ? `\u{1F4C4} Description : ${description}
-` : "") + `\u{1F517} Lien : ${linkUrl}`
+\u{1F4DD} Titre : <b>${escapeHtml(title)}</b>
+` + (description ? `\u{1F4C4} Description : ${escapeHtml(description)}
+` : "") + `\u{1F517} Lien : ${escapeHtml(linkUrl)}`
     );
     res.json(item);
   }

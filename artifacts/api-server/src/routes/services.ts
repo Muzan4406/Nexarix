@@ -5,7 +5,7 @@ import { servicesTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { authMiddleware, adminMiddleware } from "../lib/auth";
 import { uploadToStorage } from "../lib/supabase-storage";
-import { sendTelegramNotification } from "../lib/telegram";
+import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -65,9 +65,9 @@ router.post(
 
     sendTelegramNotification(
       `📌 <b>Nouveau service ajouté dans Divers</b>\n` +
-      `📝 Titre : <b>${title}</b>\n` +
-      (description ? `📄 Description : ${description}\n` : "") +
-      `🔗 Lien : ${linkUrl}`
+      `📝 Titre : <b>${escapeHtml(title)}</b>\n` +
+      (description ? `📄 Description : ${escapeHtml(description)}\n` : "") +
+      `🔗 Lien : ${escapeHtml(linkUrl)}`
     );
 
     res.json(item);

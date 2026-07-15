@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { formationsTable } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { authMiddleware, adminMiddleware } from "../lib/auth";
-import { sendTelegramNotification } from "../lib/telegram";
+import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 import { uploadToStorage, BUCKETS } from "../lib/supabase-storage";
 import multer from "multer";
 import path from "path";
@@ -63,7 +63,7 @@ router.post("/admin/formations", authMiddleware, adminMiddleware, upload, async 
 
   sendTelegramNotification(
     `📚 <b>Formation créée (Admin)</b>\n` +
-    `📖 Titre: <b>${title}</b>\n` +
+    `📖 Titre: <b>${escapeHtml(title)}</b>\n` +
     `💰 Prix: ${priceVal ? `${parseFloat(priceVal).toLocaleString()} FCFA` : "Gratuit"}`
   );
 
@@ -99,7 +99,7 @@ router.patch("/admin/formations/:id", authMiddleware, adminMiddleware, upload, a
 
   sendTelegramNotification(
     `✏️ <b>Formation modifiée (Admin)</b>\n` +
-    `📖 Titre: <b>${formation.title}</b>`
+    `📖 Titre: <b>${escapeHtml(formation.title)}</b>`
   );
 
   res.json(formatFormation(formation));
@@ -114,7 +114,7 @@ router.delete("/admin/formations/:id", authMiddleware, adminMiddleware, async (r
   if (formation) {
     sendTelegramNotification(
       `🗑️ <b>Formation supprimée (Admin)</b>\n` +
-      `📖 Titre: <b>${formation.title}</b>`
+      `📖 Titre: <b>${escapeHtml(formation.title)}</b>`
     );
   }
 

@@ -5,7 +5,7 @@ import { db } from "@workspace/db";
 import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable, adminOtpSessionsTable, blockedIpsTable } from "@workspace/db";
 import { eq, or, ilike, sql, inArray, lt, desc } from "drizzle-orm";
 import { signToken, authMiddleware, adminMiddleware } from "../lib/auth";
-import { sendTelegramNotification } from "../lib/telegram";
+import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 import { adminLoginLimiter, otpLimiter, alertIntrusion, withdrawalConfirmLimiter, blockIp } from "../lib/security";
 
 const router = Router();
@@ -134,7 +134,7 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
 
   await sendTelegramNotification(
     `🔐 <b>Tentative de connexion Admin</b>\n` +
-    `👤 Admin: <b>${username}</b>\n` +
+    `👤 Admin: <b>${escapeHtml(username)}</b>\n` +
     `🔢 Code OTP: <b>${otp}</b>\n` +
     `⏱️ Valide 5 minutes\n` +
     `⚠️ Si ce n'est pas vous, ignorez ce message.`
@@ -185,7 +185,7 @@ router.post("/admin/verify-otp", otpLimiter, async (req, res) => {
 
   sendTelegramNotification(
     `✅ <b>Connexion admin réussie</b>\n` +
-    `👤 Admin: <b>${user.username}</b>\n` +
+    `👤 Admin: <b>${escapeHtml(user.username)}</b>\n` +
     `📅 ${new Date().toLocaleString("fr-FR", { timeZone: "UTC" })}`
   );
 
@@ -294,10 +294,10 @@ router.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (req
       await distributeMLMCommissions(user);
       await sendTelegramNotification(
         `💰 <b>Activation manuelle (Admin)</b>\n` +
-        `👤 Utilisateur: <b>${user.username}</b>\n` +
-        `📧 Email: ${user.email}\n` +
-        `📱 Téléphone: ${user.phone || "—"}\n` +
-        `🌍 Pays: ${user.country || "—"}\n` +
+        `👤 Utilisateur: <b>${escapeHtml(user.username)}</b>\n` +
+        `📧 Email: ${escapeHtml(user.email)}\n` +
+        `📱 Téléphone: ${escapeHtml(user.phone || "—")}\n` +
+        `🌍 Pays: ${escapeHtml(user.country || "—")}\n` +
         `✅ Compte activé manuellement`
       );
     }
@@ -308,8 +308,8 @@ router.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (req
     if (user) {
       sendTelegramNotification(
         `⛔ <b>Utilisateur banni (Admin)</b>\n` +
-        `👤 Username: <b>${user.username}</b>\n` +
-        `📧 Email: ${user.email}`
+        `👤 Username: <b>${escapeHtml(user.username)}</b>\n` +
+        `📧 Email: ${escapeHtml(user.email)}`
       );
     }
   }
@@ -499,11 +499,16 @@ router.post("/admin/tasks", authMiddleware, adminMiddleware, async (req, res) =>
 
 router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req, res) => {
   const taskId = parseInt(req.params.taskId as string);
-  const updates: any = {};
-  const fields = ["category", "title", "description", "targetUrl", "points", "isActive", "question", "correctAnswer"];
-  for (const f of fields) {
-    if (req.body[f] !== undefined) updates[f] = req.body[f];
-  }
+  const { category, title, description, targetUrl, points, isActive, question, correctAnswer } = req.body ?? {};
+  const updates: Record<string, unknown> = {};
+  if (category !== undefined) updates.category = category;
+  if (title !== undefined) updates.title = title;
+  if (description !== undefined) updates.description = description;
+  if (targetUrl !== undefined) updates.targetUrl = targetUrl;
+  if (points !== undefined) updates.points = points;
+  if (isActive !== undefined) updates.isActive = isActive;
+  if (question !== undefined) updates.question = question;
+  if (correctAnswer !== undefined) updates.correctAnswer = correctAnswer;
 
   const [task] = await db.update(tasksTable).set(updates).where(eq(tasksTable.id, taskId)).returning();
   if (!task) {

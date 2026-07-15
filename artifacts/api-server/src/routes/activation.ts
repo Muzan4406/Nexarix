@@ -4,7 +4,7 @@ import { db } from "@workspace/db";
 import { usersTable, siteSettingsTable, withdrawalsTable } from "@workspace/db";
 import { eq, sql, and } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
-import { sendTelegramNotification } from "../lib/telegram";
+import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 
 const router = Router();
 const SENDAVAPAY_BASE = "https://sendavapay.com/api/sdk/v1";
@@ -229,10 +229,10 @@ router.post("/activate/webhook", async (req, res) => {
           const [user] = await db.select().from(usersTable).where(eq(usersTable.id, withdrawal.userId)).limit(1);
           await sendTelegramNotification(
             `❌ <b>Retrait échoué — remboursement</b>\n` +
-            `👤 Utilisateur: <b>${user?.username || withdrawal.userId}</b>\n` +
+            `👤 Utilisateur: <b>${escapeHtml(String(user?.username || withdrawal.userId))}</b>\n` +
             `💰 Montant remboursé: <b>${amountToRefund.toLocaleString()} FCFA</b>\n` +
-            `📱 Téléphone: ${withdrawal.phone}\n` +
-            `🔖 Réf Sendavapay: ${ref}`
+            `📱 Téléphone: ${escapeHtml(String(withdrawal.phone))}\n` +
+            `🔖 Réf Sendavapay: ${escapeHtml(String(ref))}`
           );
         }
 
@@ -240,9 +240,9 @@ router.post("/activate/webhook", async (req, res) => {
           const [user] = await db.select().from(usersTable).where(eq(usersTable.id, withdrawal.userId)).limit(1);
           await sendTelegramNotification(
             `✅ <b>Retrait confirmé par Sendavapay</b>\n` +
-            `👤 Utilisateur: <b>${user?.username || withdrawal.userId}</b>\n` +
+            `👤 Utilisateur: <b>${escapeHtml(String(user?.username || withdrawal.userId))}</b>\n` +
             `💰 Montant net: <b>${parseFloat(withdrawal.amountNet || "0").toLocaleString()} FCFA</b>\n` +
-            `📱 ${withdrawal.operator} — ${withdrawal.phone}`
+            `📱 ${escapeHtml(String(withdrawal.operator))} — ${escapeHtml(String(withdrawal.phone))}`
           );
         }
       } catch (_) {}
@@ -282,10 +282,10 @@ async function activateUser(user: any) {
 
   await sendTelegramNotification(
     `💰 <b>Nouveau dépôt / Activation</b>\n` +
-    `👤 Utilisateur: <b>${user.username}</b>\n` +
-    `📧 Email: ${user.email}\n` +
-    `📱 Téléphone: ${user.phone || "—"}\n` +
-    `🌍 Pays: ${user.country || "—"}\n` +
+    `👤 Utilisateur: <b>${escapeHtml(user.username)}</b>\n` +
+    `📧 Email: ${escapeHtml(user.email)}\n` +
+    `📱 Téléphone: ${escapeHtml(user.phone || "—")}\n` +
+    `🌍 Pays: ${escapeHtml(user.country || "—")}\n` +
     `✅ Compte activé avec succès`
   );
 
@@ -341,7 +341,7 @@ async function checkAndGrantReferralBonus(uplineUser: any) {
 
     await sendTelegramNotification(
       `🎉 <b>Bonus filleuls débloqué !</b>\n` +
-      `👤 Utilisateur: <b>${uplineUser.username}</b>\n` +
+      `👤 Utilisateur: <b>${escapeHtml(uplineUser.username)}</b>\n` +
       `🏆 Palier atteint: <b>${activeCount} filleuls actifs directs</b>\n` +
       `💵 Bonus crédité: <b>${REFERRAL_BONUS_AMOUNT} FCFA</b>`
     );

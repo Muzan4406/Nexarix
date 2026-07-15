@@ -33,9 +33,17 @@ Central hub for all security helpers. Contains:
 - `adminLoginLimiter` on POST `/admin/login`
 - `otpLimiter` on POST `/admin/verify-otp`
 - Telegram alert on every failed admin login (wrong account or wrong password)
+- PATCH `/admin/tasks/:taskId` rewritten from a `fields` allowlist loop with `req.body[f]` bracket access to explicit named destructuring — same behavior, but avoids the bracket-notation object-injection pattern static scanners (and future reviewers) flag as HIGH.
 
 ### `routes/users.ts`
 - `isValidAvatarUrl()` guard on PATCH `/users/profile` to reject non-URL values
+
+## Telegram HTML-injection convention (2026-07-15)
+Every `sendTelegramNotification(...)` call uses `parse_mode: "HTML"`. Any interpolated value that can originate from user input (username, email, phone, country, task/formation/service title or description, free-text fields, etc.) MUST be passed through `escapeHtml()` from `artifacts/api-server/src/lib/telegram.ts` before interpolation, or a malicious value (e.g. a username containing `<a href=...>`) can break message formatting or inject fake links/content into admin alerts.
+
+**Why:** a prior pass only escaped values in `security.ts`'s own alerts; a full SAST sweep found the same unescaped-interpolation pattern repeated across `routes/activation.ts`, `routes/admin.ts`, `routes/formations.ts`, `routes/services.ts`, `routes/withdrawals.ts`. All were fixed in one pass. `routes/telegram.ts`'s bot-command replies were left as-is — those values are typed by the admin themselves through their own authenticated Telegram chat, not attacker-controlled.
+
+**How to apply:** when adding a new `sendTelegramNotification` call with any field that traces back to a request body, DB row populated from user input, or query param, wrap it in `escapeHtml(...)` (coerce to string first if it might be non-string/null).
 
 ## Environment variables required
 - `ADMIN_EMAIL` — env var (shared) — set to godmuzan42@gmail.com
@@ -49,3 +57,6 @@ Central hub for all security helpers. Contains:
 ## Packages added
 - `express-rate-limit` — rate limiting
 - `helmet` — security headers
+
+## Known open risk (user declined to fix, 2026-07-13 and 2026-07-14)
+`JWT_SECRET` and `ADMIN_PASSWORD` are still unset in this dev environment (app runs in a degraded/fallback mode). Without `JWT_SECRET` set explicitly in production, do not assume tokens are safe — check `auth.ts` for the fallback behavior before deploying. `lib/db` connects with `ssl: { rejectUnauthorized: false }` for the Supabase pooler path — acceptable for now but means TLS MITM on that hop isn't detected; only matters when `SUPABASE_PROJECT_REF`/`SUPABASE_DB_PASSWORD` are set (dev uses local unencrypted Postgres instead).
