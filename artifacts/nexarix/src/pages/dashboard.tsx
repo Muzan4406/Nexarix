@@ -1,12 +1,9 @@
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useGetDashboard, useGetPublicSettings } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/hooks/use-auth";
-import { formatCurrency } from "@/lib/currency";
-import { Link } from "wouter";
 import {
-  CreditCard, TrendingUp, Users, Wallet, Clock, CheckSquare, Trophy,
+  CreditCard, TrendingUp, Users, Wallet, Clock, Trophy,
 } from "lucide-react";
 
 const fadeUp = (i: number) => ({
@@ -31,8 +28,6 @@ export default function Dashboard() {
     </AppLayout>
   );
 
-  const balance        = stats?.balance || 0;
-  const taskBalance    = (stats as any)?.taskBalance || 0;
   const totalWithdrawn = stats?.totalWithdrawn || 0;
   const totalBalance   = (stats as any)?.totalBalance || 0;
   const activationFee  = publicSettings?.activationFee ?? 3800;
@@ -141,39 +136,20 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          {/* Card 5 — Gains Tâches */}
+          {/* Card 5 — Tâches Accomplies (full width) */}
           <motion.div
             variants={fadeUp(3)} initial="hidden" animate="visible"
-            className="rounded-[22px] p-4 flex flex-col justify-between min-h-[130px] text-white relative overflow-hidden"
-            style={{ background: "linear-gradient(135deg, #f59e0b 0%, #f97316 60%, #fb923c 100%)" }}
-          >
-            <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
-            <div className="flex items-start justify-between relative z-10">
-              <p className="font-black text-[13px] leading-tight">Gains<br/>Tâches</p>
-              <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                <CheckSquare className="h-4 w-4 text-white" />
-              </div>
-            </div>
-            <div className="relative z-10">
-              <p className="text-orange-200 text-[10px] font-semibold mb-0.5">Solde :</p>
-              <p className="font-black text-[22px] leading-none">{taskBalance.toLocaleString("fr-FR")} F</p>
-            </div>
-          </motion.div>
-
-          {/* Card 6 — Tâches Accomplies */}
-          <motion.div
-            variants={fadeUp(3)} initial="hidden" animate="visible"
-            className="rounded-[22px] p-4 flex flex-col justify-between min-h-[130px] text-white relative overflow-hidden"
+            className="col-span-2 rounded-[22px] p-4 flex flex-col justify-between min-h-[110px] text-white relative overflow-hidden"
             style={{ background: "linear-gradient(135deg, #14b8a6 0%, #0d9488 60%, #0f766e 100%)" }}
           >
             <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
-            <div className="flex items-start justify-between relative z-10">
-              <p className="font-black text-[13px] leading-tight">Tâches<br/>Accomplies</p>
+            <div className="flex items-center justify-between relative z-10">
+              <p className="font-black text-[13px] leading-tight">Tâches Accomplies</p>
               <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
                 <Trophy className="h-4 w-4 text-white" />
               </div>
             </div>
-            <div className="relative z-10">
+            <div className="relative z-10 mt-2">
               <p className="text-teal-200 text-[10px] font-semibold mb-0.5">Total :</p>
               <p className="font-black text-[30px] leading-none">{completedTasks}</p>
             </div>
@@ -214,25 +190,6 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* ── Solde Tâches ──────────────────────── */}
-        <motion.div variants={fadeUp(4)} initial="hidden" animate="visible"
-          className="rounded-[22px] overflow-hidden"
-          style={{ background: "linear-gradient(135deg, #f59e0b 0%, #f97316 60%, #fb923c 100%)" }}
-        >
-          <div className="p-4 text-white">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-black text-[13px]">Gains Tâches</p>
-              <CheckSquare className="h-4 w-4 text-orange-200" />
-            </div>
-            <p className="font-black text-[28px] leading-none mb-1">{taskBalance.toLocaleString("fr-FR")} F</p>
-            <p className="text-orange-200 text-[11px] font-semibold mb-3">Retirable séparément dès le minimum atteint</p>
-            <Link href="/withdrawals">
-              <span className="inline-block bg-white/20 hover:bg-white/30 transition-colors rounded-xl px-4 py-2 text-xs font-black cursor-pointer">
-                Retirer →
-              </span>
-            </Link>
-          </div>
-        </motion.div>
 
       </div>
     </AppLayout>

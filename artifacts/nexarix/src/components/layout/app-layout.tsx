@@ -164,10 +164,12 @@ function NavContent({ onClose }: { onClose?: () => void }) {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-black leading-tight truncate">{user?.username}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <div className={cn("h-1.5 w-1.5 rounded-full", isActive ? "bg-emerald-400" : "bg-amber-400")} />
-                <p className="text-blue-200 text-xs font-semibold">{isActive ? "Compte actif" : "Non activé"}</p>
-              </div>
+              {!isActive && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <p className="text-blue-200 text-xs font-semibold">Non activé</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

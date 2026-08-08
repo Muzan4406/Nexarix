@@ -67,7 +67,7 @@ export default function AdminWithdrawals() {
       onSuccess: (data: any) => {
         invalidate();
         if (data?.payoutError) {
-          toast({ title: "⚠️ Payout échoué — retrait resté en attente", description: `${data.payoutError}. Rechargez votre solde Sendavapay puis réessayez.`, variant: "destructive" });
+          toast({ title: "⚠️ Payout échoué — retrait resté en attente", description: `${data.payoutError}. Vérifiez votre configuration AshtechPay puis réessayez.`, variant: "destructive" });
         } else if (isAutoMode) {
           toast({ title: "⚡ Payout automatique déclenché" });
         } else {
@@ -241,7 +241,7 @@ export default function AdminWithdrawals() {
                       </div>
                       <div className="flex flex-col items-center gap-0.5">
                         <ArrowRight className="h-3.5 w-3.5 text-gray-300" />
-                        <p className="text-[9px] font-bold text-red-400">−5%</p>
+                        <p className="text-[9px] font-bold text-red-400">−fixe</p>
                       </div>
                       <div className="flex-1 text-center">
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Frais</p>
@@ -256,7 +256,7 @@ export default function AdminWithdrawals() {
                       </div>
                     </div>
 
-                    {/* Référence Sendavapay si présente */}
+                    {/* Référence payout si présente */}
                     {w.sendavapayReference && (
                       <p className="text-[10px] text-gray-400 font-mono truncate px-1">
                         Réf: {w.sendavapayReference}
@@ -371,7 +371,7 @@ export default function AdminWithdrawals() {
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-sm text-amber-700 leading-relaxed">
-              Le <strong>montant net</strong> sera envoyé directement sur le Mobile Money de l'utilisateur via Sendavapay.
+              Le <strong>montant net</strong> sera envoyé directement sur le Mobile Money de l'utilisateur via AshtechPay.
               L'opération est <strong>irréversible</strong> une fois lancée.
             </p>
           </div>

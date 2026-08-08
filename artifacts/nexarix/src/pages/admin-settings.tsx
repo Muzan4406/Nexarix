@@ -26,7 +26,6 @@ export default function AdminSettings() {
     minWithdrawal: "3000",
     paymentMode: "manual",
     sendavapayApiKey: "",
-    sendavapayWebhookSecret: "",
     appBaseUrl: "",
     maintenanceMode: false,
   });
@@ -43,7 +42,6 @@ export default function AdminSettings() {
         minWithdrawal: String(settings.minWithdrawal ?? 3000),
         paymentMode: settings.paymentMode || "manual",
         sendavapayApiKey: settings.sendavapayApiKey || "",
-        sendavapayWebhookSecret: settings.sendavapayWebhookSecret || "",
         appBaseUrl: settings.appBaseUrl || "",
         maintenanceMode: (settings as any).maintenanceMode ?? false,
       });
@@ -59,7 +57,6 @@ export default function AdminSettings() {
         telegramChannel: form.telegramChannel || null,
         vcfLink: form.vcfLink || null,
         sendavapayApiKey: form.sendavapayApiKey || null,
-        sendavapayWebhookSecret: form.sendavapayWebhookSecret || null,
         appBaseUrl: form.appBaseUrl || null,
         maintenanceMode: form.maintenanceMode,
       } as any
