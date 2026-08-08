@@ -16,12 +16,27 @@ export const BUCKETS = {
   formations: "formation-files",
 };
 
+const FILE_SIZE_LIMIT = 1_073_741_824; // 1 Go
+
 async function ensureBucket(bucket: string) {
   const { SERVICE_KEY, STORAGE_URL } = getStorageConfig();
   const res = await fetch(`${STORAGE_URL}/bucket/${bucket}`, {
     headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
   });
-  if (res.status === 200) return;
+  if (res.status === 200) {
+    // Bucket exists — patch the fileSizeLimit in case it was created with a smaller one
+    await fetch(`${STORAGE_URL}/bucket/${bucket}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        apikey: SERVICE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: bucket, name: bucket, public: true, fileSizeLimit: FILE_SIZE_LIMIT }),
+    });
+    return;
+  }
+  // Create bucket with 1 GB limit
   await fetch(`${STORAGE_URL}/bucket`, {
     method: "POST",
     headers: {
@@ -29,7 +44,7 @@ async function ensureBucket(bucket: string) {
       apikey: SERVICE_KEY,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ id: bucket, name: bucket, public: true }),
+    body: JSON.stringify({ id: bucket, name: bucket, public: true, fileSizeLimit: FILE_SIZE_LIMIT }),
   });
 }
 
@@ -48,7 +63,7 @@ export async function getPresignedUploadUrl(
         apikey: SERVICE_KEY,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ fileSizeLimit: FILE_SIZE_LIMIT }),
     },
   );
   if (!res.ok) {

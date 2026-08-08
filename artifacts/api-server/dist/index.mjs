@@ -84471,12 +84471,24 @@ var BUCKETS = {
   store: "store-files",
   formations: "formation-files"
 };
+var FILE_SIZE_LIMIT = 1073741824;
 async function ensureBucket(bucket) {
   const { SERVICE_KEY, STORAGE_URL } = getStorageConfig();
   const res = await fetch(`${STORAGE_URL}/bucket/${bucket}`, {
     headers: { Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY }
   });
-  if (res.status === 200) return;
+  if (res.status === 200) {
+    await fetch(`${STORAGE_URL}/bucket/${bucket}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        apikey: SERVICE_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ id: bucket, name: bucket, public: true, fileSizeLimit: FILE_SIZE_LIMIT })
+    });
+    return;
+  }
   await fetch(`${STORAGE_URL}/bucket`, {
     method: "POST",
     headers: {
@@ -84484,7 +84496,7 @@ async function ensureBucket(bucket) {
       apikey: SERVICE_KEY,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ id: bucket, name: bucket, public: true })
+    body: JSON.stringify({ id: bucket, name: bucket, public: true, fileSizeLimit: FILE_SIZE_LIMIT })
   });
 }
 async function getPresignedUploadUrl(bucket, filename) {
@@ -84499,7 +84511,7 @@ async function getPresignedUploadUrl(bucket, filename) {
         apikey: SERVICE_KEY,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({})
+      body: JSON.stringify({ fileSizeLimit: FILE_SIZE_LIMIT })
     }
   );
   if (!res.ok) {
