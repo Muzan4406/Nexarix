@@ -112,13 +112,17 @@ export default function Login() {
           className="flex flex-col items-center mb-4"
         >
           <div className="relative mb-1">
-            <div className="absolute inset-0 blur-3xl opacity-25 scale-125"
+            {/* Glow halo */}
+            <div className="absolute inset-[-12px] blur-2xl opacity-30 rounded-full"
               style={{ background: "radial-gradient(circle, #10b981 0%, #0ea5e9 60%, transparent 100%)" }} />
-            <img
-              src={`${BASE}logo.png`}
-              alt="Nexarix"
-              className="relative h-56 w-56 object-contain drop-shadow-2xl"
-            />
+            {/* Logo clippé en cercle — l'image 1408×768 est centrée sur le logo rond */}
+            <div className="relative h-36 w-36 rounded-full overflow-hidden shadow-2xl ring-2 ring-white/10">
+              <img
+                src={`${BASE}logo.png`}
+                alt="Nexarix"
+                className="h-full w-full object-cover"
+              />
+            </div>
           </div>
           <h1 className="font-black text-[30px] tracking-tight"
             style={{ background: "linear-gradient(135deg, #34d399, #38bdf8, #818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
