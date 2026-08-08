@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  useGetAdminWithdrawals, useApproveWithdrawal, useRejectWithdrawal,
-  useGetAdminSettings, getGetAdminWithdrawalsQueryKey,
+  useGetAdminWithdrawals, useApproveWithdrawal, useRejectWithdrawal, getGetAdminWithdrawalsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layout/admin-layout";
@@ -12,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
-  CheckCircle2, XCircle, Clock, Wallet, Zap, AlertTriangle,
+  CheckCircle2, XCircle, Clock, Wallet, Zap,
   Phone, Calendar, ArrowRight, User, Ban,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -49,47 +48,28 @@ const card = {
 export default function AdminWithdrawals() {
   const [statusFilter, setStatusFilter] = useState("pending");
   const { data: withdrawals, isLoading } = useGetAdminWithdrawals({ status: statusFilter || undefined });
-  const { data: settings } = useGetAdminSettings();
   const approveWithdrawal = useApproveWithdrawal();
   const rejectWithdrawal  = useRejectWithdrawal();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [rejectData, setRejectData] = useState<{ id: number; reason: string } | null>(null);
-  const [confirmAutoId, setConfirmAutoId] = useState<number | null>(null);
   const [codeConfirm, setCodeConfirm] = useState<{ id: number; code: string } | null>(null);
-
-  const isAutoMode = settings?.paymentMode === "auto";
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getGetAdminWithdrawalsQueryKey() });
 
   const doApprove = (id: number, confirmationCode: string) => {
     approveWithdrawal.mutate({ withdrawalId: id, data: { confirmationCode } }, {
       onSuccess: (data: any) => {
         invalidate();
-        if (data?.payoutError) {
-          toast({ title: "⚠️ Payout échoué — retrait resté en attente", description: `${data.payoutError}. Vérifiez votre configuration AshtechPay puis réessayez.`, variant: "destructive" });
-        } else if (isAutoMode) {
-          toast({ title: "⚡ Payout automatique déclenché" });
-        } else {
-          toast({ title: "✅ Retrait validé" });
-        }
-        setConfirmAutoId(null);
+        toast({ title: "✅ Retrait validé" });
         setCodeConfirm(null);
       },
       onError: (err: any) => toast({ title: "Erreur", description: err?.data?.error, variant: "destructive" }),
     });
   };
 
-  // Étape 1 : si mode auto, on demande d'abord confirmation ; étape 2 (toujours) : code secret
   const handleApproveClick = (id: number) => {
-    if (isAutoMode) setConfirmAutoId(id);
-    else setCodeConfirm({ id, code: "" });
-  };
-
-  const handleAutoConfirmed = () => {
-    if (confirmAutoId === null) return;
-    setCodeConfirm({ id: confirmAutoId, code: "" });
-    setConfirmAutoId(null);
+    setCodeConfirm({ id, code: "" });
   };
 
   const handleCodeSubmit = () => {
@@ -132,11 +112,6 @@ export default function AdminWithdrawals() {
             <span className="bg-gray-100 text-gray-500 text-xs font-bold px-2.5 py-1 rounded-full">
               {list.length} demande{list.length !== 1 ? "s" : ""}
             </span>
-            {isAutoMode && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-blue-100 text-blue-700 border border-blue-200 rounded-full px-2.5 py-1">
-                <Zap className="h-3 w-3" /> Auto
-              </span>
-            )}
           </div>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -288,16 +263,10 @@ export default function AdminWithdrawals() {
                           onClick={() => handleApproveClick(w.id)}
                           disabled={approveWithdrawal.isPending}
                           className="flex items-center justify-center gap-2 h-11 rounded-2xl text-white font-black text-[13px] transition-all active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
-                          style={{
-                            background: isAutoMode
-                              ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
-                              : "linear-gradient(135deg, #10b981, #059669)",
-                          }}
+                          style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}
                         >
                           {approveWithdrawal.isPending ? (
                             <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                          ) : isAutoMode ? (
-                            <><Zap className="h-4 w-4" /> Valider auto</>
                           ) : (
                             <><CheckCircle2 className="h-4 w-4" /> Valider</>
                           )}
@@ -357,42 +326,6 @@ export default function AdminWithdrawals() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Dialog : Confirmation payout auto ────── */}
-      <Dialog open={confirmAutoId !== null} onOpenChange={() => setConfirmAutoId(null)}>
-        <DialogContent className="rounded-3xl border-0 shadow-2xl max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-black text-[18px] flex items-center gap-2.5">
-              <span className="h-9 w-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
-                <Zap className="h-5 w-5 text-blue-600" />
-              </span>
-              Confirmer le payout auto
-            </DialogTitle>
-          </DialogHeader>
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-            <p className="text-sm text-amber-700 leading-relaxed">
-              Le <strong>montant net</strong> sera envoyé directement sur le Mobile Money de l'utilisateur via AshtechPay.
-              L'opération est <strong>irréversible</strong> une fois lancée.
-            </p>
-          </div>
-          <DialogFooter className="gap-2 pt-1">
-            <button
-              className="flex-1 h-11 rounded-2xl border border-gray-200 bg-white font-bold text-gray-700 text-sm hover:bg-gray-50 transition-all"
-              onClick={() => setConfirmAutoId(null)}
-            >
-              Annuler
-            </button>
-            <button
-              className="flex-1 h-11 rounded-2xl text-white font-black text-sm transition-all disabled:opacity-60 shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
-              style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}
-              onClick={handleAutoConfirmed}
-            >
-              <Zap className="h-4 w-4" /> Continuer
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* ── Dialog : Code de confirmation secret ─── */}
       <Dialog open={!!codeConfirm} onOpenChange={() => setCodeConfirm(null)}>
         <DialogContent className="rounded-3xl border-0 shadow-2xl max-w-sm">
@@ -406,7 +339,7 @@ export default function AdminWithdrawals() {
           </DialogHeader>
           <div className="space-y-2">
             <p className="text-sm text-gray-500">
-              Saisissez le code secret pour valider ce retrait{isAutoMode ? " et déclencher le payout automatique" : ""}.
+              Saisissez le code secret pour valider ce retrait.
             </p>
             <Label className="text-sm font-bold text-gray-700">
               Code secret <span className="text-red-500">*</span>
