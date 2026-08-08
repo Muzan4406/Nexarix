@@ -5,6 +5,7 @@ import { Bell, Plus, Trash2, Send, Users, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Notification {
   id: number;
@@ -15,15 +16,18 @@ interface Notification {
 
 export default function AdminNotifications() {
   const { toast } = useToast();
+  const { token } = useAuth() as any;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [form, setForm] = useState({ title: "", message: "" });
   const [showForm, setShowForm] = useState(false);
 
+  const authHeaders = () => ({ Authorization: `Bearer ${token}` });
+
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("/api/admin/notifications", { credentials: "include" });
+      const res = await fetch("/api/admin/notifications", { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -43,8 +47,7 @@ export default function AdminNotifications() {
     try {
       const res = await fetch("/api/admin/notifications", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(form),
       });
       if (res.ok) {
@@ -65,7 +68,7 @@ export default function AdminNotifications() {
 
   const handleDelete = async (id: number) => {
     try {
-      const res = await fetch(`/api/admin/notifications/${id}`, { method: "DELETE", credentials: "include" });
+      const res = await fetch(`/api/admin/notifications/${id}`, { method: "DELETE", headers: authHeaders() });
       if (res.ok) {
         setNotifications(prev => prev.filter(n => n.id !== id));
         toast({ title: "Supprimée" });
