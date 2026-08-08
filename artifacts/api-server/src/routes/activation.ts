@@ -350,11 +350,10 @@ router.post("/spin", authMiddleware, async (req, res) => {
 
 // ─── Internal: activate user + welcome bonus ──────────────────────────────────
 async function activateUser(user: any) {
+  // No welcome bonus — only the spin wheel grants a bonus after activation
   await db.update(usersTable).set({
     status: "active",
     membership: "Premium",
-    balance: sql`${usersTable.balance} + ${WELCOME_BONUS}`,
-    welcomeBonus: sql`${usersTable.welcomeBonus} + ${WELCOME_BONUS}`,
   }).where(eq(usersTable.id, user.id));
 
   await sendTelegramNotification(

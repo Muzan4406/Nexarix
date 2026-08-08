@@ -44,18 +44,27 @@ export default function Store() {
     <AppLayout>
       <div className="space-y-6">
 
-        {/* Header */}
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-purple-500 to-fuchsia-500 flex items-center justify-center shadow-md shadow-purple-200">
-              <ShoppingBag className="h-4.5 w-4.5 text-white" />
-            </div>
+        {/* ── Hero ─────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: -14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
+          className="relative overflow-hidden rounded-[22px] text-white"
+          style={{ background: "linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%)" }}
+        >
+          <div className="pointer-events-none absolute -top-8 -right-8 h-36 w-36 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-white/5" />
+          <div className="relative z-10 p-5 flex items-center justify-between">
             <div>
-              <h1 className="font-black text-gray-900 text-xl leading-tight">Store Premium</h1>
-              <p className="text-xs text-gray-400 font-medium">Applications & outils exclusifs</p>
+              <p className="text-purple-200 text-[10px] font-bold uppercase tracking-widest mb-0.5">Nexarix</p>
+              <h1 className="font-black text-xl leading-tight">Store Premium</h1>
+              <p className="text-purple-200 text-xs font-medium mt-0.5">Applications & outils exclusifs</p>
+            </div>
+            <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0">
+              <ShoppingBag className="h-6 w-6 text-white" />
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filters */}
         {!isLoading && categories.length > 1 && (

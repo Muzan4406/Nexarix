@@ -37,7 +37,7 @@ export default function Withdrawals() {
   const minWithdrawal = (publicSettings as any)?.minWithdrawal ?? 3000;
   const operators = user?.country ? (OPERATORS_BY_COUNTRY[user.country] || []) : [];
   const amountNum = parseFloat(form.amount) || 0;
-  const feeEstimate = form.amount ? Math.round(amountNum * 0.05) : 0;
+  const feeEstimate = form.amount ? 500 : 0;
   const netEstimate = form.amount ? Math.round(amountNum - feeEstimate) : 0;
   const validAmount = amountNum >= minWithdrawal;
 
@@ -102,7 +102,7 @@ export default function Withdrawals() {
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Min: {minWithdrawal.toLocaleString("fr-FR")} {getCurrencyCode(user?.country)}</div>
-              <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Frais: 5%</div>
+              <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Frais fixes: 500 F</div>
               <div className="bg-white/20 rounded-xl px-3 py-1.5 text-xs font-bold">Délai: 24h</div>
             </div>
           </div>
@@ -240,7 +240,7 @@ export default function Withdrawals() {
                   <span className="font-black">{formatCurrency(amountNum, user?.country)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 font-semibold">Frais (5%)</span>
+                  <span className="text-gray-500 font-semibold">Frais fixes</span>
                   <span className="font-black text-red-500">- {formatCurrency(feeEstimate, user?.country)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-gray-200">

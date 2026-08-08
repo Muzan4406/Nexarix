@@ -7,7 +7,7 @@ import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 
 const router = Router();
 const DEFAULT_MIN_WITHDRAWAL = 3000;
-const FEE_RATE = 0.05;
+const FLAT_FEE = 500; // frais fixes en FCFA
 
 router.get("/withdrawals", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
@@ -54,7 +54,7 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     return;
   }
 
-  const fee = Math.round(amount * FEE_RATE * 100) / 100;
+  const fee = FLAT_FEE;
   const amountNet = Math.round((amount - fee) * 100) / 100;
 
   // Deduct from appropriate balance
@@ -90,7 +90,7 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     `📱 Téléphone: ${escapeHtml(String(phone))}\n` +
     `🏦 Opérateur: ${escapeHtml(String(operator))}\n` +
     `💰 Montant brut: <b>${amount.toLocaleString()} FCFA</b>\n` +
-    `📉 Frais (5%): ${fee.toLocaleString()} FCFA\n` +
+    `📉 Frais fixes: ${fee.toLocaleString()} FCFA\n` +
     `✅ Montant net: <b>${amountNet.toLocaleString()} FCFA</b>`
   );
 

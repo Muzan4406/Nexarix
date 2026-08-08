@@ -82971,7 +82971,7 @@ var tasks_default = router4;
 var import_express5 = __toESM(require_express2(), 1);
 var router5 = (0, import_express5.Router)();
 var DEFAULT_MIN_WITHDRAWAL = 3e3;
-var FEE_RATE = 0.05;
+var FLAT_FEE = 500;
 router5.get("/withdrawals", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const withdrawals = await db.select().from(withdrawalsTable).where(eq(withdrawalsTable.userId, userId)).orderBy(sql`${withdrawalsTable.createdAt} DESC`);
@@ -83001,7 +83001,7 @@ router5.post("/withdrawals", authMiddleware, async (req, res) => {
     res.status(400).json({ error: "Solde insuffisant" });
     return;
   }
-  const fee = Math.round(amount * FEE_RATE * 100) / 100;
+  const fee = FLAT_FEE;
   const amountNet = Math.round((amount - fee) * 100) / 100;
   const balanceUpdate = isTaskWithdrawal ? { taskBalance: sql`${usersTable.taskBalance} - ${amount}` } : { balance: sql`${usersTable.balance} - ${amount}` };
   await db.update(usersTable).set({
@@ -83028,7 +83028,7 @@ router5.post("/withdrawals", authMiddleware, async (req, res) => {
 \u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(String(phone))}
 \u{1F3E6} Op\xE9rateur: ${escapeHtml(String(operator))}
 \u{1F4B0} Montant brut: <b>${amount.toLocaleString()} FCFA</b>
-\u{1F4C9} Frais (5%): ${fee.toLocaleString()} FCFA
+\u{1F4C9} Frais fixes: ${fee.toLocaleString()} FCFA
 \u2705 Montant net: <b>${amountNet.toLocaleString()} FCFA</b>`
   );
   res.status(201).json(formatWithdrawal(withdrawal));
@@ -83880,7 +83880,6 @@ var admin_default = router7;
 var import_express8 = __toESM(require_express2(), 1);
 var router8 = (0, import_express8.Router)();
 var ASHTECHPAY_BASE = "https://ashtechpay.top";
-var WELCOME_BONUS = 50;
 var REFERRAL_BONUS_AMOUNT = 1500;
 var REFERRAL_BONUS_STEP = 10;
 var COUNTRY_ISO2 = {
@@ -84196,9 +84195,7 @@ router8.post("/spin", authMiddleware, async (req, res) => {
 async function activateUser(user) {
   await db.update(usersTable).set({
     status: "active",
-    membership: "Premium",
-    balance: sql`${usersTable.balance} + ${WELCOME_BONUS}`,
-    welcomeBonus: sql`${usersTable.welcomeBonus} + ${WELCOME_BONUS}`
+    membership: "Premium"
   }).where(eq(usersTable.id, user.id));
   await sendTelegramNotification(
     `\u{1F4B0} <b>Nouveau d\xE9p\xF4t / Activation</b>
