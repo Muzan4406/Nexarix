@@ -88,18 +88,20 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{
-      background: "linear-gradient(145deg, #f0fdf9 0%, #ecfeff 40%, #eff6ff 100%)"
-    }}>
-      {/* Decorative blobs */}
-      <div className="pointer-events-none fixed top-0 right-0 w-[500px] h-[500px] opacity-30"
-        style={{ background: "radial-gradient(circle at 80% 20%, #34d39950 0%, transparent 60%)" }} />
-      <div className="pointer-events-none fixed bottom-0 left-0 w-[400px] h-[400px] opacity-20"
-        style={{ background: "radial-gradient(circle at 20% 80%, #38bdf850 0%, transparent 60%)" }} />
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
+      style={{ background: "linear-gradient(145deg, #050d1f 0%, #0b1a3e 45%, #0d1f3c 100%)" }}>
 
-      {/* Geometric ring top-left */}
-      <div className="pointer-events-none fixed -top-24 -left-24 h-64 w-64 rounded-full border-[40px] border-teal-100/60" />
-      <div className="pointer-events-none fixed -bottom-16 -right-16 h-48 w-48 rounded-full border-[30px] border-blue-100/60" />
+      {/* Glow blobs */}
+      <div className="pointer-events-none fixed top-[-120px] left-[-80px] w-[480px] h-[480px] rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%)", filter: "blur(40px)" }} />
+      <div className="pointer-events-none fixed bottom-[-100px] right-[-60px] w-[420px] h-[420px] rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(99,102,241,0.20) 0%, transparent 70%)", filter: "blur(50px)" }} />
+      <div className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px]"
+        style={{ background: "radial-gradient(ellipse, rgba(14,165,233,0.08) 0%, transparent 70%)", filter: "blur(30px)" }} />
+
+      {/* Subtle grid overlay */}
+      <div className="pointer-events-none fixed inset-0 opacity-[0.03]"
+        style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
 
       <div className="w-full max-w-sm px-5 py-8 relative z-10">
         {/* Logo */}
@@ -119,7 +121,7 @@ export default function Login() {
             />
           </div>
           <h1 className="font-black text-[30px] tracking-tight"
-            style={{ background: "linear-gradient(135deg, #1e3a8a, #0f766e)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            style={{ background: "linear-gradient(135deg, #34d399, #38bdf8, #818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             NEXARIX
           </h1>
           <p className="text-slate-400 text-[12px] font-semibold tracking-wider uppercase mt-0.5">
@@ -132,7 +134,7 @@ export default function Login() {
           initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.07, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
-          className="bg-white rounded-[28px] shadow-xl shadow-slate-200/80 overflow-hidden border border-slate-100"
+          className="bg-white rounded-[28px] shadow-2xl shadow-black/40 overflow-hidden border border-white/10"
         >
           {/* Top accent bar */}
           <div className="h-1.5" style={{ background: "linear-gradient(90deg, #10b981, #0ea5e9, #1d4ed8)" }} />
@@ -273,7 +275,7 @@ export default function Login() {
 
         <motion.p
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-          className="mt-4 text-slate-300 text-[11px] text-center"
+          className="mt-4 text-slate-600 text-[11px] text-center"
         >
           © 2025 Nexarix · Tous droits réservés
         </motion.p>

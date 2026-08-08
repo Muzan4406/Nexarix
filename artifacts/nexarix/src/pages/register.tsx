@@ -77,15 +77,17 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start relative overflow-hidden py-8 px-5"
-      style={{ background: "linear-gradient(145deg, #f0fdf9 0%, #ecfeff 40%, #eff6ff 100%)" }}>
+      style={{ background: "linear-gradient(145deg, #050d1f 0%, #0b1a3e 45%, #0d1f3c 100%)" }}>
 
-      {/* Decorative blobs */}
-      <div className="pointer-events-none fixed top-0 right-0 w-[500px] h-[500px] opacity-25"
-        style={{ background: "radial-gradient(circle at 80% 10%, #34d39950 0%, transparent 60%)" }} />
-      <div className="pointer-events-none fixed bottom-0 left-0 w-[400px] h-[400px] opacity-20"
-        style={{ background: "radial-gradient(circle at 20% 90%, #38bdf850 0%, transparent 60%)" }} />
-      <div className="pointer-events-none fixed -top-24 -left-24 h-64 w-64 rounded-full border-[40px] border-teal-100/60" />
-      <div className="pointer-events-none fixed -bottom-16 -right-16 h-48 w-48 rounded-full border-[30px] border-blue-100/60" />
+      {/* Glow blobs */}
+      <div className="pointer-events-none fixed top-[-120px] left-[-80px] w-[480px] h-[480px] rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%)", filter: "blur(40px)" }} />
+      <div className="pointer-events-none fixed bottom-[-100px] right-[-60px] w-[420px] h-[420px] rounded-full"
+        style={{ background: "radial-gradient(circle, rgba(99,102,241,0.20) 0%, transparent 70%)", filter: "blur(50px)" }} />
+      <div className="pointer-events-none fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px]"
+        style={{ background: "radial-gradient(ellipse, rgba(14,165,233,0.08) 0%, transparent 70%)", filter: "blur(30px)" }} />
+      <div className="pointer-events-none fixed inset-0 opacity-[0.03]"
+        style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
 
       <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
@@ -105,7 +107,7 @@ export default function Register() {
             />
           </div>
           <h1 className="font-black text-[28px] tracking-tight"
-            style={{ background: "linear-gradient(135deg, #1e3a8a, #0f766e)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            style={{ background: "linear-gradient(135deg, #34d399, #38bdf8, #818cf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             NEXARIX
           </h1>
           <p className="text-slate-400 text-[11px] font-semibold tracking-wider uppercase mt-0.5">
