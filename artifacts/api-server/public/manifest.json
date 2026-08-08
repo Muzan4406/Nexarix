@@ -1,0 +1,33 @@
+{
+  "name": "Nexarix — Plateforme d'Affiliation",
+  "short_name": "Nexarix",
+  "description": "Complète des tâches, développe ton réseau et génère des revenus depuis ton téléphone.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0fdf9",
+  "theme_color": "#10b981",
+  "lang": "fr",
+  "scope": "/",
+  "categories": ["finance", "business"],
+  "icons": [
+    { "src": "/icons/pwa/icon-72.png",           "sizes": "72x72",     "type": "image/png" },
+    { "src": "/icons/pwa/icon-96.png",           "sizes": "96x96",     "type": "image/png" },
+    { "src": "/icons/pwa/icon-128.png",          "sizes": "128x128",   "type": "image/png" },
+    { "src": "/icons/pwa/icon-144.png",          "sizes": "144x144",   "type": "image/png" },
+    { "src": "/icons/pwa/icon-152.png",          "sizes": "152x152",   "type": "image/png" },
+    { "src": "/icons/pwa/icon-192.png",          "sizes": "192x192",   "type": "image/png", "purpose": "any" },
+    { "src": "/icons/pwa/icon-384.png",          "sizes": "384x384",   "type": "image/png" },
+    { "src": "/icons/pwa/icon-512.png",          "sizes": "512x512",   "type": "image/png", "purpose": "any" },
+    { "src": "/icons/pwa/icon-maskable-512.png", "sizes": "512x512",   "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/pwa/splash.png",
+      "sizes": "1242x2208",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Nexarix — Tableau de bord"
+    }
+  ]
+}
