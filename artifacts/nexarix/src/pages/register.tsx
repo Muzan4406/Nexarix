@@ -96,15 +96,15 @@ export default function Register() {
           className="flex flex-col items-center mb-6"
         >
           <div className="relative mb-3">
-            <div className="absolute inset-0 rounded-full blur-2xl opacity-30"
-              style={{ background: "linear-gradient(135deg, #10b981, #0ea5e9)" }} />
+            <div className="absolute inset-0 blur-3xl opacity-25 scale-125"
+              style={{ background: "radial-gradient(circle, #10b981 0%, #0ea5e9 60%, transparent 100%)" }} />
             <img
               src={`${BASE}logo.png`}
               alt="Nexarix"
-              className="relative h-20 w-20 object-contain drop-shadow-xl"
+              className="relative h-32 w-32 object-contain drop-shadow-2xl"
             />
           </div>
-          <h1 className="font-black text-[26px] tracking-tight"
+          <h1 className="font-black text-[28px] tracking-tight"
             style={{ background: "linear-gradient(135deg, #1e3a8a, #0f766e)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             NEXARIX
           </h1>
