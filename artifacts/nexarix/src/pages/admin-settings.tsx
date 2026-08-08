@@ -118,7 +118,7 @@ export default function AdminSettings() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">URLs générées pour Sendavapay</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">URL Webhook AshtechPay</p>
 
               <div className="bg-muted rounded-lg p-3 space-y-2">
                 <div>
@@ -157,7 +157,7 @@ export default function AdminSettings() {
               </div>
 
               <p className="text-xs text-amber-600 dark:text-amber-400">
-                ⚠️ Copiez ces URLs dans votre tableau de bord Sendavapay. Après changement de domaine, mettez à jour l'URL de base et re-copiez.
+                ⚠️ Copiez l'URL Webhook dans votre tableau de bord AshtechPay (champ <strong>notify_url</strong>). Après changement de domaine, mettez à jour l'URL de base et re-copiez.
               </p>
             </div>
           </CardContent>
@@ -218,7 +218,7 @@ export default function AdminSettings() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Key className="h-4 w-4 text-primary" />
-              Mode de paiement — Sendavapay
+              Mode de paiement — AshtechPay
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -227,8 +227,8 @@ export default function AdminSettings() {
                 <p className="font-semibold text-sm">Paiement automatique</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {form.paymentMode === "auto"
-                    ? "✅ Activé — Les utilisateurs paient via Sendavapay automatiquement"
-                    : "❌ Désactivé — Paiement manuel via WhatsApp/Telegram"
+                    ? "✅ Activé — Les utilisateurs paient via AshtechPay automatiquement"
+                    : "❌ Désactivé — Paiement manuel via WhatsApp"
                   }
                 </p>
               </div>
@@ -244,31 +244,20 @@ export default function AdminSettings() {
             </div>
 
             {form.paymentMode === "auto" && (
-              <>
-                <div>
-                  <Label className="flex items-center gap-2 mb-1.5">
-                    <Key className="h-4 w-4 text-amber-500" />Clé API Sendavapay
-                  </Label>
-                  <Input
-                    value={form.sendavapayApiKey}
-                    onChange={e => setForm(f => ({ ...f, sendavapayApiKey: e.target.value }))}
-                    placeholder="sk_live_..."
-                    type="password"
-                  />
-                </div>
-                <div>
-                  <Label className="flex items-center gap-2 mb-1.5">
-                    <Key className="h-4 w-4 text-purple-500" />Secret Webhook Sendavapay
-                  </Label>
-                  <Input
-                    value={form.sendavapayWebhookSecret}
-                    onChange={e => setForm(f => ({ ...f, sendavapayWebhookSecret: e.target.value }))}
-                    placeholder="whsec_..."
-                    type="password"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Disponible dans votre tableau de bord Sendavapay sous "Webhooks".</p>
-                </div>
-              </>
+              <div>
+                <Label className="flex items-center gap-2 mb-1.5">
+                  <Key className="h-4 w-4 text-amber-500" />Clé API AshtechPay
+                </Label>
+                <Input
+                  value={form.sendavapayApiKey}
+                  onChange={e => setForm(f => ({ ...f, sendavapayApiKey: e.target.value }))}
+                  placeholder="ak_live_..."
+                  type="password"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Clé Bearer disponible dans votre tableau de bord AshtechPay (ashtechpay.top).
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

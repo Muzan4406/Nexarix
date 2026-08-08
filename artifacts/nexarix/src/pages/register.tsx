@@ -101,7 +101,7 @@ export default function Register() {
             <img
               src={`${BASE}logo.png`}
               alt="Nexarix"
-              className="relative h-32 w-32 object-contain drop-shadow-2xl"
+              className="relative h-48 w-48 object-contain drop-shadow-2xl"
             />
           </div>
           <h1 className="font-black text-[28px] tracking-tight"

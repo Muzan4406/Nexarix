@@ -110,7 +110,7 @@ export default function Login() {
             <img
               src={`${BASE}logo.png`}
               alt="Nexarix"
-              className="relative h-36 w-36 object-contain drop-shadow-2xl"
+              className="relative h-56 w-56 object-contain drop-shadow-2xl"
             />
           </div>
           <h1 className="font-black text-[30px] tracking-tight"

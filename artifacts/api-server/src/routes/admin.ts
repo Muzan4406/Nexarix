@@ -636,7 +636,8 @@ router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMi
   const w = withdrawal.withdrawal;
 
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  const isAutoMode = settings?.paymentMode === "auto" && !!settings?.sendavapayApiKey;
+  // AshtechPay only supports Pay-In (collect). Withdrawals are always manual.
+  const isAutoMode = false;
 
   let sendavapayRef: string | null = null;
   let sendavapayStatus: string | null = null;
