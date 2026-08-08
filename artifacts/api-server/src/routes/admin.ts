@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { db } from "@workspace/db";
 import { usersTable, tasksTable, withdrawalsTable, siteSettingsTable, taskCompletionsTable, adminOtpSessionsTable } from "@workspace/db";
-import { eq, or, ilike, sql, inArray, lt, desc } from "drizzle-orm";
+import { eq, or, ilike, sql, inArray, lt, desc, and } from "drizzle-orm";
 import { signToken, authMiddleware, adminMiddleware } from "../lib/auth";
 import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 import { adminLoginLimiter, otpLimiter, alertIntrusion, withdrawalConfirmLimiter } from "../lib/security";
@@ -759,15 +759,33 @@ router.patch("/admin/withdrawals/:withdrawalId/reject", authMiddleware, adminMid
     return;
   }
 
-  await db.update(usersTable).set({
-    balance: sql`${usersTable.balance} + ${withUser.withdrawal.amountGross}`,
-    totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${withUser.withdrawal.amountNet}`,
-  }).where(eq(usersTable.id, withUser.userId));
+  // ── Guard : seul un retrait "pending" peut être rejeté ───────────────────
+  if (withUser.withdrawal.status !== "pending") {
+    res.status(409).json({ error: "Ce retrait n'est plus en attente" });
+    return;
+  }
 
+  // ── Remboursement atomique sur le bon solde ───────────────────────────────
+  // Marque d'abord le retrait "rejected" (transition atomique via WHERE status=pending)
   const [updated] = await db.update(withdrawalsTable)
     .set({ status: "rejected", rejectionReason: reason })
-    .where(eq(withdrawalsTable.id, withdrawalId))
+    .where(and(eq(withdrawalsTable.id, withdrawalId), eq(withdrawalsTable.status, "pending")))
     .returning();
+
+  if (!updated) {
+    // Un autre processus a déjà modifié ce retrait entre la lecture et l'écriture
+    res.status(409).json({ error: "Ce retrait n'est plus en attente (conflit)" });
+    return;
+  }
+
+  // Rembourse sur le bon solde selon le type de retrait
+  const isTaskWithdrawal = withUser.withdrawal.type === "Tâches";
+  await db.update(usersTable).set({
+    ...(isTaskWithdrawal
+      ? { taskBalance: sql`${usersTable.taskBalance} + ${withUser.withdrawal.amountGross}` }
+      : { balance: sql`${usersTable.balance} + ${withUser.withdrawal.amountGross}` }),
+    totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${withUser.withdrawal.amountNet}`,
+  }).where(eq(usersTable.id, withUser.userId));
 
   sendTelegramNotification(
     `❌ <b>Retrait rejeté</b>\n` +

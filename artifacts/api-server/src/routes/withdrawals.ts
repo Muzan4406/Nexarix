@@ -1,13 +1,16 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { withdrawalsTable, usersTable, siteSettingsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
 import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 
 const router = Router();
 const DEFAULT_MIN_WITHDRAWAL = 3000;
 const FLAT_FEE = 500; // frais fixes en FCFA
+const ALLOWED_TYPES = ["Balance", "Tâches"] as const;
+const MAX_PHONE_LEN = 20;
+const MAX_OPERATOR_LEN = 60;
 
 router.get("/withdrawals", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
@@ -21,11 +24,34 @@ router.get("/withdrawals", authMiddleware, async (req, res) => {
 
 router.post("/withdrawals", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
-  // type: "Balance" (parrainage) | "Tâches" (task earnings)
-  const { type, operator, phone, amount } = req.body;
+  const { type, operator, phone, amount: rawAmount } = req.body;
 
-  if (!type || !operator || !phone || !amount) {
+  // ── Validation des champs obligatoires ────────────────────────────────────
+  if (!type || !operator || !phone || rawAmount === undefined || rawAmount === null) {
     res.status(400).json({ error: "Tous les champs sont requis" });
+    return;
+  }
+
+  // ── Validation du type ────────────────────────────────────────────────────
+  if (!(ALLOWED_TYPES as readonly string[]).includes(type)) {
+    res.status(400).json({ error: "Type de retrait invalide" });
+    return;
+  }
+
+  // ── Validation du montant (NaN / négatif / non-numérique) ─────────────────
+  const amount = typeof rawAmount === "string" ? parseFloat(rawAmount) : Number(rawAmount);
+  if (!isFinite(amount) || amount <= 0) {
+    res.status(400).json({ error: "Montant invalide" });
+    return;
+  }
+
+  // ── Validation opérateur / téléphone ──────────────────────────────────────
+  if (typeof operator !== "string" || operator.trim().length === 0 || operator.length > MAX_OPERATOR_LEN) {
+    res.status(400).json({ error: "Opérateur invalide" });
+    return;
+  }
+  if (typeof phone !== "string" || phone.trim().length === 0 || phone.length > MAX_PHONE_LEN) {
+    res.status(400).json({ error: "Numéro de téléphone invalide" });
     return;
   }
 
@@ -37,43 +63,41 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     return;
   }
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user) {
-    res.status(404).json({ error: "Utilisateur introuvable" });
-    return;
-  }
-
-  // Choose balance source
   const isTaskWithdrawal = type === "Tâches";
-  const currentBalance = isTaskWithdrawal
-    ? parseFloat(user.taskBalance || "0")
-    : parseFloat(user.balance || "0");
-
-  if (currentBalance < amount) {
-    res.status(400).json({ error: "Solde insuffisant" });
-    return;
-  }
-
   const fee = FLAT_FEE;
   const amountNet = Math.round((amount - fee) * 100) / 100;
 
-  // Deduct from appropriate balance
-  const balanceUpdate = isTaskWithdrawal
-    ? { taskBalance: sql`${usersTable.taskBalance} - ${amount}` }
-    : { balance: sql`${usersTable.balance} - ${amount}` };
-
-  await db.update(usersTable)
+  // ── Déduction atomique : vérifie le solde ET débite en une seule requête ──
+  // Empêche la race condition (double retrait simultané)
+  const balanceCol = isTaskWithdrawal ? usersTable.taskBalance : usersTable.balance;
+  const updateResult = await db.update(usersTable)
     .set({
-      ...balanceUpdate,
+      ...(isTaskWithdrawal
+        ? { taskBalance: sql`${usersTable.taskBalance} - ${amount}` }
+        : { balance: sql`${usersTable.balance} - ${amount}` }),
       totalWithdrawn: sql`${usersTable.totalWithdrawn} + ${amountNet}`,
     })
-    .where(eq(usersTable.id, userId));
+    .where(
+      and(
+        eq(usersTable.id, userId),
+        sql`${balanceCol}::numeric >= ${amount}`,  // solde suffisant au moment de l'update
+      )
+    )
+    .returning({ id: usersTable.id, username: usersTable.username, country: usersTable.country });
+
+  if (updateResult.length === 0) {
+    // Soit l'utilisateur n'existe pas, soit le solde est insuffisant
+    res.status(400).json({ error: "Solde insuffisant ou utilisateur introuvable" });
+    return;
+  }
+
+  const user = updateResult[0];
 
   const [withdrawal] = await db.insert(withdrawalsTable).values({
     userId,
     type,
-    operator,
-    phone,
+    operator: operator.trim(),
+    phone: phone.trim(),
     country: user.country || null,
     amountGross: amount.toString(),
     fee: fee.toString(),
@@ -87,8 +111,8 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     `📂 Type: <b>${typeLabel}</b>\n` +
     `👤 Utilisateur: <b>${escapeHtml(user.username)}</b>\n` +
     `🌍 Pays: ${escapeHtml(user.country || "—")}\n` +
-    `📱 Téléphone: ${escapeHtml(String(phone))}\n` +
-    `🏦 Opérateur: ${escapeHtml(String(operator))}\n` +
+    `📱 Téléphone: ${escapeHtml(phone.trim())}\n` +
+    `🏦 Opérateur: ${escapeHtml(operator.trim())}\n` +
     `💰 Montant brut: <b>${amount.toLocaleString()} FCFA</b>\n` +
     `📉 Frais fixes: ${fee.toLocaleString()} FCFA\n` +
     `✅ Montant net: <b>${amountNet.toLocaleString()} FCFA</b>`

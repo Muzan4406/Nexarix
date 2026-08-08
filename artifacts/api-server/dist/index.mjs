@@ -82925,6 +82925,9 @@ var import_express5 = __toESM(require_express2(), 1);
 var router5 = (0, import_express5.Router)();
 var DEFAULT_MIN_WITHDRAWAL = 3e3;
 var FLAT_FEE = 500;
+var ALLOWED_TYPES = ["Balance", "T\xE2ches"];
+var MAX_PHONE_LEN = 20;
+var MAX_OPERATOR_LEN = 60;
 router5.get("/withdrawals", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const withdrawals = await db.select().from(withdrawalsTable).where(eq(withdrawalsTable.userId, userId)).orderBy(sql`${withdrawalsTable.createdAt} DESC`);
@@ -82932,9 +82935,26 @@ router5.get("/withdrawals", authMiddleware, async (req, res) => {
 });
 router5.post("/withdrawals", authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const { type, operator, phone, amount } = req.body;
-  if (!type || !operator || !phone || !amount) {
+  const { type, operator, phone, amount: rawAmount } = req.body;
+  if (!type || !operator || !phone || rawAmount === void 0 || rawAmount === null) {
     res.status(400).json({ error: "Tous les champs sont requis" });
+    return;
+  }
+  if (!ALLOWED_TYPES.includes(type)) {
+    res.status(400).json({ error: "Type de retrait invalide" });
+    return;
+  }
+  const amount = typeof rawAmount === "string" ? parseFloat(rawAmount) : Number(rawAmount);
+  if (!isFinite(amount) || amount <= 0) {
+    res.status(400).json({ error: "Montant invalide" });
+    return;
+  }
+  if (typeof operator !== "string" || operator.trim().length === 0 || operator.length > MAX_OPERATOR_LEN) {
+    res.status(400).json({ error: "Op\xE9rateur invalide" });
+    return;
+  }
+  if (typeof phone !== "string" || phone.trim().length === 0 || phone.length > MAX_PHONE_LEN) {
+    res.status(400).json({ error: "Num\xE9ro de t\xE9l\xE9phone invalide" });
     return;
   }
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
@@ -82943,29 +82963,30 @@ router5.post("/withdrawals", authMiddleware, async (req, res) => {
     res.status(400).json({ error: `Minimum de retrait : ${minWithdrawal.toLocaleString("fr-FR")} FCFA` });
     return;
   }
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user) {
-    res.status(404).json({ error: "Utilisateur introuvable" });
-    return;
-  }
   const isTaskWithdrawal = type === "T\xE2ches";
-  const currentBalance = isTaskWithdrawal ? parseFloat(user.taskBalance || "0") : parseFloat(user.balance || "0");
-  if (currentBalance < amount) {
-    res.status(400).json({ error: "Solde insuffisant" });
-    return;
-  }
   const fee = FLAT_FEE;
   const amountNet = Math.round((amount - fee) * 100) / 100;
-  const balanceUpdate = isTaskWithdrawal ? { taskBalance: sql`${usersTable.taskBalance} - ${amount}` } : { balance: sql`${usersTable.balance} - ${amount}` };
-  await db.update(usersTable).set({
-    ...balanceUpdate,
+  const balanceCol = isTaskWithdrawal ? usersTable.taskBalance : usersTable.balance;
+  const updateResult = await db.update(usersTable).set({
+    ...isTaskWithdrawal ? { taskBalance: sql`${usersTable.taskBalance} - ${amount}` } : { balance: sql`${usersTable.balance} - ${amount}` },
     totalWithdrawn: sql`${usersTable.totalWithdrawn} + ${amountNet}`
-  }).where(eq(usersTable.id, userId));
+  }).where(
+    and(
+      eq(usersTable.id, userId),
+      sql`${balanceCol}::numeric >= ${amount}`
+      // solde suffisant au moment de l'update
+    )
+  ).returning({ id: usersTable.id, username: usersTable.username, country: usersTable.country });
+  if (updateResult.length === 0) {
+    res.status(400).json({ error: "Solde insuffisant ou utilisateur introuvable" });
+    return;
+  }
+  const user = updateResult[0];
   const [withdrawal] = await db.insert(withdrawalsTable).values({
     userId,
     type,
-    operator,
-    phone,
+    operator: operator.trim(),
+    phone: phone.trim(),
     country: user.country || null,
     amountGross: amount.toString(),
     fee: fee.toString(),
@@ -82978,8 +82999,8 @@ router5.post("/withdrawals", authMiddleware, async (req, res) => {
 \u{1F4C2} Type: <b>${typeLabel}</b>
 \u{1F464} Utilisateur: <b>${escapeHtml(user.username)}</b>
 \u{1F30D} Pays: ${escapeHtml(user.country || "\u2014")}
-\u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(String(phone))}
-\u{1F3E6} Op\xE9rateur: ${escapeHtml(String(operator))}
+\u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(phone.trim())}
+\u{1F3E6} Op\xE9rateur: ${escapeHtml(operator.trim())}
 \u{1F4B0} Montant brut: <b>${amount.toLocaleString()} FCFA</b>
 \u{1F4C9} Frais fixes: ${fee.toLocaleString()} FCFA
 \u2705 Montant net: <b>${amountNet.toLocaleString()} FCFA</b>`
@@ -83665,11 +83686,20 @@ router7.patch("/admin/withdrawals/:withdrawalId/reject", authMiddleware, adminMi
     res.status(404).json({ error: "Withdrawal not found" });
     return;
   }
+  if (withUser.withdrawal.status !== "pending") {
+    res.status(409).json({ error: "Ce retrait n'est plus en attente" });
+    return;
+  }
+  const [updated] = await db.update(withdrawalsTable).set({ status: "rejected", rejectionReason: reason }).where(and(eq(withdrawalsTable.id, withdrawalId), eq(withdrawalsTable.status, "pending"))).returning();
+  if (!updated) {
+    res.status(409).json({ error: "Ce retrait n'est plus en attente (conflit)" });
+    return;
+  }
+  const isTaskWithdrawal = withUser.withdrawal.type === "T\xE2ches";
   await db.update(usersTable).set({
-    balance: sql`${usersTable.balance} + ${withUser.withdrawal.amountGross}`,
+    ...isTaskWithdrawal ? { taskBalance: sql`${usersTable.taskBalance} + ${withUser.withdrawal.amountGross}` } : { balance: sql`${usersTable.balance} + ${withUser.withdrawal.amountGross}` },
     totalWithdrawn: sql`${usersTable.totalWithdrawn} - ${withUser.withdrawal.amountNet}`
   }).where(eq(usersTable.id, withUser.userId));
-  const [updated] = await db.update(withdrawalsTable).set({ status: "rejected", rejectionReason: reason }).where(eq(withdrawalsTable.id, withdrawalId)).returning();
   sendTelegramNotification(
     `\u274C <b>Retrait rejet\xE9</b>
 \u{1F464} Utilisateur: <b>${withUser.username}</b>
@@ -83836,18 +83866,17 @@ var FALLBACK_OPERATORS = {
   "CD": ["Afri Money", "Airtel", "Mpesa Money", "Orange", "Vodacom"]
 };
 router8.get("/settings/public", async (_req, res) => {
-  let [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (!settings) [settings] = await db.insert(siteSettingsTable).values({}).returning();
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
   res.json({
-    activationFee: parseFloat(settings.activationFee || "3800"),
-    paymentMode: settings.paymentMode || "manual",
-    minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
-    supportEmail: settings.supportEmail || null,
-    telegramLink: settings.telegramLink || null,
-    telegramChannel: settings.telegramChannel || null,
-    whatsappLink: settings.whatsappLink || null,
-    vcfLink: settings.vcfLink || null,
-    maintenanceMode: settings.maintenanceMode ?? false
+    activationFee: parseFloat(settings?.activationFee || "3800"),
+    paymentMode: settings?.paymentMode || "manual",
+    minWithdrawal: parseFloat(settings?.minWithdrawal || "3000"),
+    supportEmail: settings?.supportEmail || null,
+    telegramLink: settings?.telegramLink || null,
+    telegramChannel: settings?.telegramChannel || null,
+    whatsappLink: settings?.whatsappLink || null,
+    vcfLink: settings?.vcfLink || null,
+    maintenanceMode: settings?.maintenanceMode ?? false
   });
 });
 router8.get("/activate/countries", async (req, res) => {
@@ -85132,6 +85161,8 @@ var upload_default = router14;
 // src/routes/notifications.ts
 var import_express15 = __toESM(require_express2(), 1);
 var router15 = (0, import_express15.Router)();
+var TITLE_MAX = 200;
+var MESSAGE_MAX = 2e3;
 router15.get("/notifications", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const notifications = await db.select().from(notificationsTable).orderBy(desc(notificationsTable.createdAt)).limit(50);
@@ -85151,7 +85182,11 @@ router15.get("/notifications", authMiddleware, async (req, res) => {
 });
 router15.patch("/notifications/:id/read", authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const notificationId = parseInt(req.params.id);
+  const notificationId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(notificationId) || notificationId <= 0) {
+    res.status(400).json({ error: "ID invalide" });
+    return;
+  }
   const existing = await db.select().from(notificationReadsTable).where(and(
     eq(notificationReadsTable.userId, userId),
     eq(notificationReadsTable.notificationId, notificationId)
@@ -85174,21 +85209,24 @@ router15.patch("/notifications/read-all", authMiddleware, async (req, res) => {
   }
   res.json({ ok: true });
 });
-router15.post("/admin/notifications", authMiddleware, async (req, res) => {
+router15.post("/admin/notifications", authMiddleware, adminMiddleware, async (req, res) => {
   const userId = req.userId;
-  const [adminUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!adminUser?.isAdmin) {
-    res.status(403).json({ error: "Acc\xE8s refus\xE9" });
-    return;
-  }
   const { title, message } = req.body;
   if (!title || !message) {
     res.status(400).json({ error: "Titre et message requis" });
     return;
   }
+  if (typeof title !== "string" || title.trim().length === 0 || title.length > TITLE_MAX) {
+    res.status(400).json({ error: `Titre invalide (max ${TITLE_MAX} caract\xE8res)` });
+    return;
+  }
+  if (typeof message !== "string" || message.trim().length === 0 || message.length > MESSAGE_MAX) {
+    res.status(400).json({ error: `Message invalide (max ${MESSAGE_MAX} caract\xE8res)` });
+    return;
+  }
   const [notification] = await db.insert(notificationsTable).values({
-    title,
-    message,
+    title: title.trim(),
+    message: message.trim(),
     createdBy: userId
   }).returning();
   res.status(201).json({
@@ -85198,13 +85236,7 @@ router15.post("/admin/notifications", authMiddleware, async (req, res) => {
     createdAt: notification.createdAt?.toISOString()
   });
 });
-router15.get("/admin/notifications", authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  const [adminUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!adminUser?.isAdmin) {
-    res.status(403).json({ error: "Acc\xE8s refus\xE9" });
-    return;
-  }
+router15.get("/admin/notifications", authMiddleware, adminMiddleware, async (req, res) => {
   const notifications = await db.select().from(notificationsTable).orderBy(desc(notificationsTable.createdAt));
   res.json(notifications.map((n) => ({
     id: n.id,
@@ -85213,14 +85245,12 @@ router15.get("/admin/notifications", authMiddleware, async (req, res) => {
     createdAt: n.createdAt?.toISOString()
   })));
 });
-router15.delete("/admin/notifications/:id", authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  const [adminUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!adminUser?.isAdmin) {
-    res.status(403).json({ error: "Acc\xE8s refus\xE9" });
+router15.delete("/admin/notifications/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  const notifId = parseInt(req.params.id, 10);
+  if (!Number.isFinite(notifId) || notifId <= 0) {
+    res.status(400).json({ error: "ID invalide" });
     return;
   }
-  const notifId = parseInt(req.params.id);
   await db.delete(notificationReadsTable).where(eq(notificationReadsTable.notificationId, notifId));
   await db.delete(notificationsTable).where(eq(notificationsTable.id, notifId));
   res.json({ ok: true });

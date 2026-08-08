@@ -48,18 +48,18 @@ const FALLBACK_OPERATORS: Record<string, string[]> = {
 
 // ─── Public settings ─────────────────────────────────────────────────────────
 router.get("/settings/public", async (_req, res) => {
-  let [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (!settings) [settings] = await db.insert(siteSettingsTable).values({}).returning();
+  // Lecture seule — aucune écriture sur un endpoint public
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
   res.json({
-    activationFee: parseFloat(settings.activationFee || "3800"),
-    paymentMode: settings.paymentMode || "manual",
-    minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
-    supportEmail: settings.supportEmail || null,
-    telegramLink: settings.telegramLink || null,
-    telegramChannel: settings.telegramChannel || null,
-    whatsappLink: settings.whatsappLink || null,
-    vcfLink: settings.vcfLink || null,
-    maintenanceMode: settings.maintenanceMode ?? false,
+    activationFee: parseFloat(settings?.activationFee || "3800"),
+    paymentMode: settings?.paymentMode || "manual",
+    minWithdrawal: parseFloat(settings?.minWithdrawal || "3000"),
+    supportEmail: settings?.supportEmail || null,
+    telegramLink: settings?.telegramLink || null,
+    telegramChannel: settings?.telegramChannel || null,
+    whatsappLink: settings?.whatsappLink || null,
+    vcfLink: settings?.vcfLink || null,
+    maintenanceMode: settings?.maintenanceMode ?? false,
   });
 });
 

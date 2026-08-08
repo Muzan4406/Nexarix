@@ -4,6 +4,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { Bell, CheckCheck, Clock, Inbox } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Notification {
   id: number;
@@ -22,13 +23,16 @@ const fadeUp = {
 };
 
 export default function Notifications() {
+  const { token } = useAuth() as any;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
+  const authH = () => ({ Authorization: `Bearer ${token}` });
+
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("/api/notifications", { credentials: "include" });
+      const res = await fetch("/api/notifications", { headers: authH() });
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -44,7 +48,7 @@ export default function Notifications() {
 
   const markRead = async (id: number) => {
     try {
-      await fetch(`/api/notifications/${id}/read`, { method: "PATCH", credentials: "include" });
+      await fetch(`/api/notifications/${id}/read`, { method: "PATCH", headers: authH() });
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch {}
@@ -52,7 +56,7 @@ export default function Notifications() {
 
   const markAllRead = async () => {
     try {
-      await fetch("/api/notifications/read-all", { method: "PATCH", credentials: "include" });
+      await fetch("/api/notifications/read-all", { method: "PATCH", headers: authH() });
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch {}

@@ -206,22 +206,25 @@ function NavContent({ onClose }: { onClose?: () => void }) {
 }
 
 function NotificationBell() {
+  const { token } = useAuth() as any;
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const fetchUnread = async () => {
       try {
-        const res = await fetch("/api/notifications", { credentials: "include" });
+        const res = await fetch("/api/notifications", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) {
           const data = await res.json();
           setUnreadCount(data.unreadCount || 0);
         }
       } catch {}
     };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    if (token) fetchUnread();
+    const interval = setInterval(() => { if (token) fetchUnread(); }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [token]);
 
   return (
     <Link href="/notifications">
