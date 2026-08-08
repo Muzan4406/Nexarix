@@ -25,11 +25,11 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
-var __copyProps = (to, from, except2, desc2) => {
+var __copyProps = (to, from, except2, desc3) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
       if (!__hasOwnProp.call(to, key) && key !== except2)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc2 = __getOwnPropDesc(from, key)) || desc2.enumerable });
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc3 = __getOwnPropDesc(from, key)) || desc3.enumerable });
   }
   return to;
 };
@@ -1351,10 +1351,10 @@ var require_http_errors = __commonJS({
       return ServerError;
     }
     function nameFunc(func, name) {
-      var desc2 = Object.getOwnPropertyDescriptor(func, "name");
-      if (desc2 && desc2.configurable) {
-        desc2.value = name;
-        Object.defineProperty(func, "name", desc2);
+      var desc3 = Object.getOwnPropertyDescriptor(func, "name");
+      if (desc3 && desc3.configurable) {
+        desc3.value = name;
+        Object.defineProperty(func, "name", desc3);
       }
     }
     function populateConstructorExports(exports2, codes, HttpError) {
@@ -16840,14 +16840,14 @@ var require_get = __commonJS({
         throw e;
       }
     }
-    var desc2 = !!hasProtoAccessor && gOPD && gOPD(
+    var desc3 = !!hasProtoAccessor && gOPD && gOPD(
       Object.prototype,
       /** @type {keyof typeof Object.prototype} */
       "__proto__"
     );
     var $Object = Object;
     var $getPrototypeOf = $Object.getPrototypeOf;
-    module.exports = desc2 && typeof desc2.get === "function" ? callBind([desc2.get]) : typeof $getPrototypeOf === "function" ? (
+    module.exports = desc3 && typeof desc3.get === "function" ? callBind([desc3.get]) : typeof $getPrototypeOf === "function" ? (
       /** @type {import('./get')} */
       function getDunder(value) {
         return $getPrototypeOf(value == null ? value : $Object(value));
@@ -17197,10 +17197,10 @@ var require_get_intrinsic = __commonJS({
             return void undefined2;
           }
           if ($gOPD && i + 1 >= parts.length) {
-            var desc2 = $gOPD(value, part);
-            isOwn = !!desc2;
-            if (isOwn && "get" in desc2 && !("originalValue" in desc2.get)) {
-              value = desc2.get;
+            var desc3 = $gOPD(value, part);
+            isOwn = !!desc3;
+            if (isOwn && "get" in desc3 && !("originalValue" in desc3.get)) {
+              value = desc3.get;
             } else {
               value = value[part];
             }
@@ -30551,12 +30551,12 @@ var require_result = __commonJS({
         }
         const row = /* @__PURE__ */ Object.create(null);
         for (let i = 0; i < fieldDescriptions.length; i++) {
-          const desc2 = fieldDescriptions[i];
-          row[desc2.name] = null;
+          const desc3 = fieldDescriptions[i];
+          row[desc3.name] = null;
           if (this._types) {
-            this._parsers[i] = this._types.getTypeParser(desc2.dataTypeID, desc2.format || "text");
+            this._parsers[i] = this._types.getTypeParser(desc3.dataTypeID, desc3.format || "text");
           } else {
-            this._parsers[i] = types3.getTypeParser(desc2.dataTypeID, desc2.format || "text");
+            this._parsers[i] = types3.getTypeParser(desc3.dataTypeID, desc3.format || "text");
           }
         }
         this._prebuiltEmptyResultObject = { ...row };
@@ -37665,13 +37665,13 @@ var require_ipv4 = __commonJS({
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
-      var desc2 = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc2 || ("get" in desc2 ? !m.__esModule : desc2.writable || desc2.configurable)) {
-        desc2 = { enumerable: true, get: function() {
+      var desc3 = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc3 || ("get" in desc3 ? !m.__esModule : desc3.writable || desc3.configurable)) {
+        desc3 = { enumerable: true, get: function() {
           return m[k];
         } };
       }
-      Object.defineProperty(o, k2, desc2);
+      Object.defineProperty(o, k2, desc3);
     }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
@@ -38231,13 +38231,13 @@ var require_regular_expressions = __commonJS({
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
-      var desc2 = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc2 || ("get" in desc2 ? !m.__esModule : desc2.writable || desc2.configurable)) {
-        desc2 = { enumerable: true, get: function() {
+      var desc3 = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc3 || ("get" in desc3 ? !m.__esModule : desc3.writable || desc3.configurable)) {
+        desc3 = { enumerable: true, get: function() {
           return m[k];
         } };
       }
-      Object.defineProperty(o, k2, desc2);
+      Object.defineProperty(o, k2, desc3);
     }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
@@ -38323,13 +38323,13 @@ var require_ipv6 = __commonJS({
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
-      var desc2 = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc2 || ("get" in desc2 ? !m.__esModule : desc2.writable || desc2.configurable)) {
-        desc2 = { enumerable: true, get: function() {
+      var desc3 = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc3 || ("get" in desc3 ? !m.__esModule : desc3.writable || desc3.configurable)) {
+        desc3 = { enumerable: true, get: function() {
           return m[k];
         } };
       }
-      Object.defineProperty(o, k2, desc2);
+      Object.defineProperty(o, k2, desc3);
     }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
@@ -39440,13 +39440,13 @@ var require_ip_address = __commonJS({
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
-      var desc2 = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc2 || ("get" in desc2 ? !m.__esModule : desc2.writable || desc2.configurable)) {
-        desc2 = { enumerable: true, get: function() {
+      var desc3 = Object.getOwnPropertyDescriptor(m, k);
+      if (!desc3 || ("get" in desc3 ? !m.__esModule : desc3.writable || desc3.configurable)) {
+        desc3 = { enumerable: true, get: function() {
           return m[k];
         } };
       }
-      Object.defineProperty(o, k2, desc2);
+      Object.defineProperty(o, k2, desc3);
     }) : (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
       o[k2] = m[k];
@@ -55368,16 +55368,16 @@ var require_typedarray = __commonJS({
     })()) {
       defineProp = Object.defineProperty;
     } else {
-      defineProp = function(o, p, desc2) {
+      defineProp = function(o, p, desc3) {
         if (!o === Object(o)) throw new TypeError("Object.defineProperty called on non-object");
-        if (ECMAScript.HasProperty(desc2, "get") && Object.prototype.__defineGetter__) {
-          Object.prototype.__defineGetter__.call(o, p, desc2.get);
+        if (ECMAScript.HasProperty(desc3, "get") && Object.prototype.__defineGetter__) {
+          Object.prototype.__defineGetter__.call(o, p, desc3.get);
         }
-        if (ECMAScript.HasProperty(desc2, "set") && Object.prototype.__defineSetter__) {
-          Object.prototype.__defineSetter__.call(o, p, desc2.set);
+        if (ECMAScript.HasProperty(desc3, "set") && Object.prototype.__defineSetter__) {
+          Object.prototype.__defineSetter__.call(o, p, desc3.set);
         }
-        if (ECMAScript.HasProperty(desc2, "value")) {
-          o[p] = desc2.value;
+        if (ECMAScript.HasProperty(desc3, "value")) {
+          o[p] = desc3.value;
         }
         return o;
       };
@@ -82475,50 +82475,6 @@ function getClientIp(req) {
   if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
   return req.socket?.remoteAddress ?? "unknown";
 }
-var blockedIpCache = /* @__PURE__ */ new Map();
-var CACHE_TTL_MS = 15e3;
-async function blockIp(ip, reason, req) {
-  if (!ip || ip === "unknown") return;
-  try {
-    await db.insert(blockedIpsTable).values({ ip, reason, blockedAt: Date.now() }).onConflictDoNothing({ target: blockedIpsTable.ip });
-    blockedIpCache.set(ip, { blocked: true, checkedAt: Date.now() });
-  } catch (err) {
-    console.error("[security] \xC9chec du blocage IP en base:", err);
-  }
-  const ua = req ? escapeHtml((req.headers["user-agent"] ?? "\u2014").slice(0, 120)) : "\u2014";
-  await sendTelegramNotification(
-    `\u26D4\uFE0F <b>IP BLOQU\xC9E D\xC9FINITIVEMENT</b>
-\u{1F310} IP: <code>${escapeHtml(ip)}</code>
-\u{1F4C4} Raison: ${escapeHtml(reason)}
-\u{1F5A5}\uFE0F User-Agent: ${ua}
-
-Cette IP ne peut plus acc\xE9der au site. D\xE9bloquez-la depuis le panneau admin si n\xE9cessaire.`
-  ).catch(() => {
-  });
-}
-async function isIpBlocked(ip) {
-  const cached2 = blockedIpCache.get(ip);
-  if (cached2 && Date.now() - cached2.checkedAt < CACHE_TTL_MS) {
-    return cached2.blocked;
-  }
-  try {
-    const rows = await db.select({ ip: blockedIpsTable.ip }).from(blockedIpsTable).where(eq(blockedIpsTable.ip, ip)).limit(1);
-    const blocked = rows.length > 0;
-    blockedIpCache.set(ip, { blocked, checkedAt: Date.now() });
-    return blocked;
-  } catch (err) {
-    console.error("[security] \xC9chec de la v\xE9rification IP bloqu\xE9e:", err);
-    return false;
-  }
-}
-async function blockedIpGuard(req, res, next) {
-  const ip = getClientIp(req);
-  if (await isIpBlocked(ip)) {
-    res.status(403).json({ error: "Acc\xE8s refus\xE9. Cette adresse IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
-    return;
-  }
-  next();
-}
 async function alertIntrusion(event, details, req) {
   const ip = getClientIp(req);
   const ua = escapeHtml((req.headers["user-agent"] ?? "\u2014").slice(0, 120));
@@ -82536,9 +82492,8 @@ var loginLimiter = rate_limit_default({
   windowMs: DAY_MS,
   max: 10,
   keyGenerator: getClientIp,
-  handler: async (req, res) => {
-    await blockIp(getClientIp(req), "Force brute sur la connexion (10 tentatives d\xE9pass\xE9es)", req);
-    res.status(403).json({ error: "Trop de tentatives de connexion. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
+  handler: (_req, res) => {
+    res.status(429).json({ error: "Trop de tentatives de connexion. R\xE9essayez dans 24h." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82547,9 +82502,8 @@ var registerLimiter = rate_limit_default({
   windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
-  handler: async (req, res) => {
-    await blockIp(getClientIp(req), "Abus d'inscriptions (5 comptes d\xE9pass\xE9s, bot probable)", req);
-    res.status(403).json({ error: "Trop d'inscriptions depuis cette adresse. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
+  handler: (_req, res) => {
+    res.status(429).json({ error: "Trop d'inscriptions depuis cette adresse. R\xE9essayez dans 24h." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82558,9 +82512,8 @@ var adminLoginLimiter = rate_limit_default({
   windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
-  handler: async (req, res) => {
-    await blockIp(getClientIp(req), "Force brute sur la connexion admin (5 tentatives d\xE9pass\xE9es)", req);
-    res.status(403).json({ error: "Trop de tentatives admin. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
+  handler: (_req, res) => {
+    res.status(429).json({ error: "Trop de tentatives admin. R\xE9essayez dans 24h." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82569,9 +82522,8 @@ var otpLimiter = rate_limit_default({
   windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
-  handler: async (req, res) => {
-    await blockIp(getClientIp(req), "Force brute sur le code OTP (5 tentatives d\xE9pass\xE9es)", req);
-    res.status(403).json({ error: "Trop de tentatives OTP. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
+  handler: (_req, res) => {
+    res.status(429).json({ error: "Trop de tentatives OTP. R\xE9essayez dans 24h." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82580,9 +82532,8 @@ var withdrawalConfirmLimiter = rate_limit_default({
   windowMs: DAY_MS,
   max: 5,
   keyGenerator: getClientIp,
-  handler: async (req, res) => {
-    await blockIp(getClientIp(req), "Force brute sur le code de confirmation de retrait (5 tentatives d\xE9pass\xE9es)", req);
-    res.status(403).json({ error: "Trop de tentatives. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
+  handler: (_req, res) => {
+    res.status(429).json({ error: "Trop de tentatives. R\xE9essayez dans 24h." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -82591,9 +82542,8 @@ var globalApiLimiter = rate_limit_default({
   windowMs: 60 * 1e3,
   max: 200,
   keyGenerator: getClientIp,
-  handler: async (req, res) => {
-    await blockIp(getClientIp(req), "Scan/bot d\xE9tect\xE9 (plus de 200 requ\xEAtes/min)", req);
-    res.status(403).json({ error: "Trop de requ\xEAtes. Cette IP a \xE9t\xE9 bloqu\xE9e d\xE9finitivement." });
+  handler: (_req, res) => {
+    res.status(429).json({ error: "Trop de requ\xEAtes. Ralentissez." });
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -83834,46 +83784,6 @@ function formatAdminWithdrawal(w) {
     createdAt: w.createdAt?.toISOString()
   };
 }
-router7.get("/admin/blocked-ips", authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const rows = await db.select().from(blockedIpsTable).orderBy(desc(blockedIpsTable.blockedAt));
-    res.json(
-      rows.map((r) => ({
-        id: r.id,
-        ip: r.ip,
-        reason: r.reason,
-        blockedAt: new Date(r.blockedAt).toISOString()
-      }))
-    );
-  } catch (err) {
-    console.error("Erreur r\xE9cup\xE9ration IP bloqu\xE9es:", err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
-router7.post("/admin/blocked-ips", authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const { ip, reason } = req.body ?? {};
-    if (!ip || typeof ip !== "string") {
-      res.status(400).json({ error: "Adresse IP requise" });
-      return;
-    }
-    await blockIp(ip.trim(), typeof reason === "string" && reason.trim() || "Blocage manuel par l'administrateur");
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Erreur blocage IP:", err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
-router7.delete("/admin/blocked-ips/:ip", authMiddleware, adminMiddleware, async (req, res) => {
-  try {
-    const ip = decodeURIComponent(String(req.params.ip));
-    await db.delete(blockedIpsTable).where(eq(blockedIpsTable.ip, ip));
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Erreur d\xE9blocage IP:", err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
 var admin_default = router7;
 
 // src/routes/activation.ts
@@ -85373,7 +85283,6 @@ app.use((0, import_cors.default)({
   },
   credentials: true
 }));
-app.use("/api", blockedIpGuard);
 app.use("/api", globalApiLimiter);
 app.use("/api/activate/webhook", import_express17.default.raw({ type: "application/json" }));
 app.use("/api/formations/purchase/webhook", import_express17.default.raw({ type: "application/json" }));
@@ -85484,14 +85393,6 @@ async function runStartupMigrations() {
     `);
     await db.execute(sql`
       ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
-    `);
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS blocked_ips (
-        id SERIAL PRIMARY KEY,
-        ip TEXT NOT NULL UNIQUE,
-        reason TEXT NOT NULL,
-        blocked_at BIGINT NOT NULL
-      );
     `);
     await ensureAdminUser();
     logger.info("Startup migrations OK");
