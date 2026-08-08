@@ -85485,6 +85485,14 @@ async function runStartupMigrations() {
     await db.execute(sql`
       ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
     `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS blocked_ips (
+        id SERIAL PRIMARY KEY,
+        ip TEXT NOT NULL UNIQUE,
+        reason TEXT NOT NULL,
+        blocked_at BIGINT NOT NULL
+      );
+    `);
     await ensureAdminUser();
     logger.info("Startup migrations OK");
   } catch (err) {
