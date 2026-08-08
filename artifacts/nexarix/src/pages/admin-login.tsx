@@ -154,7 +154,7 @@ export default function AdminLogin() {
                           pattern="[0-9]*"
                           autoComplete="one-time-code"
                           autoFocus
-                          className="text-center text-2xl font-black tracking-widest h-14 rounded-2xl"
+                          className="text-center text-2xl font-black tracking-widest h-14 rounded-2xl text-gray-900 bg-white border-2 border-blue-200 focus-visible:ring-blue-500"
                           {...field}
                           onChange={(e) => {
                             const val = e.target.value.replace(/\D/g, "").slice(0, 6);
