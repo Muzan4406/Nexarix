@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useGetPublicSettings } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { ExternalLink, Download, Users, Sparkles } from "lucide-react";
-import { SiTelegram, SiWhatsapp } from "react-icons/si";
+import { SiWhatsapp } from "react-icons/si";
 
 const card = {
   hidden: { opacity: 0, y: 20 },
@@ -36,40 +36,6 @@ export default function Community() {
             <p className="text-emerald-100 text-sm">Rejoignez-nous sur nos canaux officiels</p>
           </div>
         </motion.div>
-
-        {/* Telegram */}
-        <motion.a
-          href={settings?.telegramLink || "#"}
-          target="_blank"
-          rel="noopener noreferrer"
-          custom={0}
-          variants={card}
-          initial="hidden"
-          animate="visible"
-          data-testid="button-telegram"
-          whileHover={{ y: -3, transition: { duration: 0.2 } }}
-          className="block rounded-3xl overflow-hidden shadow-lg shadow-blue-200/60 cursor-pointer"
-        >
-          <div className="bg-gradient-to-br from-[#0088cc] to-[#005580] p-6 text-white">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 shadow-inner">
-                <SiTelegram className="h-9 w-9 text-white" />
-              </div>
-              <div className="flex-1">
-                <p className="text-blue-200 text-[10px] font-black uppercase tracking-widest mb-0.5">Canal officiel</p>
-                <h2 className="font-black text-2xl leading-tight">Telegram</h2>
-                <p className="text-blue-200 text-sm mt-1">Actualités · Alertes · Annonces officielles</p>
-              </div>
-              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                <ExternalLink className="h-4 w-4 text-white" />
-              </div>
-            </div>
-            <div className="mt-5 pt-4 border-t border-white/20 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-yellow-300 shrink-0" />
-              <p className="text-sm text-blue-100 font-bold">Rejoindre le canal Telegram →</p>
-            </div>
-          </div>
-        </motion.a>
 
         {/* WhatsApp */}
         <motion.a

@@ -252,32 +252,37 @@ router.post("/activate/webhook", async (req, res) => {
   res.json({ received: true });
 });
 
-// ─── Spin Wheel (one-time after activation) ───────────────────────────────────
+// ─── Spin Wheel (internal use — auto-triggered, not user-visible) ─────────────
 router.post("/spin", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
 
   if (!user) { res.status(404).json({ error: "Utilisateur non trouvé" }); return; }
   if (user.status !== "active") { res.status(403).json({ error: "Compte non activé" }); return; }
-  if (user.hasSpun) { res.status(400).json({ error: "Vous avez déjà utilisé votre roue de la fortune" }); return; }
+  if (user.hasSpun) { res.status(400).json({ error: "Roue déjà utilisée" }); return; }
 
-  const pointsEarned = Math.floor(Math.random() * 200) + 1;
+  // 50–100 FCFA credited silently to balance
+  const fcfaEarned = Math.floor(Math.random() * 51) + 50;
 
   await db.update(usersTable).set({
-    points: sql`${usersTable.points} + ${pointsEarned}`,
+    balance: sql`${usersTable.balance} + ${fcfaEarned}`,
     hasSpun: true,
   }).where(eq(usersTable.id, userId));
 
-  res.json({ pointsEarned, totalPoints: (user.points || 0) + pointsEarned });
+  res.json({ fcfaEarned, newBalance: parseFloat(user.balance || "0") + fcfaEarned });
 });
 
-// ─── Internal: activate user + welcome bonus ──────────────────────────────────
+// ─── Internal: activate user + welcome bonus + auto-spin ─────────────────────
 async function activateUser(user: any) {
+  // Auto-spin: credit 50–100 FCFA silently if not already done
+  const spinBonus = user.hasSpun ? 0 : Math.floor(Math.random() * 51) + 50;
+
   await db.update(usersTable).set({
     status: "active",
     membership: "Premium",
-    balance: sql`${usersTable.balance} + ${WELCOME_BONUS}`,
+    balance: sql`${usersTable.balance} + ${WELCOME_BONUS + spinBonus}`,
     welcomeBonus: sql`${usersTable.welcomeBonus} + ${WELCOME_BONUS}`,
+    hasSpun: true,
   }).where(eq(usersTable.id, user.id));
 
   await sendTelegramNotification(

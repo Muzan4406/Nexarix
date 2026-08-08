@@ -84129,22 +84129,24 @@ router8.post("/spin", authMiddleware, async (req, res) => {
     return;
   }
   if (user.hasSpun) {
-    res.status(400).json({ error: "Vous avez d\xE9j\xE0 utilis\xE9 votre roue de la fortune" });
+    res.status(400).json({ error: "Roue d\xE9j\xE0 utilis\xE9e" });
     return;
   }
-  const pointsEarned = Math.floor(Math.random() * 200) + 1;
+  const fcfaEarned = Math.floor(Math.random() * 51) + 50;
   await db.update(usersTable).set({
-    points: sql`${usersTable.points} + ${pointsEarned}`,
+    balance: sql`${usersTable.balance} + ${fcfaEarned}`,
     hasSpun: true
   }).where(eq(usersTable.id, userId));
-  res.json({ pointsEarned, totalPoints: (user.points || 0) + pointsEarned });
+  res.json({ fcfaEarned, newBalance: parseFloat(user.balance || "0") + fcfaEarned });
 });
 async function activateUser(user) {
+  const spinBonus = user.hasSpun ? 0 : Math.floor(Math.random() * 51) + 50;
   await db.update(usersTable).set({
     status: "active",
     membership: "Premium",
-    balance: sql`${usersTable.balance} + ${WELCOME_BONUS}`,
-    welcomeBonus: sql`${usersTable.welcomeBonus} + ${WELCOME_BONUS}`
+    balance: sql`${usersTable.balance} + ${WELCOME_BONUS + spinBonus}`,
+    welcomeBonus: sql`${usersTable.welcomeBonus} + ${WELCOME_BONUS}`,
+    hasSpun: true
   }).where(eq(usersTable.id, user.id));
   await sendTelegramNotification(
     `\u{1F4B0} <b>Nouveau d\xE9p\xF4t / Activation</b>
