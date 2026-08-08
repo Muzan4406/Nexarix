@@ -154,7 +154,7 @@ export default function Dashboard() {
             <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
             <div className="flex items-start justify-between relative z-10">
               <p className="font-black text-[13px] leading-tight">Gains<br/>Tâches</p>
-              <CardIcon src={`${BASE}icon-taches.jpg`} alt="Gains Tâches" />
+              <CardIcon src={`${BASE}icon-taches.png`} alt="Gains Tâches" />
             </div>
             <div className="relative z-10">
               <p className="text-orange-200 text-[10px] font-semibold mb-0.5">Solde :</p>
@@ -171,7 +171,7 @@ export default function Dashboard() {
             <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
             <div className="flex items-start justify-between relative z-10">
               <p className="font-black text-[13px] leading-tight">Tâches<br/>Accomplies</p>
-              <CardIcon src={`${BASE}icon-taches.jpg`} alt="Tâches" />
+              <CardIcon src={`${BASE}icon-taches.png`} alt="Tâches" />
             </div>
             <div className="relative z-10">
               <p className="text-teal-200 text-[10px] font-semibold mb-0.5">Total :</p>
