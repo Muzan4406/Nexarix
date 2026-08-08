@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,10 @@ export default function AdminLogin() {
   const [loadingCredentials, setLoadingCredentials] = useState(false);
   const [loadingOtp, setLoadingOtp] = useState(false);
 
+  const [otpValue, setOtpValue] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const otpInputRef = useRef<HTMLInputElement>(null);
+
   const credForm = useForm({ resolver: zodResolver(loginSchema), defaultValues: { identifier: "", password: "" } });
   const otpForm = useForm({ resolver: zodResolver(otpSchema), defaultValues: { otp: "" } });
 
@@ -49,10 +53,10 @@ export default function AdminLogin() {
         setDevOtp(data.devOtp || null);
         setStep("otp");
         if (data.devOtp) {
-          // Pre-fill OTP when Telegram is not configured (dev/test mode)
-          otpForm.setValue("otp", data.devOtp);
+          setOtpValue(data.devOtp);
           toast({ title: "🔓 Mode test", description: "OTP pré-rempli automatiquement (Telegram non configuré)." });
         } else {
+          setOtpValue("");
           toast({ title: "📲 Code OTP envoyé sur Telegram", description: "Vérifiez votre groupe Telegram." });
         }
       }
@@ -63,13 +67,29 @@ export default function AdminLogin() {
     }
   };
 
-  const onSubmitOtp = async (values: z.infer<typeof otpSchema>) => {
+  const handleOtpInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const raw = e.currentTarget.value;
+    const digits = raw.replace(/\D/g, "").slice(0, 6);
+    // Force the native input value to only digits (prevents non-numeric on some Android keyboards)
+    e.currentTarget.value = digits;
+    setOtpValue(digits);
+    if (digits.length === 6) setOtpError("");
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpValue.length !== 6) {
+      setOtpError("Le code doit être de 6 chiffres");
+      otpInputRef.current?.focus();
+      return;
+    }
+    setOtpError("");
     setLoadingOtp(true);
     try {
       const res = await fetch("/api/admin/verify-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionToken, otp: values.otp }),
+        body: JSON.stringify({ sessionToken, otp: otpValue }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Code OTP invalide");
@@ -141,42 +161,45 @@ export default function AdminLogin() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Form {...otpForm}>
-                <form onSubmit={otpForm.handleSubmit(onSubmitOtp)} className="space-y-4">
-                  <FormField control={otpForm.control} name="otp" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Code OTP</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="123456"
-                          maxLength={6}
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          autoComplete="one-time-code"
-                          autoFocus
-                          className="text-center text-2xl font-black tracking-widest h-14 rounded-2xl text-gray-900 bg-white border-2 border-blue-200 focus-visible:ring-blue-500"
-                          {...field}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, "").slice(0, 6);
-                            field.onChange(val);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <Button type="submit" className="w-full bg-destructive hover:bg-destructive/90" disabled={loadingOtp}>
-                    {loadingOtp ? "Vérification…" : "Valider le code"}
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => { setStep("credentials"); otpForm.reset(); }}
-                    className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors mt-1"
-                  >
-                    ← Retour à la connexion
-                  </button>
-                </form>
-              </Form>
+              {/* Input natif sans React Hook Form — évite le bug de valeur vide sur Android */}
+              <form onSubmit={handleOtpSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Code OTP</label>
+                  <input
+                    ref={otpInputRef}
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                    placeholder="123456"
+                    defaultValue={otpValue}
+                    onInput={handleOtpInput}
+                    onChange={handleOtpInput as any}
+                    className={[
+                      "w-full h-14 rounded-2xl border-2 px-4 text-center text-2xl font-black tracking-widest",
+                      "text-gray-900 bg-white outline-none transition-colors",
+                      "placeholder:text-gray-300",
+                      otpError
+                        ? "border-red-400 focus:border-red-500"
+                        : "border-blue-200 focus:border-blue-500",
+                    ].join(" ")}
+                  />
+                  {otpError && (
+                    <p className="text-sm font-medium text-red-500">{otpError}</p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full bg-destructive hover:bg-destructive/90" disabled={loadingOtp}>
+                  {loadingOtp ? "Vérification…" : "Valider le code"}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => { setStep("credentials"); setOtpValue(""); setOtpError(""); }}
+                  className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors mt-1"
+                >
+                  ← Retour à la connexion
+                </button>
+              </form>
             </CardContent>
           </Card>
         )}
