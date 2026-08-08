@@ -2,9 +2,9 @@ import { motion } from "framer-motion";
 import { useGetDashboard, useGetPublicSettings } from "@workspace/api-client-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  CreditCard, TrendingUp, Users, Wallet, Clock, Trophy,
-} from "lucide-react";
+import { Users, Clock } from "lucide-react";
+
+const BASE = import.meta.env.BASE_URL;
 
 const fadeUp = (i: number) => ({
   hidden: { opacity: 0, y: 24 },
@@ -13,6 +13,22 @@ const fadeUp = (i: number) => ({
     transition: { delay: i * 0.07, duration: 0.45, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
   },
 });
+
+function CardIcon({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 overflow-hidden backdrop-blur-sm">
+      <img src={src} alt={alt} className="h-8 w-8 object-contain drop-shadow-sm" />
+    </div>
+  );
+}
+
+function CardIconLight({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="h-10 w-10 rounded-2xl bg-gray-50 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+      <img src={src} alt={alt} className="h-8 w-8 object-contain" />
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -28,6 +44,7 @@ export default function Dashboard() {
     </AppLayout>
   );
 
+  const taskBalance    = (stats as any)?.taskBalance || 0;
   const totalWithdrawn = stats?.totalWithdrawn || 0;
   const totalBalance   = (stats as any)?.totalBalance || 0;
   const activationFee  = publicSettings?.activationFee ?? 3800;
@@ -55,7 +72,7 @@ export default function Dashboard() {
           </p>
         </motion.div>
 
-        {/* ── 2×2 Stat Cards ────────────────────── */}
+        {/* ── 6 Stat Cards (2×3) ────────────────── */}
         <div className="grid grid-cols-2 gap-3">
 
           {/* Card 1 — Frais d'Activation */}
@@ -65,9 +82,7 @@ export default function Dashboard() {
           >
             <div className="flex items-start justify-between">
               <p className="text-gray-700 font-black text-[13px] leading-tight">Frais<br/>d'Activation</p>
-              <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                <CreditCard className="h-4 w-4 text-gray-500" />
-              </div>
+              <CardIconLight src={`${BASE}icon-activation.png`} alt="Activation" />
             </div>
             <div>
               <p className="text-gray-400 text-[10px] font-semibold mb-0.5">Montant :</p>
@@ -86,9 +101,7 @@ export default function Dashboard() {
             <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
             <div className="flex items-start justify-between relative z-10">
               <p className="font-black text-[13px] leading-tight">Total Gagné</p>
-              <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                <TrendingUp className="h-4 w-4 text-white" />
-              </div>
+              <CardIcon src={`${BASE}icon-gains.png`} alt="Gains" />
             </div>
             <div className="relative z-10">
               <p className="text-purple-200 text-[10px] font-semibold mb-0.5">Montant :</p>
@@ -107,9 +120,7 @@ export default function Dashboard() {
             <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
             <div className="flex items-start justify-between relative z-10">
               <p className="font-black text-[13px] leading-tight">Total Filleuls</p>
-              <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                <Users className="h-4 w-4 text-white" />
-              </div>
+              <CardIcon src={`${BASE}icon-filleuls.png`} alt="Filleuls" />
             </div>
             <div className="relative z-10">
               <p className="text-sky-200 text-[10px] font-semibold mb-0.5">Nombre :</p>
@@ -124,9 +135,7 @@ export default function Dashboard() {
           >
             <div className="flex items-start justify-between">
               <p className="text-gray-700 font-black text-[13px] leading-tight">Total<br/>Retiré</p>
-              <div className="h-8 w-8 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
-                <Wallet className="h-4 w-4 text-gray-500" />
-              </div>
+              <CardIconLight src={`${BASE}icon-retrait.png`} alt="Retrait" />
             </div>
             <div>
               <p className="text-gray-400 text-[10px] font-semibold mb-0.5">Montant :</p>
@@ -136,20 +145,35 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          {/* Card 5 — Tâches Accomplies (full width) */}
+          {/* Card 5 — Gains Tâches */}
           <motion.div
             variants={fadeUp(3)} initial="hidden" animate="visible"
-            className="col-span-2 rounded-[22px] p-4 flex flex-col justify-between min-h-[110px] text-white relative overflow-hidden"
+            className="rounded-[22px] p-4 flex flex-col justify-between min-h-[130px] text-white relative overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #f59e0b 0%, #f97316 60%, #fb923c 100%)" }}
+          >
+            <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
+            <div className="flex items-start justify-between relative z-10">
+              <p className="font-black text-[13px] leading-tight">Gains<br/>Tâches</p>
+              <CardIcon src={`${BASE}icon-taches.jpg`} alt="Gains Tâches" />
+            </div>
+            <div className="relative z-10">
+              <p className="text-orange-200 text-[10px] font-semibold mb-0.5">Solde :</p>
+              <p className="font-black text-[22px] leading-none">{taskBalance.toLocaleString("fr-FR")} F</p>
+            </div>
+          </motion.div>
+
+          {/* Card 6 — Tâches Accomplies */}
+          <motion.div
+            variants={fadeUp(3)} initial="hidden" animate="visible"
+            className="rounded-[22px] p-4 flex flex-col justify-between min-h-[130px] text-white relative overflow-hidden"
             style={{ background: "linear-gradient(135deg, #14b8a6 0%, #0d9488 60%, #0f766e 100%)" }}
           >
             <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
-            <div className="flex items-center justify-between relative z-10">
-              <p className="font-black text-[13px] leading-tight">Tâches Accomplies</p>
-              <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                <Trophy className="h-4 w-4 text-white" />
-              </div>
+            <div className="flex items-start justify-between relative z-10">
+              <p className="font-black text-[13px] leading-tight">Tâches<br/>Accomplies</p>
+              <CardIcon src={`${BASE}icon-taches.jpg`} alt="Tâches" />
             </div>
-            <div className="relative z-10 mt-2">
+            <div className="relative z-10">
               <p className="text-teal-200 text-[10px] font-semibold mb-0.5">Total :</p>
               <p className="font-black text-[30px] leading-none">{completedTasks}</p>
             </div>
@@ -157,11 +181,11 @@ export default function Dashboard() {
         </div>
 
         {/* ── Aperçu Parrainage ─────────────────── */}
-        <motion.div variants={fadeUp(3)} initial="hidden" animate="visible"
+        <motion.div variants={fadeUp(4)} initial="hidden" animate="visible"
           className="bg-white rounded-[22px] border border-gray-100 shadow-sm overflow-hidden"
         >
           <div className="flex items-center gap-2 px-4 pt-4 pb-3 border-b border-gray-50">
-            <Users className="h-4 w-4 text-blue-600 shrink-0" />
+            <img src={`${BASE}icon-filleuls.png`} alt="" className="h-5 w-5 object-contain" />
             <p className="font-black text-gray-900 text-sm uppercase tracking-wide">Aperçu du parrainage</p>
           </div>
           <div className="p-4 space-y-2">
@@ -189,7 +213,6 @@ export default function Dashboard() {
             </div>
           </div>
         </motion.div>
-
 
       </div>
     </AppLayout>
