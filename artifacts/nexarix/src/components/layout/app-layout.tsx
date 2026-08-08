@@ -2,12 +2,12 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import {
   LogOut, Menu, LayoutDashboard, CheckSquare, Wallet,
-  Phone, User, Star, History,
+  Phone, User, History,
   Users, Zap, ChevronDown, ShoppingBag, GraduationCap, LayoutGrid,
-  Crown, UserX, Trophy, Gift,
+  Crown, UserX, Gift, Bell,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -26,23 +26,20 @@ const SECTIONS: Section[] = [
     group: {
       name: "Mon Équipe", icon: Users, accent: "text-cyan-500",
       items: [
-        { name: "Niveau 1",           href: "/equipe/niveau-1", icon: Crown   },
-        { name: "Niveau 2",           href: "/equipe/niveau-2", icon: Star    },
-        { name: "Niveau 3",           href: "/equipe/niveau-3", icon: Zap     },
-        { name: "Inactifs",           href: "/equipe/inactifs", icon: UserX   },
-        { name: "Bonus Super Parrain",href: "/equipe/bonus",        icon: Trophy  },
-        { name: "Mon lien de parrainage", href: "/equipe/parrainage", icon: Gift },
+        { name: "Niveau 1",               href: "/equipe/niveau-1",   icon: Crown   },
+        { name: "Niveau 2",               href: "/equipe/niveau-2",   icon: Zap     },
+        { name: "Niveau 3",               href: "/equipe/niveau-3",   icon: Users   },
+        { name: "Inactifs",               href: "/equipe/inactifs",   icon: UserX   },
+        { name: "Mon lien de parrainage", href: "/equipe/parrainage", icon: Gift    },
       ],
     },
   },
   {
     kind: "group",
     group: {
-      name: "Gains", icon: Star, accent: "text-amber-500",
+      name: "Gains", icon: CheckSquare, accent: "text-amber-500",
       items: [
-        { name: "Tâches",          href: "/tasks",  icon: CheckSquare },
-        { name: "Mes Points",      href: "/points", icon: Zap },
-        { name: "Roue de Fortune", href: "/spin",   icon: Star },
+        { name: "Tâches", href: "/tasks", icon: CheckSquare },
       ],
     },
   },
@@ -51,15 +48,15 @@ const SECTIONS: Section[] = [
     group: {
       name: "Retraits", icon: Wallet, accent: "text-emerald-500",
       items: [
-        { name: "Retirer",    href: "/withdrawals",        icon: Wallet },
+        { name: "Retirer",    href: "/withdrawals",        icon: Wallet  },
         { name: "Historique", href: "/withdrawal-history", icon: History },
       ],
     },
   },
-  { kind: "item", item: { name: "Store Premium",  href: "/store",      icon: ShoppingBag,     gradient: "from-purple-500 to-fuchsia-500" } },
-  { kind: "item", item: { name: "Formations",     href: "/formations", icon: GraduationCap,   gradient: "from-orange-500 to-amber-500" } },
-  { kind: "item", item: { name: "Divers",          href: "/divers",     icon: LayoutGrid,      gradient: "from-sky-500 to-blue-500" } },
-  { kind: "item", item: { name: "Assistance",     href: "/contact",    icon: Phone,           gradient: "from-rose-500 to-pink-500" } },
+  { kind: "item", item: { name: "Store Premium",  href: "/store",      icon: ShoppingBag,   gradient: "from-purple-500 to-fuchsia-500" } },
+  { kind: "item", item: { name: "Formations",     href: "/formations", icon: GraduationCap, gradient: "from-orange-500 to-amber-500"   } },
+  { kind: "item", item: { name: "Divers",          href: "/divers",     icon: LayoutGrid,    gradient: "from-sky-500 to-blue-500"       } },
+  { kind: "item", item: { name: "Assistance",     href: "/contact",    icon: Phone,         gradient: "from-rose-500 to-pink-500"      } },
 ];
 
 function NavLink({ href, icon: Icon, name, active, gradient, onClick }: {
@@ -205,13 +202,45 @@ function NavContent({ onClose }: { onClose?: () => void }) {
   );
 }
 
+function NotificationBell() {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch("/api/notifications", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setUnreadCount(data.unreadCount || 0);
+        }
+      } catch {}
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <Link href="/notifications">
+      <span className="relative h-9 w-9 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer">
+        <Bell className="h-4 w-4 text-gray-600" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center text-[9px] font-black text-white">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
+        )}
+      </span>
+    </Link>
+  );
+}
+
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
   const [location] = useLocation();
 
   return (
-    <div className="flex min-h-screen w-full bg-[#f5f7fa]">
+    <div className="flex min-h-screen w-full bg-[#f0f4f8]">
       {/* Desktop Sidebar */}
       <aside className="hidden md:block md:w-64 shrink-0 border-r border-gray-100 bg-white sticky top-0 h-screen overflow-hidden">
         <NavContent />
@@ -231,13 +260,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             <img src={`${BASE}logo.png`} alt="Nexarix" className="h-8 w-8 rounded-xl object-cover shadow-sm" />
             <span className="font-black text-base bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">NEXARIX</span>
           </div>
 
-          <div className="ml-auto">
-            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-md shadow-blue-200">
+          <div className="flex items-center gap-2 ml-auto">
+            <NotificationBell />
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-md shadow-blue-200">
               {user?.username?.[0]?.toUpperCase()}
             </div>
           </div>

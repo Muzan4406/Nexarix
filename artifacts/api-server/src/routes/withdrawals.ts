@@ -21,6 +21,7 @@ router.get("/withdrawals", authMiddleware, async (req, res) => {
 
 router.post("/withdrawals", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
+  // type: "Balance" (parrainage) | "Tâches" (task earnings)
   const { type, operator, phone, amount } = req.body;
 
   if (!type || !operator || !phone || !amount) {
@@ -42,7 +43,12 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     return;
   }
 
-  const currentBalance = parseFloat(user.balance || "0");
+  // Choose balance source
+  const isTaskWithdrawal = type === "Tâches";
+  const currentBalance = isTaskWithdrawal
+    ? parseFloat(user.taskBalance || "0")
+    : parseFloat(user.balance || "0");
+
   if (currentBalance < amount) {
     res.status(400).json({ error: "Solde insuffisant" });
     return;
@@ -51,9 +57,14 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
   const fee = Math.round(amount * FEE_RATE * 100) / 100;
   const amountNet = Math.round((amount - fee) * 100) / 100;
 
+  // Deduct from appropriate balance
+  const balanceUpdate = isTaskWithdrawal
+    ? { taskBalance: sql`${usersTable.taskBalance} - ${amount}` }
+    : { balance: sql`${usersTable.balance} - ${amount}` };
+
   await db.update(usersTable)
     .set({
-      balance: sql`${usersTable.balance} - ${amount}`,
+      ...balanceUpdate,
       totalWithdrawn: sql`${usersTable.totalWithdrawn} + ${amountNet}`,
     })
     .where(eq(usersTable.id, userId));
@@ -70,8 +81,10 @@ router.post("/withdrawals", authMiddleware, async (req, res) => {
     status: "pending",
   }).returning();
 
+  const typeLabel = isTaskWithdrawal ? "Gains Tâches" : "Gains Parrainage";
   sendTelegramNotification(
     `💸 <b>Nouvelle demande de retrait</b>\n` +
+    `📂 Type: <b>${typeLabel}</b>\n` +
     `👤 Utilisateur: <b>${escapeHtml(user.username)}</b>\n` +
     `🌍 Pays: ${escapeHtml(user.country || "—")}\n` +
     `📱 Téléphone: ${escapeHtml(String(phone))}\n` +

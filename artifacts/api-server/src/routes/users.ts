@@ -17,15 +17,32 @@ router.get("/users/dashboard", authMiddleware, async (req, res) => {
     return;
   }
 
-  const downlineCount = await db.select({ count: sql<number>`count(*)` })
-    .from(usersTable)
+  // Level 1 downlines
+  const level1 = await db.select().from(usersTable)
     .where(eq(usersTable.upline, user.username));
+
+  // Level 2 downlines
+  const level2Users: any[] = [];
+  for (const l1 of level1) {
+    const children = await db.select().from(usersTable)
+      .where(eq(usersTable.upline, l1.username));
+    level2Users.push(...children);
+  }
+
+  // Level 3 downlines
+  const level3Users: any[] = [];
+  for (const l2 of level2Users) {
+    const children = await db.select().from(usersTable)
+      .where(eq(usersTable.upline, l2.username));
+    level3Users.push(...children);
+  }
 
   const completedTasksCount = await db.select({ count: sql<number>`count(*)` })
     .from(taskCompletionsTable)
     .where(eq(taskCompletionsTable.userId, userId));
 
   const balance = parseFloat(user.balance || "0");
+  const taskBalance = parseFloat(user.taskBalance || "0");
   const totalWithdrawn = parseFloat(user.totalWithdrawn || "0");
   const mlmL1 = parseFloat(user.mlmEarningsL1 || "0");
   const mlmL2 = parseFloat(user.mlmEarningsL2 || "0");
@@ -33,16 +50,26 @@ router.get("/users/dashboard", authMiddleware, async (req, res) => {
   const tasks = parseFloat(user.taskEarnings || "0");
   const welcomeBonus = parseFloat(user.welcomeBonus || "0");
   const totalEarned = mlmL1 + mlmL2 + mlmL3 + tasks + welcomeBonus;
-  const totalBalance = balance + totalWithdrawn;
+  const totalBalance = balance + taskBalance + totalWithdrawn;
+
+  const level1Count = level1.length;
+  const level2Count = level2Users.length;
+  const level3Count = level3Users.length;
+  const totalDownlineCount = level1Count + level2Count + level3Count;
 
   res.json({
     balance,
+    taskBalance,
     points: user.points,
     totalWithdrawn,
     totalEarned,
     totalBalance,
     welcomeBonus,
-    downlineCount: Number(downlineCount[0]?.count || 0),
+    downlineCount: level1Count,
+    downlineLevel1Count: level1Count,
+    downlineLevel2Count: level2Count,
+    downlineLevel3Count: level3Count,
+    totalDownlineCount,
     completedTasks: Number(completedTasksCount[0]?.count || 0),
     referralLink: `${req.headers['x-forwarded-proto'] || req.protocol}://${req.headers['x-forwarded-host'] || req.get('host')}/register/${user.username}`,
     earnings: { mlmLevel1: mlmL1, mlmLevel2: mlmL2, mlmLevel3: mlmL3, tasks },
@@ -70,6 +97,7 @@ router.get("/users/profile", authMiddleware, async (req, res) => {
     status: user.status,
     membership: user.membership,
     balance: parseFloat(user.balance || "0"),
+    taskBalance: parseFloat(user.taskBalance || "0"),
     points: user.points,
     upline: user.upline,
     avatarUrl: user.avatarUrl,
@@ -79,14 +107,13 @@ router.get("/users/profile", authMiddleware, async (req, res) => {
   });
 });
 
-// Validate that a URL points to an accepted image host (Supabase or common CDNs)
+// Validate that a URL points to an accepted image host
 function isValidAvatarUrl(url: unknown): boolean {
   if (typeof url !== "string" || url.length > 500) return false;
   try {
     const parsed = new URL(url);
     if (!["https:", "http:"].includes(parsed.protocol)) return false;
-    // Allow Supabase storage, common CDN patterns, and data URIs are rejected
-    return true; // all valid HTTPS URLs allowed — Supabase presigned URLs vary per project
+    return true;
   } catch {
     return false;
   }
@@ -119,6 +146,7 @@ router.patch("/users/profile", authMiddleware, async (req, res) => {
     status: user.status,
     membership: user.membership,
     balance: parseFloat(user.balance || "0"),
+    taskBalance: parseFloat(user.taskBalance || "0"),
     points: user.points,
     upline: user.upline,
     avatarUrl: user.avatarUrl,

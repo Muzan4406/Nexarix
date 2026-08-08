@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
-import { eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
 
 const router = Router();
@@ -49,6 +49,7 @@ function formatDownlineUser(u: any) {
   return {
     id: u.id,
     username: u.username,
+    phone: u.phone,
     country: u.country,
     status: u.status,
     joinedAt: u.joinedAt?.toISOString(),

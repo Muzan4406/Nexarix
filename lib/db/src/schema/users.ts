@@ -14,6 +14,7 @@ export const usersTable = pgTable("users", {
   status: userStatusEnum("status").notNull().default("inactive"),
   membership: text("membership").notNull().default("Free"),
   balance: numeric("balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  taskBalance: numeric("task_balance", { precision: 12, scale: 2 }).notNull().default("0"),
   points: integer("points").notNull().default(0),
   upline: text("upline"),
   avatarUrl: text("avatar_url"),

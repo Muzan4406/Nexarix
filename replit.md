@@ -14,7 +14,7 @@ Three workflows are configured (auto-created from the artifact layout) and run i
 
 | Workflow | Command | Port |
 |---|---|---|
-| `artifacts/nexarix: web` | `pnpm --filter @workspace/nexarix run dev` | 5000 (proxied) |
+| `artifacts/nexarix: web` | `pnpm --filter @workspace/nexarix run dev` | 20217 → external 80 (Replit assigns PORT=20217 to this artifact workflow) |
 | `artifacts/api-server: API Server` | `pnpm --filter @workspace/api-server run dev` | 8080 |
 | `artifacts/mockup-sandbox: Component Preview Server` | `pnpm --filter @workspace/mockup-sandbox run dev` | canvas preview only |
 

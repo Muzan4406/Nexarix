@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle, XCircle, Users, Zap } from "lucide-react";
+import { CheckCircle, XCircle, Users, Zap, Phone } from "lucide-react";
 import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 const listStagger = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
@@ -34,7 +35,7 @@ export function MemberList({
     return (
       <div className="space-y-2.5">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-20 rounded-2xl bg-white border border-gray-100 animate-pulse" />
+          <div key={i} className="h-24 rounded-2xl bg-white border border-gray-100 animate-pulse" />
         ))}
       </div>
     );
@@ -88,17 +89,17 @@ export function MemberList({
               {/* Infos */}
               <div className="flex-1 min-w-0">
                 <p className="font-black text-gray-900 text-sm truncate">{u.username}</p>
+                {u.phone && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Phone className="h-3 w-3 text-gray-400 shrink-0" />
+                    <span className="text-[11px] text-gray-500 font-medium">{u.phone}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  {u.country && (
-                    <span className="text-[11px] text-gray-400 font-medium">{u.country}</span>
-                  )}
                   {u.joinedAt && (
-                    <>
-                      {u.country && <span className="text-gray-200 text-xs">·</span>}
-                      <span className="text-[11px] text-gray-400">
-                        {format(new Date(u.joinedAt), "dd/MM/yy")}
-                      </span>
-                    </>
+                    <span className="text-[11px] text-gray-400">
+                      Inscrit le {format(new Date(u.joinedAt), "dd/MM/yyyy", { locale: fr })}
+                    </span>
                   )}
                 </div>
               </div>

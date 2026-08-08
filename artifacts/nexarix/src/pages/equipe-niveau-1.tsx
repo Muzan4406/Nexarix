@@ -9,7 +9,7 @@ import { getCurrencyCode } from "@/lib/currency";
 const CONFIG = {
   key: "level1" as const,
   label: "Niveau 1",
-  commission: 1300,
+  commission: 2000,
   color: "#10b981",
   lightBg: "bg-emerald-50",
   lightText: "text-emerald-600",
@@ -32,6 +32,7 @@ export default function EquipeNiveau1() {
   const members = downline?.level1 ?? [];
   const earnings = downline?.mlmEarningsL1 ?? 0;
   const count = members.length;
+  const activeCount = members.filter((m: any) => m.status === "active").length;
 
   return (
     <AppLayout>
@@ -58,7 +59,7 @@ export default function EquipeNiveau1() {
               </div>
               <div className="text-right">
                 <p className="text-white font-black text-3xl leading-none">{count}</p>
-                <p className="text-emerald-200 text-[11px] font-semibold mt-0.5">filleul{count > 1 ? "s" : ""} direct{count > 1 ? "s" : ""}</p>
+                <p className="text-emerald-200 text-[11px] font-semibold mt-0.5">filleul{count > 1 ? "s" : ""}</p>
               </div>
             </div>
 
@@ -79,18 +80,34 @@ export default function EquipeNiveau1() {
           </div>
         </motion.div>
 
-        {/* Liste */}
+        {/* Liste actifs */}
         <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">
-            {count} membre{count > 1 ? "s" : ""} — Niveau 1
+            {activeCount} actif{activeCount > 1 ? "s" : ""} sur {count} — Niveau 1
           </p>
           <MemberList
-            members={members}
+            members={members.filter((m: any) => m.status === "active")}
             isLoading={isLoading}
             levelConfig={CONFIG}
             emptyMessage="Parrainez votre premier filleul pour commencer"
           />
         </motion.div>
+
+        {/* Liste inactifs */}
+        {members.filter((m: any) => m.status !== "active").length > 0 && (
+          <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">
+              {members.filter((m: any) => m.status !== "active").length} inactif{members.filter((m: any) => m.status !== "active").length > 1 ? "s" : ""} — Niveau 1
+            </p>
+            <MemberList
+              members={members.filter((m: any) => m.status !== "active")}
+              isLoading={isLoading}
+              levelConfig={CONFIG}
+              emptyMessage=""
+              showCommission={false}
+            />
+          </motion.div>
+        )}
 
       </div>
     </AppLayout>

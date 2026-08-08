@@ -32,7 +32,7 @@ router.get("/settings/public", async (_req, res) => {
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
   if (!settings) [settings] = await db.insert(siteSettingsTable).values({}).returning();
   res.json({
-    activationFee: parseFloat(settings.activationFee || "3000"),
+    activationFee: parseFloat(settings.activationFee || "3800"),
     paymentMode: settings.paymentMode || "manual",
     minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
     supportEmail: settings.supportEmail || null,
@@ -60,7 +60,7 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
   if (settings.paymentMode !== "auto") { res.status(400).json({ error: "Le paiement automatique n'est pas activé" }); return; }
   if (!settings.sendavapayApiKey) { res.status(503).json({ error: "La clé API Sendavapay n'est pas configurée" }); return; }
 
-  const activationFee = parseFloat(settings.activationFee || "3000");
+  const activationFee = parseFloat(settings.activationFee || "3800");
   const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
 
   // Prioritize form data over profile data
@@ -296,9 +296,9 @@ async function activateUser(user: any) {
 async function distributeMLMCommissions(user: any) {
   if (!user.upline) return;
   const commissions = [
-    { field: "mlmEarningsL1", amount: 1300 },
-    { field: "mlmEarningsL2", amount: 600 },
-    { field: "mlmEarningsL3", amount: 300 },
+    { field: "mlmEarningsL1", amount: 2000 },
+    { field: "mlmEarningsL2", amount: 700 },
+    { field: "mlmEarningsL3", amount: 400 },
   ];
   let currentUplineUsername = user.upline;
   let isLevel1 = true;

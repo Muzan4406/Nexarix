@@ -9,7 +9,7 @@ import { getCurrencyCode } from "@/lib/currency";
 const CONFIG = {
   key: "level2" as const,
   label: "Niveau 2",
-  commission: 600,
+  commission: 700,
   color: "#3b82f6",
   lightBg: "bg-blue-50",
   lightText: "text-blue-600",
@@ -32,6 +32,7 @@ export default function EquipeNiveau2() {
   const members = downline?.level2 ?? [];
   const earnings = downline?.mlmEarningsL2 ?? 0;
   const count = members.length;
+  const activeCount = members.filter((m: any) => m.status === "active").length;
 
   return (
     <AppLayout>
@@ -79,18 +80,33 @@ export default function EquipeNiveau2() {
           </div>
         </motion.div>
 
-        {/* Liste */}
+        {/* Liste actifs */}
         <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">
-            {count} membre{count > 1 ? "s" : ""} — Niveau 2
+            {activeCount} actif{activeCount > 1 ? "s" : ""} sur {count} — Niveau 2
           </p>
           <MemberList
-            members={members}
+            members={members.filter((m: any) => m.status === "active")}
             isLoading={isLoading}
             levelConfig={CONFIG}
             emptyMessage="Aucun filleul de niveau 2 pour l'instant"
           />
         </motion.div>
+
+        {members.filter((m: any) => m.status !== "active").length > 0 && (
+          <motion.div custom={2} variants={fadeUp} initial="hidden" animate="visible">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 px-1">
+              {members.filter((m: any) => m.status !== "active").length} inactif{members.filter((m: any) => m.status !== "active").length > 1 ? "s" : ""} — Niveau 2
+            </p>
+            <MemberList
+              members={members.filter((m: any) => m.status !== "active")}
+              isLoading={isLoading}
+              levelConfig={CONFIG}
+              emptyMessage=""
+              showCommission={false}
+            />
+          </motion.div>
+        )}
 
       </div>
     </AppLayout>

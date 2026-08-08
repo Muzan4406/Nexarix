@@ -20651,27 +20651,27 @@ var require_router = __commonJS({
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
-    module.exports = Router16;
+    module.exports = Router17;
     module.exports.Route = Route;
-    function Router16(options) {
-      if (!(this instanceof Router16)) {
-        return new Router16(options);
+    function Router17(options) {
+      if (!(this instanceof Router17)) {
+        return new Router17(options);
       }
       const opts = options || {};
-      function router16(req, res, next) {
-        router16.handle(req, res, next);
+      function router17(req, res, next) {
+        router17.handle(req, res, next);
       }
-      Object.setPrototypeOf(router16, this);
-      router16.caseSensitive = opts.caseSensitive;
-      router16.mergeParams = opts.mergeParams;
-      router16.params = {};
-      router16.strict = opts.strict;
-      router16.stack = [];
-      return router16;
+      Object.setPrototypeOf(router17, this);
+      router17.caseSensitive = opts.caseSensitive;
+      router17.mergeParams = opts.mergeParams;
+      router17.params = {};
+      router17.strict = opts.strict;
+      router17.stack = [];
+      return router17;
     }
-    Router16.prototype = function() {
+    Router17.prototype = function() {
     };
-    Router16.prototype.param = function param(name, fn) {
+    Router17.prototype.param = function param(name, fn) {
       if (!name) {
         throw new TypeError("argument name is required");
       }
@@ -20691,7 +20691,7 @@ var require_router = __commonJS({
       params.push(fn);
       return this;
     };
-    Router16.prototype.handle = function handle(req, res, callback) {
+    Router17.prototype.handle = function handle(req, res, callback) {
       if (!callback) {
         throw new TypeError("argument callback is required");
       }
@@ -20818,7 +20818,7 @@ var require_router = __commonJS({
         }
       }
     };
-    Router16.prototype.use = function use(handler) {
+    Router17.prototype.use = function use(handler) {
       let offset = 0;
       let path5 = "/";
       if (typeof handler !== "function") {
@@ -20851,7 +20851,7 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router16.prototype.route = function route(path5) {
+    Router17.prototype.route = function route(path5) {
       const route2 = new Route(path5);
       const layer = new Layer(path5, {
         sensitive: this.caseSensitive,
@@ -20866,7 +20866,7 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router16.prototype[method] = function(path5) {
+      Router17.prototype[method] = function(path5) {
         const route = this.route(path5);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
@@ -21049,13 +21049,13 @@ var require_application = __commonJS({
     var compileTrust = require_utils3().compileTrust;
     var resolve = __require("node:path").resolve;
     var once = require_once();
-    var Router16 = require_router();
+    var Router17 = require_router();
     var slice = Array.prototype.slice;
     var flatten = Array.prototype.flat;
     var app2 = exports = module.exports = {};
     var trustProxyDefaultSymbol = "@@symbol:trust_proxy_default";
     app2.init = function init() {
-      var router16 = null;
+      var router17 = null;
       this.cache = /* @__PURE__ */ Object.create(null);
       this.engines = /* @__PURE__ */ Object.create(null);
       this.settings = /* @__PURE__ */ Object.create(null);
@@ -21064,13 +21064,13 @@ var require_application = __commonJS({
         configurable: true,
         enumerable: true,
         get: function getrouter() {
-          if (router16 === null) {
-            router16 = new Router16({
+          if (router17 === null) {
+            router17 = new Router17({
               caseSensitive: this.enabled("case sensitive routing"),
               strict: this.enabled("strict routing")
             });
           }
-          return router16;
+          return router17;
         }
       });
     };
@@ -21141,15 +21141,15 @@ var require_application = __commonJS({
       if (fns.length === 0) {
         throw new TypeError("app.use() requires a middleware function");
       }
-      var router16 = this.router;
+      var router17 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router16.use(path5, fn2);
+          return router17.use(path5, fn2);
         }
         debug(".use app under %s", path5);
         fn2.mountpath = path5;
         fn2.parent = this;
-        router16.use(path5, function mounted_app(req, res, next) {
+        router17.use(path5, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -23722,7 +23722,7 @@ var require_express = __commonJS({
     var EventEmitter = __require("node:events").EventEmitter;
     var mixin = require_merge_descriptors();
     var proto = require_application();
-    var Router16 = require_router();
+    var Router17 = require_router();
     var req = require_request();
     var res = require_response();
     exports = module.exports = createApplication;
@@ -23744,8 +23744,8 @@ var require_express = __commonJS({
     exports.application = proto;
     exports.request = req;
     exports.response = res;
-    exports.Route = Router16.Route;
-    exports.Router = Router16;
+    exports.Route = Router17.Route;
+    exports.Router = Router17;
     exports.json = bodyParser.json;
     exports.raw = bodyParser.raw;
     exports.static = require_serve_static();
@@ -56088,7 +56088,7 @@ var require_multer = __commonJS({
 });
 
 // src/app.ts
-var import_express16 = __toESM(require_express2(), 1);
+var import_express17 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 
 // ../../node_modules/.pnpm/helmet@8.3.0/node_modules/helmet/index.mjs
@@ -56664,7 +56664,7 @@ import path4 from "node:path";
 import { fileURLToPath } from "node:url";
 
 // src/routes/index.ts
-var import_express15 = __toESM(require_express2(), 1);
+var import_express16 = __toESM(require_express2(), 1);
 
 // src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
@@ -63516,10 +63516,10 @@ function pgEnumObjectWithSchema(enumName, values, schema) {
 // ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/subquery.js
 var Subquery = class {
   static [entityKind] = "Subquery";
-  constructor(sql2, fields, alias, isWith = false, usedTables = []) {
+  constructor(sql3, fields, alias, isWith = false, usedTables = []) {
     this._ = {
       brand: "Subquery",
-      sql: sql2,
+      sql: sql3,
       selectedFields: fields,
       alias,
       isWith,
@@ -63920,19 +63920,19 @@ function sql(strings, ...params) {
   }
   return new SQL(queryChunks);
 }
-((sql2) => {
+((sql22) => {
   function empty() {
     return new SQL([]);
   }
-  sql2.empty = empty;
+  sql22.empty = empty;
   function fromList(list) {
     return new SQL(list);
   }
-  sql2.fromList = fromList;
+  sql22.fromList = fromList;
   function raw(str) {
     return new SQL([new StringChunk(str)]);
   }
-  sql2.raw = raw;
+  sql22.raw = raw;
   function join(chunks, separator) {
     const result = [];
     for (const [i, chunk] of chunks.entries()) {
@@ -63943,24 +63943,24 @@ function sql(strings, ...params) {
     }
     return new SQL(result);
   }
-  sql2.join = join;
+  sql22.join = join;
   function identifier(value) {
     return new Name(value);
   }
-  sql2.identifier = identifier;
+  sql22.identifier = identifier;
   function placeholder2(name2) {
     return new Placeholder(name2);
   }
-  sql2.placeholder = placeholder2;
+  sql22.placeholder = placeholder2;
   function param2(value, encoder) {
     return new Param(value, encoder);
   }
-  sql2.param = param2;
+  sql22.param = param2;
 })(sql || (sql = {}));
 ((SQL2) => {
   class Aliased {
-    constructor(sql2, fieldAlias) {
-      this.sql = sql2;
+    constructor(sql22, fieldAlias) {
+      this.sql = sql22;
       this.fieldAlias = fieldAlias;
     }
     static [entityKind] = "SQL.Aliased";
@@ -66657,8 +66657,8 @@ var PgDialect = class {
       return "none";
     }
   }
-  sqlToQuery(sql2, invokeSource) {
-    return sql2.toQuery({
+  sqlToQuery(sql22, invokeSource) {
+    return sql22.toQuery({
       casing: this.casing,
       escapeName: this.escapeName,
       escapeParam: this.escapeParam,
@@ -69017,10 +69017,10 @@ var PgRelationalQuery = class extends QueryPromise {
 
 // ../../node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.22.0/node_modules/drizzle-orm/pg-core/query-builders/raw.js
 var PgRaw = class extends QueryPromise {
-  constructor(execute, sql2, query, mapBatchResult) {
+  constructor(execute, sql3, query, mapBatchResult) {
     super();
     this.execute = execute;
-    this.sql = sql2;
+    this.sql = sql3;
     this.query = query;
     this.mapBatchResult = mapBatchResult;
   }
@@ -69340,8 +69340,8 @@ var NoopCache = class extends Cache {
   async onMutate(_params) {
   }
 };
-async function hashQuery(sql2, params) {
-  const dataToHash = `${sql2}-${JSON.stringify(params)}`;
+async function hashQuery(sql3, params) {
+  const dataToHash = `${sql3}-${JSON.stringify(params)}`;
   const encoder = new TextEncoder();
   const data = encoder.encode(dataToHash);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
@@ -69474,8 +69474,8 @@ var PgSession = class {
     ).all();
   }
   /** @internal */
-  async count(sql2, token) {
-    const res = await this.execute(sql2, token);
+  async count(sql22, token) {
+    const res = await this.execute(sql22, token);
     return Number(
       res[0]["count"]
     );
@@ -69697,8 +69697,8 @@ var NodePgSession = class _NodePgSession extends PgSession {
       if (isPool) session.client.release();
     }
   }
-  async count(sql2) {
-    const res = await this.execute(sql2);
+  async count(sql22) {
+    const res = await this.execute(sql22);
     return Number(
       res["rows"][0]["count"]
     );
@@ -69808,6 +69808,8 @@ __export(schema_exports, {
   insertTaskSchema: () => insertTaskSchema,
   insertUserSchema: () => insertUserSchema,
   insertWithdrawalSchema: () => insertWithdrawalSchema,
+  notificationReadsTable: () => notificationReadsTable,
+  notificationsTable: () => notificationsTable,
   servicesTable: () => servicesTable,
   siteSettingsTable: () => siteSettingsTable,
   storeItemsTable: () => storeItemsTable,
@@ -81218,6 +81220,7 @@ var usersTable = pgTable("users", {
   status: userStatusEnum("status").notNull().default("inactive"),
   membership: text("membership").notNull().default("Free"),
   balance: numeric("balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  taskBalance: numeric("task_balance", { precision: 12, scale: 2 }).notNull().default("0"),
   points: integer("points").notNull().default(0),
   upline: text("upline"),
   avatarUrl: text("avatar_url"),
@@ -81278,7 +81281,7 @@ var siteSettingsTable = pgTable("site_settings", {
   telegramChannel: text("telegram_channel"),
   whatsappLink: text("whatsapp_link").notNull().default("https://wa.me/nexarix"),
   vcfLink: text("vcf_link"),
-  activationFee: numeric("activation_fee", { precision: 12, scale: 2 }).notNull().default("3000"),
+  activationFee: numeric("activation_fee", { precision: 12, scale: 2 }).notNull().default("3800"),
   minWithdrawal: numeric("min_withdrawal", { precision: 12, scale: 2 }).notNull().default("3000"),
   paymentMode: text("payment_mode").notNull().default("manual"),
   sendavapayApiKey: text("sendavapay_api_key"),
@@ -81381,6 +81384,21 @@ var blockedIpsTable = pgTable("blocked_ips", {
   ip: text("ip").notNull().unique(),
   reason: text("reason").notNull(),
   blockedAt: bigint("blocked_at", { mode: "number" }).notNull()
+});
+
+// ../../lib/db/src/schema/notifications.ts
+var notificationsTable = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdBy: integer("created_by").references(() => usersTable.id)
+});
+var notificationReadsTable = pgTable("notification_reads", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => usersTable.id),
+  notificationId: integer("notification_id").notNull().references(() => notificationsTable.id),
+  readAt: timestamp("read_at").notNull().defaultNow()
 });
 
 // ../../lib/db/src/index.ts
@@ -82751,9 +82769,20 @@ router3.get("/users/dashboard", authMiddleware, async (req, res) => {
     res.status(404).json({ error: "User not found" });
     return;
   }
-  const downlineCount = await db.select({ count: sql`count(*)` }).from(usersTable).where(eq(usersTable.upline, user.username));
+  const level1 = await db.select().from(usersTable).where(eq(usersTable.upline, user.username));
+  const level2Users = [];
+  for (const l1 of level1) {
+    const children = await db.select().from(usersTable).where(eq(usersTable.upline, l1.username));
+    level2Users.push(...children);
+  }
+  const level3Users = [];
+  for (const l2 of level2Users) {
+    const children = await db.select().from(usersTable).where(eq(usersTable.upline, l2.username));
+    level3Users.push(...children);
+  }
   const completedTasksCount = await db.select({ count: sql`count(*)` }).from(taskCompletionsTable).where(eq(taskCompletionsTable.userId, userId));
   const balance = parseFloat(user.balance || "0");
+  const taskBalance = parseFloat(user.taskBalance || "0");
   const totalWithdrawn = parseFloat(user.totalWithdrawn || "0");
   const mlmL1 = parseFloat(user.mlmEarningsL1 || "0");
   const mlmL2 = parseFloat(user.mlmEarningsL2 || "0");
@@ -82761,15 +82790,24 @@ router3.get("/users/dashboard", authMiddleware, async (req, res) => {
   const tasks = parseFloat(user.taskEarnings || "0");
   const welcomeBonus = parseFloat(user.welcomeBonus || "0");
   const totalEarned = mlmL1 + mlmL2 + mlmL3 + tasks + welcomeBonus;
-  const totalBalance = balance + totalWithdrawn;
+  const totalBalance = balance + taskBalance + totalWithdrawn;
+  const level1Count = level1.length;
+  const level2Count = level2Users.length;
+  const level3Count = level3Users.length;
+  const totalDownlineCount = level1Count + level2Count + level3Count;
   res.json({
     balance,
+    taskBalance,
     points: user.points,
     totalWithdrawn,
     totalEarned,
     totalBalance,
     welcomeBonus,
-    downlineCount: Number(downlineCount[0]?.count || 0),
+    downlineCount: level1Count,
+    downlineLevel1Count: level1Count,
+    downlineLevel2Count: level2Count,
+    downlineLevel3Count: level3Count,
+    totalDownlineCount,
     completedTasks: Number(completedTasksCount[0]?.count || 0),
     referralLink: `${req.headers["x-forwarded-proto"] || req.protocol}://${req.headers["x-forwarded-host"] || req.get("host")}/register/${user.username}`,
     earnings: { mlmLevel1: mlmL1, mlmLevel2: mlmL2, mlmLevel3: mlmL3, tasks }
@@ -82792,6 +82830,7 @@ router3.get("/users/profile", authMiddleware, async (req, res) => {
     status: user.status,
     membership: user.membership,
     balance: parseFloat(user.balance || "0"),
+    taskBalance: parseFloat(user.taskBalance || "0"),
     points: user.points,
     upline: user.upline,
     avatarUrl: user.avatarUrl,
@@ -82828,6 +82867,7 @@ router3.patch("/users/profile", authMiddleware, async (req, res) => {
     status: user.status,
     membership: user.membership,
     balance: parseFloat(user.balance || "0"),
+    taskBalance: parseFloat(user.taskBalance || "0"),
     points: user.points,
     upline: user.upline,
     avatarUrl: user.avatarUrl,
@@ -82862,6 +82902,7 @@ var users_default = router3;
 // src/routes/tasks.ts
 var import_express4 = __toESM(require_express2(), 1);
 var router4 = (0, import_express4.Router)();
+var TASK_FCFA_RATE = 0.5;
 router4.get("/tasks", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const activeTasks = await db.select().from(tasksTable).where(and(eq(tasksTable.isActive, true), sql`${tasksTable.deletedAt} IS NULL`));
@@ -82906,13 +82947,17 @@ router4.post("/tasks/:taskId/complete", authMiddleware, async (req, res) => {
     }
   }
   await db.insert(taskCompletionsTable).values({ userId, taskId });
+  const fcfaEarned = task.points * TASK_FCFA_RATE;
   const [updated] = await db.update(usersTable).set({
     points: sql`${usersTable.points} + ${task.points}`,
-    taskEarnings: sql`${usersTable.taskEarnings} + ${task.points * 0.5}`
+    taskEarnings: sql`${usersTable.taskEarnings} + ${fcfaEarned}`,
+    taskBalance: sql`${usersTable.taskBalance} + ${fcfaEarned}`
   }).where(eq(usersTable.id, userId)).returning();
   res.json({
     pointsEarned: task.points,
-    newPoints: updated.points
+    fcfaEarned,
+    newPoints: updated.points,
+    newTaskBalance: parseFloat(updated.taskBalance || "0")
   });
 });
 var tasks_default = router4;
@@ -82945,15 +82990,17 @@ router5.post("/withdrawals", authMiddleware, async (req, res) => {
     res.status(404).json({ error: "Utilisateur introuvable" });
     return;
   }
-  const currentBalance = parseFloat(user.balance || "0");
+  const isTaskWithdrawal = type === "T\xE2ches";
+  const currentBalance = isTaskWithdrawal ? parseFloat(user.taskBalance || "0") : parseFloat(user.balance || "0");
   if (currentBalance < amount) {
     res.status(400).json({ error: "Solde insuffisant" });
     return;
   }
   const fee = Math.round(amount * FEE_RATE * 100) / 100;
   const amountNet = Math.round((amount - fee) * 100) / 100;
+  const balanceUpdate = isTaskWithdrawal ? { taskBalance: sql`${usersTable.taskBalance} - ${amount}` } : { balance: sql`${usersTable.balance} - ${amount}` };
   await db.update(usersTable).set({
-    balance: sql`${usersTable.balance} - ${amount}`,
+    ...balanceUpdate,
     totalWithdrawn: sql`${usersTable.totalWithdrawn} + ${amountNet}`
   }).where(eq(usersTable.id, userId));
   const [withdrawal] = await db.insert(withdrawalsTable).values({
@@ -82967,8 +83014,10 @@ router5.post("/withdrawals", authMiddleware, async (req, res) => {
     amountNet: amountNet.toString(),
     status: "pending"
   }).returning();
+  const typeLabel = isTaskWithdrawal ? "Gains T\xE2ches" : "Gains Parrainage";
   sendTelegramNotification(
     `\u{1F4B8} <b>Nouvelle demande de retrait</b>
+\u{1F4C2} Type: <b>${typeLabel}</b>
 \u{1F464} Utilisateur: <b>${escapeHtml(user.username)}</b>
 \u{1F30D} Pays: ${escapeHtml(user.country || "\u2014")}
 \u{1F4F1} T\xE9l\xE9phone: ${escapeHtml(String(phone))}
@@ -83035,6 +83084,7 @@ function formatDownlineUser(u) {
   return {
     id: u.id,
     username: u.username,
+    phone: u.phone,
     country: u.country,
     status: u.status,
     joinedAt: u.joinedAt?.toISOString()
@@ -83862,7 +83912,7 @@ router8.get("/settings/public", async (_req, res) => {
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
   if (!settings) [settings] = await db.insert(siteSettingsTable).values({}).returning();
   res.json({
-    activationFee: parseFloat(settings.activationFee || "3000"),
+    activationFee: parseFloat(settings.activationFee || "3800"),
     paymentMode: settings.paymentMode || "manual",
     minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
     supportEmail: settings.supportEmail || null,
@@ -83895,7 +83945,7 @@ router8.post("/activate/initiate", authMiddleware, async (req, res) => {
     res.status(503).json({ error: "La cl\xE9 API Sendavapay n'est pas configur\xE9e" });
     return;
   }
-  const activationFee = parseFloat(settings.activationFee || "3000");
+  const activationFee = parseFloat(settings.activationFee || "3800");
   const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
   const resolvedCountry = formCountry || user.country || "";
   const resolvedPhone = formPhone || user.phone || "";
@@ -84109,9 +84159,9 @@ async function activateUser(user) {
 async function distributeMLMCommissions2(user) {
   if (!user.upline) return;
   const commissions = [
-    { field: "mlmEarningsL1", amount: 1300 },
-    { field: "mlmEarningsL2", amount: 600 },
-    { field: "mlmEarningsL3", amount: 300 }
+    { field: "mlmEarningsL1", amount: 2e3 },
+    { field: "mlmEarningsL2", amount: 700 },
+    { field: "mlmEarningsL3", amount: 400 }
   ];
   let currentUplineUsername = user.upline;
   let isLevel1 = true;
@@ -85111,30 +85161,129 @@ router14.post("/admin/upload/presign", authMiddleware, adminMiddleware, async (r
 });
 var upload_default = router14;
 
-// src/routes/index.ts
+// src/routes/notifications.ts
+var import_express15 = __toESM(require_express2(), 1);
 var router15 = (0, import_express15.Router)();
-router15.use(health_default);
-router15.use(auth_default);
-router15.use(users_default);
-router15.use(tasks_default);
-router15.use(withdrawals_default);
-router15.use(downline_default);
-router15.use(admin_default);
-router15.use(activation_default);
-router15.use(telegram_default);
-router15.use(store_default);
-router15.use(formations_default);
-router15.use(formation_purchases_default);
-router15.use(services_default);
-router15.use(upload_default);
-var routes_default = router15;
+router15.get("/notifications", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const notifications = await db.select().from(notificationsTable).orderBy(desc(notificationsTable.createdAt)).limit(50);
+  const reads = await db.select({ notificationId: notificationReadsTable.notificationId }).from(notificationReadsTable).where(eq(notificationReadsTable.userId, userId));
+  const readIds = new Set(reads.map((r) => r.notificationId));
+  const result = notifications.map((n) => ({
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    createdAt: n.createdAt?.toISOString(),
+    read: readIds.has(n.id)
+  }));
+  res.json({
+    notifications: result,
+    unreadCount: result.filter((n) => !n.read).length
+  });
+});
+router15.patch("/notifications/:id/read", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const notificationId = parseInt(req.params.id);
+  const existing = await db.select().from(notificationReadsTable).where(and(
+    eq(notificationReadsTable.userId, userId),
+    eq(notificationReadsTable.notificationId, notificationId)
+  )).limit(1);
+  if (existing.length === 0) {
+    await db.insert(notificationReadsTable).values({ userId, notificationId });
+  }
+  res.json({ ok: true });
+});
+router15.patch("/notifications/read-all", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const allNotifs = await db.select({ id: notificationsTable.id }).from(notificationsTable);
+  const reads = await db.select({ notificationId: notificationReadsTable.notificationId }).from(notificationReadsTable).where(eq(notificationReadsTable.userId, userId));
+  const readIds = new Set(reads.map((r) => r.notificationId));
+  const unread = allNotifs.filter((n) => !readIds.has(n.id));
+  if (unread.length > 0) {
+    await db.insert(notificationReadsTable).values(
+      unread.map((n) => ({ userId, notificationId: n.id }))
+    );
+  }
+  res.json({ ok: true });
+});
+router15.post("/admin/notifications", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const [adminUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!adminUser?.isAdmin) {
+    res.status(403).json({ error: "Acc\xE8s refus\xE9" });
+    return;
+  }
+  const { title, message } = req.body;
+  if (!title || !message) {
+    res.status(400).json({ error: "Titre et message requis" });
+    return;
+  }
+  const [notification] = await db.insert(notificationsTable).values({
+    title,
+    message,
+    createdBy: userId
+  }).returning();
+  res.status(201).json({
+    id: notification.id,
+    title: notification.title,
+    message: notification.message,
+    createdAt: notification.createdAt?.toISOString()
+  });
+});
+router15.get("/admin/notifications", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const [adminUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!adminUser?.isAdmin) {
+    res.status(403).json({ error: "Acc\xE8s refus\xE9" });
+    return;
+  }
+  const notifications = await db.select().from(notificationsTable).orderBy(desc(notificationsTable.createdAt));
+  res.json(notifications.map((n) => ({
+    id: n.id,
+    title: n.title,
+    message: n.message,
+    createdAt: n.createdAt?.toISOString()
+  })));
+});
+router15.delete("/admin/notifications/:id", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const [adminUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!adminUser?.isAdmin) {
+    res.status(403).json({ error: "Acc\xE8s refus\xE9" });
+    return;
+  }
+  const notifId = parseInt(req.params.id);
+  await db.delete(notificationReadsTable).where(eq(notificationReadsTable.notificationId, notifId));
+  await db.delete(notificationsTable).where(eq(notificationsTable.id, notifId));
+  res.json({ ok: true });
+});
+var notifications_default = router15;
+
+// src/routes/index.ts
+var router16 = (0, import_express16.Router)();
+router16.use(health_default);
+router16.use(auth_default);
+router16.use(users_default);
+router16.use(tasks_default);
+router16.use(withdrawals_default);
+router16.use(downline_default);
+router16.use(admin_default);
+router16.use(activation_default);
+router16.use(telegram_default);
+router16.use(store_default);
+router16.use(formations_default);
+router16.use(formation_purchases_default);
+router16.use(services_default);
+router16.use(upload_default);
+router16.use(notifications_default);
+var routes_default = router16;
 
 // src/app.ts
 var import_jsonwebtoken2 = __toESM(require_jsonwebtoken(), 1);
 var JWT_SECRET2 = process.env.JWT_SECRET ?? (process.env.NODE_ENV === "production" ? (() => {
   throw new Error("JWT_SECRET environment variable is required in production");
 })() : "nexarix-dev-secret-change-in-production");
-var app = (0, import_express16.default)();
+var app = (0, import_express17.default)();
 app.use(
   (0, import_pino_http.default)({
     logger,
@@ -85175,10 +85324,10 @@ app.use((0, import_cors.default)({
 }));
 app.use("/api", blockedIpGuard);
 app.use("/api", globalApiLimiter);
-app.use("/api/activate/webhook", import_express16.default.raw({ type: "application/json" }));
-app.use("/api/formations/purchase/webhook", import_express16.default.raw({ type: "application/json" }));
-app.use(import_express16.default.json());
-app.use(import_express16.default.urlencoded({ extended: true }));
+app.use("/api/activate/webhook", import_express17.default.raw({ type: "application/json" }));
+app.use("/api/formations/purchase/webhook", import_express17.default.raw({ type: "application/json" }));
+app.use(import_express17.default.json());
+app.use(import_express17.default.urlencoded({ extended: true }));
 app.use("/api", async (req, res, next) => {
   const bypassed = [
     "/settings/public",
@@ -85207,7 +85356,7 @@ app.use("/api", async (req, res, next) => {
 app.use("/api", routes_default);
 var __dirname2 = path4.dirname(fileURLToPath(import.meta.url));
 var publicDir = path4.join(__dirname2, "../public");
-app.use(import_express16.default.static(publicDir));
+app.use(import_express17.default.static(publicDir));
 app.get("/{*splat}", (_req, res) => {
   res.sendFile(path4.join(publicDir, "index.html"));
 });

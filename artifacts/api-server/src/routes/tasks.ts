@@ -6,6 +6,9 @@ import { authMiddleware } from "../lib/auth";
 
 const router = Router();
 
+// FCFA credit per task point (0.5 FCFA per point)
+const TASK_FCFA_RATE = 0.5;
+
 router.get("/tasks", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
 
@@ -70,17 +73,22 @@ router.post("/tasks/:taskId/complete", authMiddleware, async (req, res) => {
 
   await db.insert(taskCompletionsTable).values({ userId, taskId });
 
+  const fcfaEarned = task.points * TASK_FCFA_RATE;
+
   const [updated] = await db.update(usersTable)
     .set({
       points: sql`${usersTable.points} + ${task.points}`,
-      taskEarnings: sql`${usersTable.taskEarnings} + ${task.points * 0.5}`,
+      taskEarnings: sql`${usersTable.taskEarnings} + ${fcfaEarned}`,
+      taskBalance: sql`${usersTable.taskBalance} + ${fcfaEarned}`,
     })
     .where(eq(usersTable.id, userId))
     .returning();
 
   res.json({
     pointsEarned: task.points,
+    fcfaEarned,
     newPoints: updated.points,
+    newTaskBalance: parseFloat(updated.taskBalance || "0"),
   });
 });
 
