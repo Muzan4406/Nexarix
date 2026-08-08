@@ -83187,6 +83187,7 @@ router7.post("/admin/login", adminLoginLimiter, async (req, res) => {
     isAdmin: 1,
     expiresAt: Date.now() + 5 * 60 * 1e3
   });
+  const telegramConfigured = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
   await sendTelegramNotification(
     `\u{1F510} <b>Tentative de connexion Admin</b>
 \u{1F464} Admin: <b>${escapeHtml(username)}</b>
@@ -83194,7 +83195,11 @@ router7.post("/admin/login", adminLoginLimiter, async (req, res) => {
 \u23F1\uFE0F Valide 5 minutes
 \u26A0\uFE0F Si ce n'est pas vous, ignorez ce message.`
   );
-  res.json({ otpRequired: true, sessionToken });
+  res.json({
+    otpRequired: true,
+    sessionToken,
+    ...!telegramConfigured && { devOtp: otp }
+  });
 });
 router7.post("/admin/verify-otp", otpLimiter, async (req, res) => {
   const { sessionToken, otp } = req.body;

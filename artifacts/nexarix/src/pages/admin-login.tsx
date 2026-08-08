@@ -26,6 +26,7 @@ export default function AdminLogin() {
   const { toast } = useToast();
   const [step, setStep] = useState<"credentials" | "otp">("credentials");
   const [sessionToken, setSessionToken] = useState("");
+  const [devOtp, setDevOtp] = useState<string | null>(null);
   const [loadingCredentials, setLoadingCredentials] = useState(false);
   const [loadingOtp, setLoadingOtp] = useState(false);
 
@@ -45,8 +46,15 @@ export default function AdminLogin() {
 
       if (data.otpRequired && data.sessionToken) {
         setSessionToken(data.sessionToken);
+        setDevOtp(data.devOtp || null);
         setStep("otp");
-        toast({ title: "📲 Code OTP envoyé sur Telegram", description: "Vérifiez votre groupe Telegram." });
+        if (data.devOtp) {
+          // Pre-fill OTP when Telegram is not configured (dev/test mode)
+          otpForm.setValue("otp", data.devOtp);
+          toast({ title: "🔓 Mode test", description: "OTP pré-rempli automatiquement (Telegram non configuré)." });
+        } else {
+          toast({ title: "📲 Code OTP envoyé sur Telegram", description: "Vérifiez votre groupe Telegram." });
+        }
       }
     } catch (err: any) {
       toast({ title: "Accès refusé", description: err.message, variant: "destructive" });

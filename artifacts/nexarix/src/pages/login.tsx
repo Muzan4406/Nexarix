@@ -102,9 +102,9 @@ export default function Login() {
           initial={{ opacity: 0, y: -24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }}
-          className="flex flex-col items-center mb-7"
+          className="flex flex-col items-center mb-4"
         >
-          <div className="relative mb-3">
+          <div className="relative mb-1">
             <div className="absolute inset-0 blur-3xl opacity-25 scale-125"
               style={{ background: "radial-gradient(circle, #10b981 0%, #0ea5e9 60%, transparent 100%)" }} />
             <img

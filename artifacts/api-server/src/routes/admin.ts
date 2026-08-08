@@ -132,6 +132,8 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
     expiresAt: Date.now() + 5 * 60 * 1000,
   });
 
+  const telegramConfigured = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
+
   await sendTelegramNotification(
     `🔐 <b>Tentative de connexion Admin</b>\n` +
     `👤 Admin: <b>${escapeHtml(username)}</b>\n` +
@@ -140,7 +142,13 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
     `⚠️ Si ce n'est pas vous, ignorez ce message.`
   );
 
-  res.json({ otpRequired: true, sessionToken });
+  // When Telegram is not configured, return the OTP directly so the admin
+  // can log in without needing a bot. Remove this once Telegram is set up.
+  res.json({
+    otpRequired: true,
+    sessionToken,
+    ...(!telegramConfigured && { devOtp: otp }),
+  });
 });
 
 router.post("/admin/verify-otp", otpLimiter, async (req, res) => {
