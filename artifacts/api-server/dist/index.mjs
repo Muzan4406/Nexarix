@@ -85394,6 +85394,24 @@ async function runStartupMigrations() {
     await db.execute(sql`
       ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
     `);
+    await db.execute(sql`
+      ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS task_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS upline TEXT,
+        ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+        ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS welcome_bonus NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS total_withdrawn NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS mlm_earnings_l1 NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS mlm_earnings_l2 NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS mlm_earnings_l3 NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS task_earnings NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS has_spun BOOLEAN NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP NOT NULL DEFAULT NOW();
+    `);
     await ensureAdminUser();
     logger.info("Startup migrations OK");
   } catch (err) {
