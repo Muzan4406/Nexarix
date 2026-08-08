@@ -209,7 +209,7 @@ router.get("/admin/dashboard", authMiddleware, adminMiddleware, async (req, res)
     .where(sql`${usersTable.status} = 'inactive' AND ${usersTable.isAdmin} = false`);
 
   const pointsData = await db.select({
-    totalPoints: sql<number>`sum(${usersTable.points})`,
+    totalPoints: sql<number>`sum(${usersTable.taskEarnings})`,
   }).from(usersTable);
 
   const pendingWithdrawals = await db.select({
@@ -281,11 +281,12 @@ router.get("/admin/users/:userId", authMiddleware, adminMiddleware, async (req, 
 
 router.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (req, res) => {
   const userId = parseInt(req.params.userId as string);
-  const { balance, points, status, upline, password, isBanned } = req.body;
+  const { balance, taskBalance, points, status, upline, password, isBanned } = req.body;
 
   const updates: any = {};
   if (balance !== undefined) updates.balance = balance.toString();
   if (points !== undefined) updates.points = points;
+  if (taskBalance !== undefined) updates.taskBalance = taskBalance.toString();
   if (status !== undefined) updates.status = status;
   if (upline !== undefined) updates.upline = upline;
   if (isBanned !== undefined) updates.isBanned = isBanned;
@@ -514,6 +515,7 @@ router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req
   if (description !== undefined) updates.description = description;
   if (targetUrl !== undefined) updates.targetUrl = targetUrl;
   if (points !== undefined) updates.points = points;
+  if (taskBalance !== undefined) updates.taskBalance = taskBalance.toString();
   if (isActive !== undefined) updates.isActive = isActive;
   if (question !== undefined) updates.question = question;
   if (correctAnswer !== undefined) updates.correctAnswer = correctAnswer;
@@ -840,6 +842,7 @@ function formatUser(user: any) {
     status: user.status,
     membership: user.membership,
     balance: parseFloat(user.balance || "0"),
+    taskBalance: parseFloat(user.taskBalance || "0"),
     points: user.points,
     upline: user.upline,
     avatarUrl: user.avatarUrl,
@@ -858,6 +861,7 @@ function formatAdminUser(user: any) {
     status: user.status,
     membership: user.membership,
     balance: parseFloat(user.balance || "0"),
+    taskBalance: parseFloat(user.taskBalance || "0"),
     points: user.points,
     upline: user.upline,
     joinedAt: user.joinedAt?.toISOString(),

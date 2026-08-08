@@ -7,7 +7,7 @@ import { authMiddleware } from "../lib/auth";
 const router = Router();
 
 const MIN_POINTS_TO_CONVERT = 1000;
-const POINTS_TO_FCFA_RATE = 1; // 1 point = 1 FCFA (argent réel)
+const POINTS_TO_FCFA_RATE = 0.5; // anciens points : 1000 pts = 500 F
 
 router.get("/users/dashboard", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
@@ -169,13 +169,19 @@ router.post("/users/convert-points", authMiddleware, async (req, res) => {
   const pointsToConvert = setsOf1000 * MIN_POINTS_TO_CONVERT;
   const fcfaToAdd = setsOf1000 * (MIN_POINTS_TO_CONVERT * POINTS_TO_FCFA_RATE);
 
+  // Atomique : décrémente et crédite depuis la ligne courante, seulement si le solde de points est suffisant
   const [updated] = await db.update(usersTable)
     .set({
-      points: user.points - pointsToConvert,
+      points: sql`${usersTable.points} - ${pointsToConvert}`,
       balance: sql`${usersTable.balance} + ${fcfaToAdd}`,
     })
-    .where(eq(usersTable.id, userId))
+    .where(sql`${usersTable.id} = ${userId} AND ${usersTable.points} >= ${pointsToConvert}`)
     .returning();
+
+  if (!updated) {
+    res.status(409).json({ error: "Conversion déjà en cours, réessayez" });
+    return;
+  }
 
   res.json({
     pointsConverted: pointsToConvert,

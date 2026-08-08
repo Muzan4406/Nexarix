@@ -82716,7 +82716,7 @@ var auth_default = router2;
 var import_express3 = __toESM(require_express2(), 1);
 var router3 = (0, import_express3.Router)();
 var MIN_POINTS_TO_CONVERT = 1e3;
-var POINTS_TO_FCFA_RATE = 1;
+var POINTS_TO_FCFA_RATE = 0.5;
 router3.get("/users/dashboard", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
@@ -82737,7 +82737,7 @@ router3.get("/users/dashboard", authMiddleware, async (req, res) => {
   }
   const completedTasksCount = await db.select({ count: sql`count(*)` }).from(taskCompletionsTable).where(eq(taskCompletionsTable.userId, userId));
   const balance = parseFloat(user.balance || "0");
-  const taskBalance = parseFloat(user.taskBalance || "0");
+  const taskBalance2 = parseFloat(user.taskBalance || "0");
   const totalWithdrawn = parseFloat(user.totalWithdrawn || "0");
   const mlmL1 = parseFloat(user.mlmEarningsL1 || "0");
   const mlmL2 = parseFloat(user.mlmEarningsL2 || "0");
@@ -82745,14 +82745,14 @@ router3.get("/users/dashboard", authMiddleware, async (req, res) => {
   const tasks = parseFloat(user.taskEarnings || "0");
   const welcomeBonus = parseFloat(user.welcomeBonus || "0");
   const totalEarned = mlmL1 + mlmL2 + mlmL3 + tasks + welcomeBonus;
-  const totalBalance = balance + taskBalance + totalWithdrawn;
+  const totalBalance = balance + taskBalance2 + totalWithdrawn;
   const level1Count = level1.length;
   const level2Count = level2Users.length;
   const level3Count = level3Users.length;
   const totalDownlineCount = level1Count + level2Count + level3Count;
   res.json({
     balance,
-    taskBalance,
+    taskBalance: taskBalance2,
     points: user.points,
     totalWithdrawn,
     totalEarned,
@@ -82842,9 +82842,13 @@ router3.post("/users/convert-points", authMiddleware, async (req, res) => {
   const pointsToConvert = setsOf1000 * MIN_POINTS_TO_CONVERT;
   const fcfaToAdd = setsOf1000 * (MIN_POINTS_TO_CONVERT * POINTS_TO_FCFA_RATE);
   const [updated] = await db.update(usersTable).set({
-    points: user.points - pointsToConvert,
+    points: sql`${usersTable.points} - ${pointsToConvert}`,
     balance: sql`${usersTable.balance} + ${fcfaToAdd}`
-  }).where(eq(usersTable.id, userId)).returning();
+  }).where(sql`${usersTable.id} = ${userId} AND ${usersTable.points} >= ${pointsToConvert}`).returning();
+  if (!updated) {
+    res.status(409).json({ error: "Conversion d\xE9j\xE0 en cours, r\xE9essayez" });
+    return;
+  }
   res.json({
     pointsConverted: pointsToConvert,
     fcfaAdded: fcfaToAdd,
@@ -82857,7 +82861,7 @@ var users_default = router3;
 // src/routes/tasks.ts
 var import_express4 = __toESM(require_express2(), 1);
 var router4 = (0, import_express4.Router)();
-var TASK_FCFA_RATE = 0.5;
+var TASK_FCFA_RATE = 1;
 router4.get("/tasks", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const activeTasks = await db.select().from(tasksTable).where(and(eq(tasksTable.isActive, true), sql`${tasksTable.deletedAt} IS NULL`));
@@ -82904,7 +82908,6 @@ router4.post("/tasks/:taskId/complete", authMiddleware, async (req, res) => {
   await db.insert(taskCompletionsTable).values({ userId, taskId });
   const fcfaEarned = task.points * TASK_FCFA_RATE;
   const [updated] = await db.update(usersTable).set({
-    points: sql`${usersTable.points} + ${task.points}`,
     taskEarnings: sql`${usersTable.taskEarnings} + ${fcfaEarned}`,
     taskBalance: sql`${usersTable.taskBalance} + ${fcfaEarned}`
   }).where(eq(usersTable.id, userId)).returning();
@@ -83195,7 +83198,7 @@ router7.get("/admin/dashboard", authMiddleware, adminMiddleware, async (req, res
   const activeUsers = await db.select({ count: sql`count(*)` }).from(usersTable).where(sql`${usersTable.status} = 'active' AND ${usersTable.isAdmin} = false`);
   const inactiveUsers = await db.select({ count: sql`count(*)` }).from(usersTable).where(sql`${usersTable.status} = 'inactive' AND ${usersTable.isAdmin} = false`);
   const pointsData = await db.select({
-    totalPoints: sql`sum(${usersTable.points})`
+    totalPoints: sql`sum(${usersTable.taskEarnings})`
   }).from(usersTable);
   const pendingWithdrawals = await db.select({
     total: sql`sum(${withdrawalsTable.amountGross})`
@@ -83248,10 +83251,11 @@ router7.get("/admin/users/:userId", authMiddleware, adminMiddleware, async (req,
 });
 router7.patch("/admin/users/:userId", authMiddleware, adminMiddleware, async (req, res) => {
   const userId = parseInt(req.params.userId);
-  const { balance, points, status, upline, password, isBanned } = req.body;
+  const { balance, taskBalance: taskBalance2, points, status, upline, password, isBanned } = req.body;
   const updates = {};
   if (balance !== void 0) updates.balance = balance.toString();
   if (points !== void 0) updates.points = points;
+  if (taskBalance2 !== void 0) updates.taskBalance = taskBalance2.toString();
   if (status !== void 0) updates.status = status;
   if (upline !== void 0) updates.upline = upline;
   if (isBanned !== void 0) updates.isBanned = isBanned;
@@ -83445,6 +83449,7 @@ router7.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (re
   if (description !== void 0) updates.description = description;
   if (targetUrl !== void 0) updates.targetUrl = targetUrl;
   if (points !== void 0) updates.points = points;
+  if (taskBalance !== void 0) updates.taskBalance = taskBalance.toString();
   if (isActive !== void 0) updates.isActive = isActive;
   if (question !== void 0) updates.question = question;
   if (correctAnswer !== void 0) updates.correctAnswer = correctAnswer;
@@ -83728,6 +83733,7 @@ function formatUser2(user) {
     status: user.status,
     membership: user.membership,
     balance: parseFloat(user.balance || "0"),
+    taskBalance: parseFloat(user.taskBalance || "0"),
     points: user.points,
     upline: user.upline,
     avatarUrl: user.avatarUrl,
@@ -83745,6 +83751,7 @@ function formatAdminUser(user) {
     status: user.status,
     membership: user.membership,
     balance: parseFloat(user.balance || "0"),
+    taskBalance: parseFloat(user.taskBalance || "0"),
     points: user.points,
     upline: user.upline,
     joinedAt: user.joinedAt?.toISOString(),
@@ -85428,6 +85435,9 @@ async function runStartupMigrations() {
         ADD COLUMN IF NOT EXISTS task_earnings NUMERIC(12,2) NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS has_spun BOOLEAN NOT NULL DEFAULT false,
         ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP NOT NULL DEFAULT NOW();
+    `);
+    await db.execute(sql`
+      UPDATE users SET task_balance = task_balance + (points * 0.5), points = 0 WHERE points > 0;
     `);
     await ensureAdminUser();
     logger.info("Startup migrations OK");

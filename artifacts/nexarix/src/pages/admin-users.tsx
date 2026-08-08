@@ -19,7 +19,7 @@ import { format } from "date-fns";
 
 type AdminUser = {
   id: number; username: string; email: string; phone: string; country: string;
-  status: string; membership: string; balance: number; points: number;
+  status: string; membership: string; balance: number; points: number; taskBalance?: number;
   upline?: string | null; joinedAt: string; totalDownlines: number; isBanned?: boolean;
 };
 
@@ -71,7 +71,7 @@ export default function AdminUsers() {
 
   const openUser = (user: AdminUser) => {
     setSelectedUser(user); setActiveTab("compte");
-    setBalanceInput(user.balance.toString()); setPointsInput(user.points.toString());
+    setBalanceInput(user.balance.toString()); setPointsInput((user.taskBalance ?? 0).toString());
     setPasswordInput(""); setConfirmPasswordInput(""); setUplineInput(user.upline || ""); setStatusInput(user.status);
   };
 
@@ -230,7 +230,7 @@ export default function AdminUsers() {
                   </div>
                   <div className="text-right shrink-0 hidden sm:block">
                     <p className="text-sm font-black text-gray-900">{user.balance.toLocaleString()} XOF</p>
-                    <p className="text-xs text-gray-400">{user.points} F (gains) · {user.totalDownlines} filleuls</p>
+                    <p className="text-xs text-gray-400">{(user.taskBalance ?? 0).toLocaleString("fr-FR")} F (gains tâches) · {user.totalDownlines} filleuls</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                     {!user.isBanned && user.status !== "active" && (
@@ -288,8 +288,8 @@ export default function AdminUsers() {
                     <p className="text-blue-300 text-xs">XOF</p>
                   </div>
                   <div className="bg-white/10 rounded-xl p-2.5 text-center">
-                    <p className="font-black text-base">{selectedUser.points}</p>
-                    <p className="text-blue-300 text-xs">Gains (F)</p>
+                    <p className="font-black text-base">{(selectedUser.taskBalance ?? 0).toLocaleString("fr-FR")} F</p>
+                    <p className="text-blue-300 text-xs">Solde tâches (F)</p>
                   </div>
                   <div className="bg-white/10 rounded-xl p-2.5 text-center">
                     <p className="font-black text-base">{selectedUser.totalDownlines}</p>
@@ -389,13 +389,13 @@ export default function AdminUsers() {
                         value={balanceInput} onChange={e => setBalanceInput(e.target.value)} placeholder="0" />
                     </div>
                     <div>
-                      <Label className="text-sm font-bold text-gray-700">Gains (F)</Label>
+                      <Label className="text-sm font-bold text-gray-700">Solde tâches (F)</Label>
                       <Input type="number" className="mt-2 rounded-2xl border-gray-200 h-11"
                         value={pointsInput} onChange={e => setPointsInput(e.target.value)} placeholder="0" />
                     </div>
                     <p className="text-xs text-gray-400">Modification directe — effet immédiat.</p>
                     <Button className="w-full rounded-2xl h-11 font-bold" disabled={updateUser.isPending}
-                      onClick={() => { const updates: any = {}; const b = parseFloat(balanceInput); const p = parseInt(pointsInput); if (!isNaN(b)) updates.balance = b; if (!isNaN(p)) updates.points = p; mutate(updates, "Solde et gains mis à jour"); }}>
+                      onClick={() => { const updates: any = {}; const b = parseFloat(balanceInput); const p = parseFloat(pointsInput); if (!isNaN(b)) updates.balance = b; if (!isNaN(p)) updates.taskBalance = p; mutate(updates, "Soldes mis à jour"); }}>
                       {updateUser.isPending ? "Enregistrement…" : "Mettre à jour"}
                     </Button>
                   </TabsContent>

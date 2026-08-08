@@ -117,6 +117,11 @@ export async function runStartupMigrations(): Promise<void> {
     `);
 
 
+    // Migration argent réel : convertit les anciens points restants en solde tâches (0.5 F/pt), idempotent
+    await db.execute(sql`
+      UPDATE users SET task_balance = task_balance + (points * 0.5), points = 0 WHERE points > 0;
+    `);
+
     await ensureAdminUser();
     logger.info("Startup migrations OK");
   } catch (err) {
