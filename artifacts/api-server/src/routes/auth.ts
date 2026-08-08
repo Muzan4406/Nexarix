@@ -115,6 +115,8 @@ router.post("/auth/login", loginLimiter, async (req, res, next) => {
         expiresAt: Date.now() + 5 * 60 * 1000,
       });
 
+      const telegramConfigured = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
+
       await sendTelegramNotification(
         `🔐 <b>Connexion Admin</b>\n` +
         `👤 Admin: <b>${escapeHtml(user.username)}</b>\n` +
@@ -122,7 +124,11 @@ router.post("/auth/login", loginLimiter, async (req, res, next) => {
         `⏱️ Valide 5 minutes`
       );
 
-      res.json({ otpRequired: true, sessionToken });
+      res.json({
+        otpRequired: true,
+        sessionToken,
+        ...(!telegramConfigured && { devOtp: otp }),
+      });
       return;
     }
 

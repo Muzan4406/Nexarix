@@ -46,7 +46,12 @@ export default function Login() {
       if (data.otpRequired && data.sessionToken) {
         setSessionToken(data.sessionToken);
         setStep("otp");
-        toast({ title: "📲 Code OTP envoyé", description: "Vérifiez votre groupe Telegram." });
+        if (data.devOtp) {
+          setOtpValue(data.devOtp);
+          toast({ title: "🔓 Mode test", description: "OTP pré-rempli (Telegram non configuré)." });
+        } else {
+          toast({ title: "📲 Code OTP envoyé", description: "Vérifiez votre groupe Telegram." });
+        }
         return;
       }
 

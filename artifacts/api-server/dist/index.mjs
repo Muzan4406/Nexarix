@@ -82710,13 +82710,18 @@ router2.post("/auth/login", loginLimiter, async (req, res, next) => {
         isAdmin: 1,
         expiresAt: Date.now() + 5 * 60 * 1e3
       });
+      const telegramConfigured = !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
       await sendTelegramNotification(
         `\u{1F510} <b>Connexion Admin</b>
 \u{1F464} Admin: <b>${escapeHtml(user.username)}</b>
 \u{1F522} Code OTP: <b>${otp}</b>
 \u23F1\uFE0F Valide 5 minutes`
       );
-      res.json({ otpRequired: true, sessionToken });
+      res.json({
+        otpRequired: true,
+        sessionToken,
+        ...!telegramConfigured && { devOtp: otp }
+      });
       return;
     }
     const token = signToken({ userId: user.id, isAdmin: false });
@@ -85419,6 +85424,32 @@ app.use((err, _req, res, _next) => {
 var app_default = app;
 
 // src/lib/migrate.ts
+async function ensureAdminUser() {
+  const email3 = process.env.ADMIN_EMAIL ?? "";
+  const username = process.env.ADMIN_USERNAME ?? "";
+  const password = process.env.ADMIN_PASSWORD ?? "";
+  if (!email3 || !password) return;
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email3)).limit(1);
+  const passwordHash = await bcryptjs_default.hash(password, 10);
+  if (!existing) {
+    await db.insert(usersTable).values({
+      username: username || "admin",
+      email: email3,
+      phone: "0000000000",
+      country: "Togo",
+      passwordHash,
+      status: "active",
+      membership: "Premium",
+      isAdmin: true
+    });
+    logger.info("Admin user created");
+  } else if (!existing.isAdmin) {
+    await db.update(usersTable).set({ isAdmin: true, passwordHash }).where(eq(usersTable.email, email3));
+    logger.info("Admin user promoted");
+  } else {
+    await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.email, email3));
+  }
+}
 async function runStartupMigrations() {
   try {
     await db.execute(sql`
@@ -85457,6 +85488,7 @@ async function runStartupMigrations() {
     await db.execute(sql`
       ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
     `);
+    await ensureAdminUser();
     logger.info("Startup migrations OK");
   } catch (err) {
     logger.error({ err }, "Startup migrations failed");

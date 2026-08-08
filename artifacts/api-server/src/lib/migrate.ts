@@ -1,6 +1,39 @@
 import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { usersTable } from "@workspace/db";
+import { sql, eq } from "drizzle-orm";
 import { logger } from "./logger";
+import bcrypt from "bcryptjs";
+
+async function ensureAdminUser(): Promise<void> {
+  const email = process.env.ADMIN_EMAIL ?? "";
+  const username = process.env.ADMIN_USERNAME ?? "";
+  const password = process.env.ADMIN_PASSWORD ?? "";
+  if (!email || !password) return;
+
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  if (!existing) {
+    await db.insert(usersTable).values({
+      username: username || "admin",
+      email,
+      phone: "0000000000",
+      country: "Togo",
+      passwordHash,
+      status: "active",
+      membership: "Premium",
+      isAdmin: true,
+    });
+    logger.info("Admin user created");
+  } else if (!existing.isAdmin) {
+    // Promote to admin if not already
+    await db.update(usersTable).set({ isAdmin: true, passwordHash }).where(eq(usersTable.email, email));
+    logger.info("Admin user promoted");
+  } else {
+    // Always sync password hash in case ADMIN_PASSWORD changed
+    await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.email, email));
+  }
+}
 
 export async function runStartupMigrations(): Promise<void> {
   try {
@@ -44,6 +77,7 @@ export async function runStartupMigrations(): Promise<void> {
       ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
     `);
 
+    await ensureAdminUser();
     logger.info("Startup migrations OK");
   } catch (err) {
     logger.error({ err }, "Startup migrations failed");
