@@ -39,7 +39,8 @@ const SECTIONS: Section[] = [
     group: {
       name: "Gains", icon: CheckSquare, accent: "text-amber-500",
       items: [
-        { name: "Tâches", href: "/tasks", icon: CheckSquare },
+        { name: "Tâches",              href: "/tasks", icon: CheckSquare },
+        { name: "Roue de la Fortune",  href: "/spin",  icon: Zap         },
       ],
     },
   },

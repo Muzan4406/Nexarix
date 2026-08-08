@@ -272,17 +272,13 @@ router.post("/spin", authMiddleware, async (req, res) => {
   res.json({ fcfaEarned, newBalance: parseFloat(user.balance || "0") + fcfaEarned });
 });
 
-// ─── Internal: activate user + welcome bonus + auto-spin ─────────────────────
+// ─── Internal: activate user + welcome bonus ──────────────────────────────────
 async function activateUser(user: any) {
-  // Auto-spin: credit 50–100 FCFA silently if not already done
-  const spinBonus = user.hasSpun ? 0 : Math.floor(Math.random() * 51) + 50;
-
   await db.update(usersTable).set({
     status: "active",
     membership: "Premium",
-    balance: sql`${usersTable.balance} + ${WELCOME_BONUS + spinBonus}`,
+    balance: sql`${usersTable.balance} + ${WELCOME_BONUS}`,
     welcomeBonus: sql`${usersTable.welcomeBonus} + ${WELCOME_BONUS}`,
-    hasSpun: true,
   }).where(eq(usersTable.id, user.id));
 
   await sendTelegramNotification(
