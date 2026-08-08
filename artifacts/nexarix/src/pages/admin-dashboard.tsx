@@ -126,11 +126,11 @@ export default function AdminDashboard() {
                     <Zap className="h-4 w-4 text-violet-500" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">Points générés</p>
+                    <p className="text-sm font-bold text-gray-900">Gains générés</p>
                     <p className="text-xs text-gray-400">Total cumulé</p>
                   </div>
                 </div>
-                <p className="text-sm font-black text-violet-600">{fmt(s?.totalPointsGenerated || 0)} pts</p>
+                <p className="text-sm font-black text-violet-600">{fmt(s?.totalPointsGenerated || 0)} F</p>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100">
                 <div className="flex items-center gap-3">
@@ -139,10 +139,10 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <p className="text-sm font-bold text-gray-900">Taux conversion</p>
-                    <p className="text-xs text-gray-400">Points → FCFA</p>
+                    <p className="text-xs text-gray-400">Gains → Solde</p>
                   </div>
                 </div>
-                <p className="text-sm font-black text-blue-600">1 000 pts = 500 XOF</p>
+                <p className="text-sm font-black text-blue-600">1 000 F min. par transfert</p>
               </div>
             </div>
           </motion.div>

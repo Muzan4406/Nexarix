@@ -82716,7 +82716,7 @@ var auth_default = router2;
 var import_express3 = __toESM(require_express2(), 1);
 var router3 = (0, import_express3.Router)();
 var MIN_POINTS_TO_CONVERT = 1e3;
-var POINTS_TO_FCFA_RATE = 0.5;
+var POINTS_TO_FCFA_RATE = 1;
 router3.get("/users/dashboard", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
@@ -85393,6 +85393,23 @@ async function runStartupMigrations() {
     `);
     await db.execute(sql`
       ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        created_by INTEGER
+      );
+    `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS notification_reads (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        notification_id INTEGER NOT NULL,
+        read_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
     `);
     await db.execute(sql`
       ALTER TABLE users

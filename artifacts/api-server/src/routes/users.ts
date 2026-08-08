@@ -7,7 +7,7 @@ import { authMiddleware } from "../lib/auth";
 const router = Router();
 
 const MIN_POINTS_TO_CONVERT = 1000;
-const POINTS_TO_FCFA_RATE = 0.5; // 1000 pts = 500 FCFA
+const POINTS_TO_FCFA_RATE = 1; // 1 point = 1 FCFA (argent réel)
 
 router.get("/users/dashboard", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;

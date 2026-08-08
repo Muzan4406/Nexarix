@@ -230,7 +230,7 @@ export default function AdminUsers() {
                   </div>
                   <div className="text-right shrink-0 hidden sm:block">
                     <p className="text-sm font-black text-gray-900">{user.balance.toLocaleString()} XOF</p>
-                    <p className="text-xs text-gray-400">{user.points} pts · {user.totalDownlines} filleuls</p>
+                    <p className="text-xs text-gray-400">{user.points} F (gains) · {user.totalDownlines} filleuls</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                     {!user.isBanned && user.status !== "active" && (
@@ -289,7 +289,7 @@ export default function AdminUsers() {
                   </div>
                   <div className="bg-white/10 rounded-xl p-2.5 text-center">
                     <p className="font-black text-base">{selectedUser.points}</p>
-                    <p className="text-blue-300 text-xs">Points</p>
+                    <p className="text-blue-300 text-xs">Gains (F)</p>
                   </div>
                   <div className="bg-white/10 rounded-xl p-2.5 text-center">
                     <p className="font-black text-base">{selectedUser.totalDownlines}</p>
@@ -389,13 +389,13 @@ export default function AdminUsers() {
                         value={balanceInput} onChange={e => setBalanceInput(e.target.value)} placeholder="0" />
                     </div>
                     <div>
-                      <Label className="text-sm font-bold text-gray-700">Points</Label>
+                      <Label className="text-sm font-bold text-gray-700">Gains (F)</Label>
                       <Input type="number" className="mt-2 rounded-2xl border-gray-200 h-11"
                         value={pointsInput} onChange={e => setPointsInput(e.target.value)} placeholder="0" />
                     </div>
                     <p className="text-xs text-gray-400">Modification directe — effet immédiat.</p>
                     <Button className="w-full rounded-2xl h-11 font-bold" disabled={updateUser.isPending}
-                      onClick={() => { const updates: any = {}; const b = parseFloat(balanceInput); const p = parseInt(pointsInput); if (!isNaN(b)) updates.balance = b; if (!isNaN(p)) updates.points = p; mutate(updates, "Solde et points mis à jour"); }}>
+                      onClick={() => { const updates: any = {}; const b = parseFloat(balanceInput); const p = parseInt(pointsInput); if (!isNaN(b)) updates.balance = b; if (!isNaN(p)) updates.points = p; mutate(updates, "Solde et gains mis à jour"); }}>
                       {updateUser.isPending ? "Enregistrement…" : "Mettre à jour"}
                     </Button>
                   </TabsContent>

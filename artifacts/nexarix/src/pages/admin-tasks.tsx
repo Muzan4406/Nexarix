@@ -129,7 +129,7 @@ export default function AdminTasks() {
                           {task.isActive ? "Actif" : "Inactif"}
                         </span>
                         <span className={`inline-flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-xl bg-gradient-to-r ${cfg.gradient} text-white`}>
-                          <Zap className="h-2.5 w-2.5 fill-current" />{task.points} pts
+                          <Zap className="h-2.5 w-2.5 fill-current" />{task.points} F
                         </span>
                       </div>
                       {task.description && <p className="text-sm font-semibold text-gray-800 truncate">{task.description}</p>}
@@ -181,7 +181,7 @@ export default function AdminTasks() {
               <Input className="mt-2 rounded-2xl border-gray-200 h-11" value={form.targetUrl} onChange={e => setForm(f => ({ ...f, targetUrl: e.target.value }))} placeholder="https://youtube.com/watch?v=… ou https://tiktok.com/…" data-testid="input-task-url" />
             </div>
             <div>
-              <Label className="text-sm font-bold text-gray-700">Points à gagner</Label>
+              <Label className="text-sm font-bold text-gray-700">Montant à gagner (F)</Label>
               <Input type="number" className="mt-2 rounded-2xl border-gray-200 h-11" value={form.points} onChange={e => setForm(f => ({ ...f, points: e.target.value }))} placeholder="100" data-testid="input-task-points" />
             </div>
             <div className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3">

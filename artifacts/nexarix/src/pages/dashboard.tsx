@@ -55,7 +55,7 @@ export default function Dashboard() {
   const mlmEarnings    = ((stats as any)?.earnings?.mlmLevel1 || 0) +
                          ((stats as any)?.earnings?.mlmLevel2 || 0) +
                          ((stats as any)?.earnings?.mlmLevel3 || 0);
-  const completedTasks = (stats as any)?.completedTasks || 0;
+  const balance        = (stats as any)?.balance || 0;
 
   return (
     <AppLayout>
@@ -162,7 +162,7 @@ export default function Dashboard() {
             </div>
           </motion.div>
 
-          {/* Card 6 — Tâches Accomplies */}
+          {/* Card 6 — Solde Disponible pour Retrait */}
           <motion.div
             variants={fadeUp(3)} initial="hidden" animate="visible"
             className="rounded-[22px] p-4 flex flex-col justify-between min-h-[130px] text-white relative overflow-hidden"
@@ -170,12 +170,12 @@ export default function Dashboard() {
           >
             <div className="pointer-events-none absolute -top-6 -right-6 h-24 w-24 rounded-full bg-white/10" />
             <div className="flex items-start justify-between relative z-10">
-              <p className="font-black text-[13px] leading-tight">Tâches<br/>Accomplies</p>
-              <CardIcon src={`${BASE}icon-taches.png`} alt="Tâches" />
+              <p className="font-black text-[13px] leading-tight">Solde<br/>Disponible</p>
+              <CardIcon src={`${BASE}icon-solde.png`} alt="Solde disponible pour retrait" />
             </div>
             <div className="relative z-10">
-              <p className="text-teal-200 text-[10px] font-semibold mb-0.5">Total :</p>
-              <p className="font-black text-[30px] leading-none">{completedTasks}</p>
+              <p className="text-teal-200 text-[10px] font-semibold mb-0.5">Retirable :</p>
+              <p className="font-black text-[22px] leading-none">{balance.toLocaleString("fr-FR")} F</p>
             </div>
           </motion.div>
         </div>

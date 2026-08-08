@@ -26,10 +26,10 @@ export default function Points() {
     convertPoints.mutate(undefined, {
       onSuccess: (res: any) => {
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-        toast({ title: "✅ Conversion réussie !", description: `${res.pointsConverted} pts → ${formatCurrency(res.fcfaAdded, user?.country)}` });
+        toast({ title: "✅ Transfert réussi !", description: `${formatCurrency(res.fcfaAdded, user?.country)} ajoutés à votre solde` });
       },
       onError: (err: any) => {
-        toast({ title: "Erreur", description: err?.data?.error || "Minimum 1 000 points requis", variant: "destructive" });
+        toast({ title: "Erreur", description: err?.data?.error || "Minimum 1 000 F requis", variant: "destructive" });
       },
     });
   };
@@ -46,7 +46,7 @@ export default function Points() {
   const points       = stats?.points || 0;
   const canConvert   = points >= 1000;
   const setsOf1000   = Math.floor(points / 1000);
-  const estimatedFcfa = setsOf1000 * 500;
+  const estimatedFcfa = setsOf1000 * 1000;
   const remaining    = 1000 - (points % 1000);
   const progress     = Math.min((points % 1000) / 1000 * 100, 100);
   const currency     = getCurrencyCode(user?.country);
@@ -75,7 +75,7 @@ export default function Points() {
               </div>
               <div>
                 <p className="text-orange-200/70 text-[10px] font-semibold uppercase tracking-[0.12em]">Programme</p>
-                <p className="font-black text-[17px] leading-tight">Mes Points</p>
+                <p className="font-black text-[17px] leading-tight">Mes Gains</p>
               </div>
             </div>
 
@@ -87,9 +87,9 @@ export default function Points() {
               className="mb-5"
             >
               <p className="font-black leading-none tracking-tight" style={{ fontSize: "clamp(44px, 14vw, 60px)" }}>
-                {points.toLocaleString()}
+                {points.toLocaleString("fr-FR")} F
               </p>
-              <p className="text-orange-200/80 text-[12px] font-medium mt-1">points disponibles</p>
+              <p className="text-orange-200/80 text-[12px] font-medium mt-1">gains disponibles</p>
             </motion.div>
 
             {/* Progression / statut */}
@@ -97,17 +97,17 @@ export default function Points() {
               <div className="rounded-2xl p-3.5 border border-white/12" style={{ background: "rgba(255,255,255,0.10)" }}>
                 <div className="flex items-center gap-2 mb-1">
                   <Sparkles className="h-4 w-4 text-yellow-300 shrink-0" />
-                  <p className="font-bold text-[13px]">Prêt à convertir !</p>
+                  <p className="font-bold text-[13px]">Prêt à transférer !</p>
                 </div>
                 <p className="text-orange-200/80 text-[11px]">
-                  {(setsOf1000 * 1000).toLocaleString()} pts → <span className="font-black text-white">{formatCurrency(estimatedFcfa, user?.country)}</span>
+                  {(setsOf1000 * 1000).toLocaleString("fr-FR")} F → <span className="font-black text-white">{formatCurrency(estimatedFcfa, user?.country)}</span>
                 </p>
               </div>
             ) : (
               <div>
                 <div className="flex justify-between text-[11px] mb-2">
-                  <span className="text-orange-200/80 font-semibold">Progression vers conversion</span>
-                  <span className="text-yellow-200 font-bold">{points % 1000} / 1 000 pts</span>
+                  <span className="text-orange-200/80 font-semibold">Progression vers transfert</span>
+                  <span className="text-yellow-200 font-bold">{points % 1000} / 1 000 F</span>
                 </div>
                 <div className="h-2 bg-white/15 rounded-full overflow-hidden">
                   <motion.div
@@ -119,7 +119,7 @@ export default function Points() {
                   />
                 </div>
                 <p className="text-orange-200/70 text-[10px] font-medium mt-1.5">
-                  Encore <span className="font-black text-yellow-200">{remaining}</span> pts
+                  Encore <span className="font-black text-yellow-200">{remaining}</span> F
                 </p>
               </div>
             )}
@@ -137,7 +137,7 @@ export default function Points() {
               <div className="h-8 w-8 rounded-xl bg-amber-50 flex items-center justify-center">
                 <TrendingUp className="h-4 w-4 text-amber-500" />
               </div>
-              <h2 className="font-black text-gray-900 text-[14px]">Taux de conversion</h2>
+              <h2 className="font-black text-gray-900 text-[14px]">Transfert vers le solde</h2>
             </div>
             <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-4 border border-amber-100/80">
               <div className="flex items-center gap-3">
@@ -145,18 +145,18 @@ export default function Points() {
                   <Star className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-black text-gray-900 text-[15px]">1 000 pts</p>
+                  <p className="font-black text-gray-900 text-[15px]">1 000 F</p>
                   <p className="text-[10px] text-gray-500 font-medium">minimum requis</p>
                 </div>
               </div>
               <ArrowRight className="h-4 w-4 text-gray-300 shrink-0" />
               <div className="text-right">
-                <p className="font-black text-emerald-600 text-[18px]">500 {currency}</p>
+                <p className="font-black text-emerald-600 text-[18px]">1 000 {currency}</p>
                 <p className="text-[10px] text-gray-500 font-medium">ajoutés au solde</p>
               </div>
             </div>
             <p className="text-[10px] text-gray-400 mt-3 text-center font-medium">
-              Les points restants (hors multiples de 1 000) sont conservés.
+              Le reste (hors multiples de 1 000) est conservé.
             </p>
           </div>
         </motion.div>
@@ -179,14 +179,14 @@ export default function Points() {
             {convertPoints.isPending ? (
               <div className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
             ) : canConvert ? (
-              <><Zap className="h-5 w-5" /> Convertir {(setsOf1000 * 1000).toLocaleString()} pts → {formatCurrency(estimatedFcfa, user?.country)}</>
+              <><Zap className="h-5 w-5" /> Convertir {(setsOf1000 * 1000).toLocaleString("fr-FR")} F → {formatCurrency(estimatedFcfa, user?.country)}</>
             ) : (
-              <><Lock className="h-5 w-5" /> Minimum 1 000 pts requis</>
+              <><Lock className="h-5 w-5" /> Minimum 1 000 F requis</>
             )}
           </button>
           {!canConvert && (
             <p className="text-[11px] text-center text-gray-400 mt-2 font-medium">
-              Il vous manque <span className="font-black text-gray-600">{remaining.toLocaleString()}</span> points pour convertir
+              Il vous manque <span className="font-black text-gray-600">{remaining.toLocaleString("fr-FR")}</span> F pour transférer
             </p>
           )}
         </motion.div>

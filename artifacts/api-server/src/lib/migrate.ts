@@ -77,6 +77,25 @@ export async function runStartupMigrations(): Promise<void> {
       ALTER TABLE site_settings ADD COLUMN IF NOT EXISTS maintenance_mode BOOLEAN NOT NULL DEFAULT false;
     `);
 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        created_by INTEGER
+      );
+    `);
+
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS notification_reads (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        notification_id INTEGER NOT NULL,
+        read_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
     // Auto-repair: ensure every users column exists (prod DBs may lag behind schema)
     await db.execute(sql`
       ALTER TABLE users

@@ -115,7 +115,7 @@ function VideoWatchModal({ task, onClaim, onClose, isPending }: {
               className={`rounded-2xl h-11 font-bold text-white border-0 bg-gradient-to-r ${cfg.gradient} disabled:opacity-40 disabled:cursor-not-allowed shadow-md`}
             >
               <Zap className="h-4 w-4 mr-1.5 fill-current" />
-              {isPending ? "Validation…" : `Réclamer · ${task.points} pts`}
+              {isPending ? "Validation…" : `Réclamer · ${task.points} F`}
             </Button>
           </div>
         </div>
@@ -157,7 +157,7 @@ function TaskCard({ task, onWatch, index }: { task: any; onWatch: (t: any) => vo
           )}
           <div className="flex items-center gap-3 mt-2">
             <span className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-1 rounded-xl bg-gradient-to-r ${cfg.gradient} text-white shadow-sm`}>
-              <Zap className="h-3 w-3 fill-current" />{task.points} pts
+              <Zap className="h-3 w-3 fill-current" />{task.points} F
             </span>
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function Tasks() {
       onSuccess: (res) => {
         queryClient.invalidateQueries({ queryKey: getGetTasksQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-        toast({ title: "🎉 Récompense reçue !", description: `+${res.pointsEarned} points crédités sur votre compte` });
+        toast({ title: "🎉 Récompense reçue !", description: `+${res.pointsEarned} F crédités sur votre compte` });
         setWatchTask(null);
       },
       onError: (err: any) => {
@@ -238,7 +238,7 @@ export default function Tasks() {
                 <Trophy className="h-5 w-5 text-yellow-300" />
                 <h1 className="font-black text-xl tracking-tight">Tâches rémunérées</h1>
               </div>
-              <p className="text-white/75 text-xs">Regarde des vidéos · gagne des points FCFA</p>
+              <p className="text-white/75 text-xs">Regarde des vidéos · gagne de l'argent réel</p>
             </div>
             <div className="flex gap-2 shrink-0">
               <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-3 py-2 text-center">
