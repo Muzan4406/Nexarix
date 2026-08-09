@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Edit, Trash2, ShoppingBag, Upload, Download, ImagePlus } from "lucide-react";
+import { Plus, Edit, Trash2, ShoppingBag, Upload, Download, ImagePlus, Link2, FolderUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CATEGORIES = ["app", "game", "tool", "other"];
@@ -21,6 +21,8 @@ const emptyForm = {
   title: "", category: "app", price: "0", isFree: true,
   fileType: "apk", fileSize: "",
   isActive: true, isPremium: true,
+  externalLink: "",
+  uploadMode: "upload" as "upload" | "link",
 };
 
 const card = {
@@ -62,11 +64,15 @@ export default function AdminStore() {
 
   const openEdit = (item: any) => {
     setEditItem(item);
+    // Detect if existing downloadUrl looks like an external link (not Supabase)
+    const isExternal = item.downloadUrl && !item.downloadUrl.includes("supabase.co");
     setForm({
       title: item.title, category: item.category,
       price: String(item.price || 0), isFree: item.isFree,
       fileType: item.fileType || "apk", fileSize: item.fileSize || "",
       isActive: item.isActive, isPremium: item.isPremium,
+      externalLink: isExternal ? item.downloadUrl : "",
+      uploadMode: isExternal ? "link" : "upload",
     });
     setFile(null);
     setThumbnail(null);
@@ -139,7 +145,10 @@ export default function AdminStore() {
       let downloadUrl: string | undefined;
       let thumbnailUrl: string | undefined;
 
-      if (file) {
+      // Mode lien externe — pas d'upload Supabase
+      if (form.uploadMode === "link" && form.externalLink.trim()) {
+        downloadUrl = form.externalLink.trim();
+      } else if (file) {
         downloadUrl = await uploadFileDirect(file, "store-files", (pct) => makeProgress(pct));
         doneFiles++;
         setUploadProgress(Math.round((doneFiles / Math.max(totalFiles, 1)) * 100));
@@ -340,23 +349,67 @@ export default function AdminStore() {
                 onChange={e => setForm(f => ({ ...f, fileSize: e.target.value }))} placeholder="45 MB" />
             </div>
 
-            {/* File upload only */}
+            {/* Fichier : upload ou lien externe */}
             <div>
               <Label className="text-sm font-bold text-gray-700">Fichier à télécharger</Label>
-              <div className="mt-2">
-                <input ref={fileInputRef} type="file" className="hidden" accept=".apk,.pdf,.zip,.exe,*"
-                  onChange={e => setFile(e.target.files?.[0] || null)} />
+
+              {/* Toggle upload / lien */}
+              <div className="mt-2 flex rounded-2xl border border-gray-200 overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full border-2 border-dashed border-gray-200 hover:border-purple-300 rounded-2xl py-4 flex flex-col items-center gap-2 transition-all group">
-                  <Upload className="h-6 w-6 text-gray-300 group-hover:text-purple-400 transition-colors" />
-                  <span className="text-xs font-semibold text-gray-400">
-                    {file ? file.name : editItem?.downloadUrl ? "Fichier déjà uploadé — cliquer pour remplacer" : "Cliquez pour choisir un fichier (APK, PDF, ZIP…)"}
-                  </span>
-                  {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB</span>}
+                  onClick={() => setForm(f => ({ ...f, uploadMode: "upload" }))}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-colors",
+                    form.uploadMode === "upload"
+                      ? "bg-purple-600 text-white"
+                      : "bg-white text-gray-500 hover:bg-gray-50"
+                  )}
+                >
+                  <FolderUp className="h-3.5 w-3.5" /> Uploader
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, uploadMode: "link" }))}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-colors",
+                    form.uploadMode === "link"
+                      ? "bg-purple-600 text-white"
+                      : "bg-white text-gray-500 hover:bg-gray-50"
+                  )}
+                >
+                  <Link2 className="h-3.5 w-3.5" /> Lien externe
                 </button>
               </div>
+
+              {form.uploadMode === "upload" ? (
+                <div className="mt-2">
+                  <input ref={fileInputRef} type="file" className="hidden" accept=".apk,.pdf,.zip,.exe,*"
+                    onChange={e => setFile(e.target.files?.[0] || null)} />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-200 hover:border-purple-300 rounded-2xl py-4 flex flex-col items-center gap-2 transition-all group">
+                    <Upload className="h-6 w-6 text-gray-300 group-hover:text-purple-400 transition-colors" />
+                    <span className="text-xs font-semibold text-gray-400">
+                      {file ? file.name : editItem?.downloadUrl && form.uploadMode === "upload" ? "Fichier déjà configuré — cliquer pour remplacer" : "Cliquez pour choisir un fichier (APK, PDF, ZIP…)"}
+                    </span>
+                    {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB · max 50 MB</span>}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  <Input
+                    placeholder="https://drive.google.com/… ou https://mega.nz/…"
+                    value={form.externalLink}
+                    onChange={e => setForm(f => ({ ...f, externalLink: e.target.value }))}
+                    className="rounded-2xl border-gray-200 h-11 text-sm"
+                  />
+                  <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                    <Link2 className="h-3 w-3" />
+                    Collez un lien Google Drive, Mega, Dropbox… Pour les fichiers &gt; 50 MB.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
