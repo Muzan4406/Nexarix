@@ -68,44 +68,41 @@ export default function AdminFormations() {
     setOpen(true);
   };
 
-  // Upload a file directly to Supabase via presigned URL, with XHR progress
-  const uploadFileDirect = (
+  // Upload contenu (PDF, ZIP…) → serveur Plesk par morceaux, sans limite de taille
+  const uploadFileChunked = async (
     fileObj: File,
-    bucket: string,
     onProgress: (pct: number) => void,
-  ): Promise<string> =>
-    new Promise(async (resolve, reject) => {
-      try {
-        const presignRes = await fetch("/api/admin/upload/presign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ bucket, originalName: fileObj.name }),
-        });
-        if (!presignRes.ok) {
-          const e = await presignRes.json() as any;
-          reject(new Error(e.error || "Presign échoué"));
-          return;
-        }
-        const { signedUrl, publicUrl } = await presignRes.json() as any;
+  ): Promise<string> => {
+    const CHUNK = 5 * 1024 * 1024;
+    const total = Math.ceil(fileObj.size / CHUNK);
+    const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", signedUrl);
-        xhr.setRequestHeader("Content-Type", fileObj.type || "application/octet-stream");
-        xhr.setRequestHeader("x-upsert", "true");
+    for (let i = 0; i < total; i++) {
+      const fd = new FormData();
+      fd.append("uploadId", uploadId);
+      fd.append("chunkIndex", String(i));
+      fd.append("totalChunks", String(total));
+      fd.append("filename", fileObj.name);
+      fd.append("chunk", fileObj.slice(i * CHUNK, Math.min((i + 1) * CHUNK, fileObj.size)), fileObj.name);
+      const r = await fetch("/api/admin/upload/chunk", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!r.ok) { const e = await r.json() as any; throw new Error(e.error || `Erreur chunk ${i}`); }
+      onProgress(Math.round(((i + 1) / total) * 90));
+    }
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve(publicUrl);
-          else reject(new Error(`Upload échoué (${xhr.status}): ${xhr.responseText}`));
-        };
-        xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
-        xhr.send(fileObj);
-      } catch (e: any) {
-        reject(e);
-      }
+    const r = await fetch("/api/admin/upload/chunk/finalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ uploadId, filename: fileObj.name, totalChunks: String(total) }),
     });
+    if (!r.ok) { const e = await r.json() as any; throw new Error(e.error || "Finalisation échouée"); }
+    const { downloadUrl } = await r.json() as any;
+    onProgress(100);
+    return downloadUrl;
+  };
 
   const handleSave = async () => {
     if (!form.title) { toast({ title: "Le titre est requis", variant: "destructive" }); return; }
@@ -118,8 +115,7 @@ export default function AdminFormations() {
       if (form.uploadMode === "link" && form.externalLink.trim()) {
         contentUrl = form.externalLink.trim();
       } else if (file) {
-        contentUrl = await uploadFileDirect(file, "formation-files", (pct) => setUploadProgress(pct));
-        setUploadProgress(100);
+        contentUrl = await uploadFileChunked(file, (pct) => setUploadProgress(pct));
       }
 
       // Submit form metadata with URL (no file)
@@ -291,7 +287,7 @@ export default function AdminFormations() {
                     <span className="text-xs font-semibold text-gray-400">
                       {file ? file.name : editItem?.contentUrl && form.uploadMode === "upload" ? "Fichier déjà uploadé — cliquer pour remplacer" : "Cliquez pour choisir un fichier (PDF, Word, ZIP…)"}
                     </span>
-                    {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB · max 50 MB</span>}
+                    {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB — envoi par morceaux</span>}
                   </button>
                 </div>
               ) : (

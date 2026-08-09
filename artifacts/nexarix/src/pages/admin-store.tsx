@@ -87,7 +87,7 @@ export default function AdminStore() {
     setThumbnailPreview(URL.createObjectURL(f));
   };
 
-  // Upload a file directly to Supabase via presigned URL, with XHR progress
+  // Upload thumbnail → Supabase (petite image, CDN)
   const uploadFileDirect = (
     fileObj: File,
     bucket: string,
@@ -102,16 +102,13 @@ export default function AdminStore() {
         });
         if (!presignRes.ok) {
           const e = await presignRes.json() as any;
-          reject(new Error(e.error || "Presign échoué"));
-          return;
+          reject(new Error(e.error || "Presign échoué")); return;
         }
         const { signedUrl, publicUrl } = await presignRes.json() as any;
-
         const xhr = new XMLHttpRequest();
         xhr.open("PUT", signedUrl);
         xhr.setRequestHeader("Content-Type", fileObj.type || "application/octet-stream");
         xhr.setRequestHeader("x-upsert", "true");
-
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
         };
@@ -121,10 +118,45 @@ export default function AdminStore() {
         };
         xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
         xhr.send(fileObj);
-      } catch (e: any) {
-        reject(e);
-      }
+      } catch (e: any) { reject(e); }
     });
+
+  // Upload contenu (APK, PDF, ZIP…) → serveur Plesk par morceaux, sans limite de taille
+  const uploadFileChunked = async (
+    fileObj: File,
+    onProgress: (pct: number) => void,
+  ): Promise<string> => {
+    const CHUNK = 5 * 1024 * 1024; // 5 Mo par morceau
+    const total = Math.ceil(fileObj.size / CHUNK);
+    const uploadId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    for (let i = 0; i < total; i++) {
+      const fd = new FormData();
+      fd.append("uploadId", uploadId);
+      fd.append("chunkIndex", String(i));
+      fd.append("totalChunks", String(total));
+      fd.append("filename", fileObj.name);
+      fd.append("chunk", fileObj.slice(i * CHUNK, Math.min((i + 1) * CHUNK, fileObj.size)), fileObj.name);
+
+      const r = await fetch("/api/admin/upload/chunk", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      if (!r.ok) { const e = await r.json() as any; throw new Error(e.error || `Erreur chunk ${i}`); }
+      onProgress(Math.round(((i + 1) / total) * 90));
+    }
+
+    const r = await fetch("/api/admin/upload/chunk/finalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ uploadId, filename: fileObj.name, totalChunks: String(total) }),
+    });
+    if (!r.ok) { const e = await r.json() as any; throw new Error(e.error || "Finalisation échouée"); }
+    const { downloadUrl } = await r.json() as any;
+    onProgress(100);
+    return downloadUrl;
+  };
 
   const handleSave = async () => {
     if (!form.title) { toast({ title: "Le titre est requis", variant: "destructive" }); return; }
@@ -145,11 +177,12 @@ export default function AdminStore() {
       let downloadUrl: string | undefined;
       let thumbnailUrl: string | undefined;
 
-      // Mode lien externe — pas d'upload Supabase
+      // Mode lien externe — pas d'upload
       if (form.uploadMode === "link" && form.externalLink.trim()) {
         downloadUrl = form.externalLink.trim();
       } else if (file) {
-        downloadUrl = await uploadFileDirect(file, "store-files", (pct) => makeProgress(pct));
+        // Upload chunké vers le serveur Plesk — pas de limite de taille
+        downloadUrl = await uploadFileChunked(file, (pct) => makeProgress(pct));
         doneFiles++;
         setUploadProgress(Math.round((doneFiles / Math.max(totalFiles, 1)) * 100));
       }
@@ -393,7 +426,7 @@ export default function AdminStore() {
                     <span className="text-xs font-semibold text-gray-400">
                       {file ? file.name : editItem?.downloadUrl && form.uploadMode === "upload" ? "Fichier déjà configuré — cliquer pour remplacer" : "Cliquez pour choisir un fichier (APK, PDF, ZIP…)"}
                     </span>
-                    {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB · max 50 MB</span>}
+                    {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB — envoi par morceaux</span>}
                   </button>
                 </div>
               ) : (
