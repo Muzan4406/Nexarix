@@ -11,12 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Edit, Trash2, GraduationCap, Upload, Play, FileText, Tag } from "lucide-react";
+import { Plus, Edit, Trash2, GraduationCap, Upload, Play, FileText, Tag, Link2, FolderUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const emptyForm = {
   title: "", description: "", videoUrl: "",
   isFree: true, isActive: true, price: "",
+  externalLink: "", uploadMode: "upload" as "upload" | "link",
 };
 
 const card = {
@@ -54,11 +55,14 @@ export default function AdminFormations() {
 
   const openEdit = (f: any) => {
     setEditItem(f);
+    const isExternal = f.contentUrl && !f.contentUrl.includes("supabase.co");
     setForm({
       title: f.title, description: f.description || "",
       videoUrl: f.videoUrl || "",
       isFree: f.isFree, isActive: f.isActive,
       price: f.price ? String(f.price) : "",
+      externalLink: isExternal ? f.contentUrl : "",
+      uploadMode: isExternal ? "link" : "upload",
     });
     setFile(null);
     setOpen(true);
@@ -111,7 +115,9 @@ export default function AdminFormations() {
     try {
       let contentUrl: string | undefined;
 
-      if (file) {
+      if (form.uploadMode === "link" && form.externalLink.trim()) {
+        contentUrl = form.externalLink.trim();
+      } else if (file) {
         contentUrl = await uploadFileDirect(file, "formation-files", (pct) => setUploadProgress(pct));
         setUploadProgress(100);
       }
@@ -256,21 +262,52 @@ export default function AdminFormations() {
                 placeholder="https://youtube.com/watch?v=…" />
             </div>
 
-            {/* File upload */}
+            {/* Document / Fichier : upload ou lien externe */}
             <div>
               <Label className="text-sm font-bold text-gray-700">Document / Fichier <span className="font-normal text-gray-400">(optionnel)</span></Label>
-              <div className="mt-2">
-                <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.zip,*"
-                  onChange={e => setFile(e.target.files?.[0] || null)} />
-                <button onClick={() => fileInputRef.current?.click()}
-                  className="w-full border-2 border-dashed border-gray-200 hover:border-orange-300 rounded-2xl py-4 flex flex-col items-center gap-2 transition-all group">
-                  <Upload className="h-6 w-6 text-gray-300 group-hover:text-orange-400 transition-colors" />
-                  <span className="text-xs font-semibold text-gray-400">
-                    {file ? file.name : editItem?.contentUrl ? "Fichier déjà uploadé — cliquer pour remplacer" : "Cliquez pour choisir un fichier (PDF, Word, ZIP…)"}
-                  </span>
-                  {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB</span>}
+
+              <div className="mt-2 flex rounded-2xl border border-gray-200 overflow-hidden">
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, uploadMode: "upload" }))}
+                  className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-colors",
+                    form.uploadMode === "upload" ? "bg-orange-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50")}>
+                  <FolderUp className="h-3.5 w-3.5" /> Uploader
+                </button>
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, uploadMode: "link" }))}
+                  className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold transition-colors",
+                    form.uploadMode === "link" ? "bg-orange-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50")}>
+                  <Link2 className="h-3.5 w-3.5" /> Lien externe
                 </button>
               </div>
+
+              {form.uploadMode === "upload" ? (
+                <div className="mt-2">
+                  <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.zip,*"
+                    onChange={e => setFile(e.target.files?.[0] || null)} />
+                  <button onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-200 hover:border-orange-300 rounded-2xl py-4 flex flex-col items-center gap-2 transition-all group">
+                    <Upload className="h-6 w-6 text-gray-300 group-hover:text-orange-400 transition-colors" />
+                    <span className="text-xs font-semibold text-gray-400">
+                      {file ? file.name : editItem?.contentUrl && form.uploadMode === "upload" ? "Fichier déjà uploadé — cliquer pour remplacer" : "Cliquez pour choisir un fichier (PDF, Word, ZIP…)"}
+                    </span>
+                    {file && <span className="text-[10px] text-gray-400">{(file.size / 1024 / 1024).toFixed(1)} MB · max 50 MB</span>}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  <Input
+                    placeholder="https://drive.google.com/… ou https://mega.nz/…"
+                    value={form.externalLink}
+                    onChange={e => setForm(f => ({ ...f, externalLink: e.target.value }))}
+                    className="rounded-2xl border-gray-200 h-11 text-sm"
+                  />
+                  <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                    <Link2 className="h-3 w-3" />
+                    Collez un lien Google Drive, Mega, Dropbox… Pour les fichiers &gt; 50 MB.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Price */}
