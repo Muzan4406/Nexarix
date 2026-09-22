@@ -375,7 +375,7 @@ async function distributeMLMCommissions(user: any) {
   if (!user.upline) return;
 
   const commissions = [
-    { level: 1, amount: 1300 },
+    { level: 1, amount: 2000 },
     { level: 2, amount: 700 },
     { level: 3, amount: 400 },
   ];
@@ -407,7 +407,7 @@ router.delete("/admin/users/:userId", authMiddleware, adminMiddleware, async (re
 
   if (user.status === "active" && user.upline) {
     const commissions = [
-      { field: "mlmEarningsL1" as const, amount: 1300 },
+      { field: "mlmEarningsL1" as const, amount: 2000 },
       { field: "mlmEarningsL2" as const, amount: 700 },
       { field: "mlmEarningsL3" as const, amount: 400 },
     ];
@@ -446,7 +446,7 @@ router.post("/admin/users/:userId/revoke-referral", authMiddleware, adminMiddlew
 
   if (user.status === "active") {
     const commissions = [
-      { field: "mlmEarningsL1" as const, amount: 1300 },
+      { field: "mlmEarningsL1" as const, amount: 2000 },
       { field: "mlmEarningsL2" as const, amount: 700 },
       { field: "mlmEarningsL3" as const, amount: 400 },
     ];
@@ -515,7 +515,6 @@ router.patch("/admin/tasks/:taskId", authMiddleware, adminMiddleware, async (req
   if (description !== undefined) updates.description = description;
   if (targetUrl !== undefined) updates.targetUrl = targetUrl;
   if (points !== undefined) updates.points = points;
-  if (taskBalance !== undefined) updates.taskBalance = taskBalance.toString();
   if (isActive !== undefined) updates.isActive = isActive;
   if (question !== undefined) updates.question = question;
   if (correctAnswer !== undefined) updates.correctAnswer = correctAnswer;
@@ -646,7 +645,7 @@ router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMi
   const w = withdrawal.withdrawal;
 
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  // AshtechPay only supports Pay-In (collect). Withdrawals are always manual.
+  // SendavaPay is used only for activation pay-ins. Withdrawals are always manual.
   const isAutoMode = false;
 
   let sendavapayRef: string | null = null;
@@ -808,7 +807,7 @@ router.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res) 
   }
   res.json({
     ...settings,
-    activationFee: parseFloat(settings.activationFee || "3000"),
+    activationFee: parseFloat(settings.activationFee || "3800"),
     minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
     sendavapayApiKey: maskSecret(settings.sendavapayApiKey),
     sendavapayWebhookSecret: maskSecret(settings.sendavapayWebhookSecret),
@@ -845,8 +844,10 @@ router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res
 
   res.json({
     ...settings,
-    activationFee: parseFloat(settings.activationFee || "3000"),
+    activationFee: parseFloat(settings.activationFee || "3800"),
     minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
+    sendavapayApiKey: maskSecret(settings.sendavapayApiKey),
+    sendavapayWebhookSecret: maskSecret(settings.sendavapayWebhookSecret),
   });
 });
 

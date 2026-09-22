@@ -83,3 +83,10 @@ Check balance + operator availability before executing. Returns `valid`, `fee`, 
 - `withdrawal.failed` webhook refunds `amountGross` to user balance automatically
 - Phone normalization: `00XXX` → `+XXX`, else prepend `+` if missing
 - `externalReference` for payout: `nexarix-withdrawal-{withdrawalId}`
+
+## Browser integration constraint
+Activation's `initiate-payment` and `submit-otp` calls should go through the Nexarix API server, not directly from the browser.
+
+**Why:** SendavaPay returned HTTP 403 to a browser CORS preflight from the development origin, while server-side requests and the public operator proxy worked.
+
+**How to apply:** Keep the SDK key and payment token server-side; the frontend should send only the selected operator ID and OTP to authenticated Nexarix routes.

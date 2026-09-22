@@ -43,7 +43,7 @@ router.get("/notifications", authMiddleware, async (req, res) => {
 // PATCH /notifications/:id/read — mark as read
 router.patch("/notifications/:id/read", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
-  const notificationId = parseInt(req.params.id, 10);
+  const notificationId = parseInt(String(req.params.id), 10);
 
   if (!Number.isFinite(notificationId) || notificationId <= 0) {
     res.status(400).json({ error: "ID invalide" });
@@ -138,7 +138,7 @@ router.get("/admin/notifications", authMiddleware, adminMiddleware, async (req, 
 
 // DELETE /admin/notifications/:id — delete notification (admin)
 router.delete("/admin/notifications/:id", authMiddleware, adminMiddleware, async (req, res) => {
-  const notifId = parseInt(req.params.id, 10);
+  const notifId = parseInt(String(req.params.id), 10);
 
   if (!Number.isFinite(notifId) || notifId <= 0) {
     res.status(400).json({ error: "ID invalide" });
