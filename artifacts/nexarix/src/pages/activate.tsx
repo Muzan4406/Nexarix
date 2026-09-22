@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const BASE = import.meta.env.BASE_URL;
 
-// SendavaPay-supported countries only
+// AshtechPay-supported countries only
 const COUNTRY_ISO: Record<string, string> = {
   "Bénin": "BJ",
   "Burkina Faso": "BF",
@@ -22,7 +22,7 @@ const COUNTRY_ISO: Record<string, string> = {
   "Gabon": "GA",
   "Mali": "ML",
   "Niger": "NE",
-  "RD Congo": "COD",
+  "RD Congo": "CD",
   "Sénégal": "SN",
   "Togo": "TG",
 };
@@ -30,13 +30,6 @@ const COUNTRY_ISO: Record<string, string> = {
 const COUNTRY_LIST = Object.keys(COUNTRY_ISO).sort();
 
 type Phase = "form" | "initiating" | "otp" | "wave" | "waiting" | "success";
-type Operator = {
-  id: string;
-  name: string;
-  slug: string;
-  requiresOtp?: boolean;
-};
-
 export default function Activate() {
   const { user, logout } = useAuth();
   const [, navigate] = useLocation();
@@ -45,13 +38,14 @@ export default function Activate() {
   const [phase, setPhase] = useState<Phase>("form");
   const [country, setCountry] = useState(user?.country || "");
   const [phone, setPhone] = useState(user?.phone || "");
-  const [operators, setOperators] = useState<Operator[]>([]);
-  const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
+  const [operators, setOperators] = useState<string[]>([]);
+  const [selectedOperator, setSelectedOperator] = useState("");
   const [loadingOperators, setLoadingOperators] = useState(false);
 
   // Payment state
   const [transactionId, setTransactionId] = useState("");
-  const [otpToken, setOtpToken] = useState("");
+  const [otpReference, setOtpReference] = useState("");
+  const [ussdCode, setUssdCode] = useState<string | null>(null);
   const [waveUrl, setWaveUrl] = useState("");
   const [otp, setOtp] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -68,16 +62,16 @@ export default function Activate() {
     if (user?.phone && !phone) setPhone(user.phone);
   }, [user]);
 
-  // Load only online operators from the SendavaPay SDK.
+  // Load operators through the AshtechPay proxy.
   useEffect(() => {
     if (paymentMode !== "auto" || !countryCode) {
       setOperators([]);
-      setSelectedOperator(null);
+      setSelectedOperator("");
       return;
     }
     let cancelled = false;
     setLoadingOperators(true);
-    setSelectedOperator(null);
+    setSelectedOperator("");
     const token = localStorage.getItem("nexarix_token");
     fetch(`/api/activate/countries?country_code=${encodeURIComponent(countryCode)}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -115,7 +109,7 @@ export default function Activate() {
 
   const checkPaymentStatus = async () => {
     try {
-      const qs = transactionId ? `?reference=${encodeURIComponent(transactionId)}` : "";
+      const qs = transactionId ? `?transactionId=${encodeURIComponent(transactionId)}` : "";
       const resp = await fetch(`/api/activate/check${qs}`, { headers: authHeaders() });
       const json = await resp.json();
       if (json?.status === "active") setPhase("success");
@@ -141,29 +135,30 @@ export default function Activate() {
         body: JSON.stringify({
           country,
           phone: phone.trim(),
-          operatorId: selectedOperator.id,
+          operator: selectedOperator,
         }),
       });
       const json = await resp.json() as any;
       if (!resp.ok) {
-        setErrorMsg(json?.error || "Erreur SendavaPay. Vérifiez la configuration.");
+          setErrorMsg(json?.error || "Erreur AshtechPay. Vérifiez la configuration.");
         setPhase("form");
         return;
       }
 
-      setTransactionId(json.reference);
-
-      if (json.requiresRedirect && json.redirectUrl) {
-        setWaveUrl(json.redirectUrl);
+      if (json.flow === "wave" && json.waveUrl) {
+        setWaveUrl(json.waveUrl);
+        setTransactionId(json.transactionId || "");
         setPhase("wave");
         return;
       }
-      if (json.requiresOtp && json.otpToken) {
-        setOtpToken(json.otpToken);
+      if (json.flow === "otp") {
+        setOtpReference(json.reference || "");
+        setUssdCode(json.ussdCode || null);
         setPhase("otp");
         return;
       }
 
+      setTransactionId(json.transactionId || "");
       setPhase("waiting");
       setCheckCount(0);
     } catch {
@@ -180,10 +175,23 @@ export default function Activate() {
       const resp = await fetch("/api/activate/otp", {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ otpToken, otp: otp.trim() }),
+        body: JSON.stringify({
+          country,
+          phone: phone.trim(),
+          operator: selectedOperator,
+          otp: otp.trim(),
+          reference: otpReference,
+        }),
       });
       const json = await resp.json() as any;
-      if (!resp.ok || !json.success) { setErrorMsg(json?.error || "Code OTP incorrect."); return; }
+      if (!resp.ok) { setErrorMsg(json?.error || "Code OTP incorrect."); return; }
+      if (json.flow === "wave" && json.waveUrl) {
+        setWaveUrl(json.waveUrl);
+        setTransactionId(json.transactionId || "");
+        setPhase("wave");
+        return;
+      }
+      setTransactionId(json.transactionId || "");
       setPhase("waiting");
       setCheckCount(0);
     } catch {
@@ -196,7 +204,8 @@ export default function Activate() {
   const handleReset = () => {
     setPhase("form");
     setTransactionId("");
-    setOtpToken("");
+    setOtpReference("");
+    setUssdCode(null);
     setWaveUrl("");
     setOtp("");
     setErrorMsg("");
@@ -275,7 +284,7 @@ export default function Activate() {
                       <div className="relative">
                         <select
                           value={country}
-                           onChange={e => { setCountry(e.target.value); setSelectedOperator(null); }}
+                           onChange={e => { setCountry(e.target.value); setSelectedOperator(""); }}
                           className="w-full h-12 pl-4 pr-10 rounded-2xl border-2 border-gray-100 focus:border-blue-400 focus:outline-none text-sm font-semibold text-gray-800 bg-white appearance-none"
                           disabled={phase === "initiating"}
                         >
@@ -317,19 +326,19 @@ export default function Activate() {
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            {operators.map(op => (
+                             {operators.map(op => (
                               <button
-                                 key={op.id}
+                                  key={op}
                                  onClick={() => setSelectedOperator(op)}
                                 disabled={phase === "initiating"}
                                 className={`w-full flex items-center justify-between rounded-2xl px-4 py-3 border-2 transition-all ${
-                                   selectedOperator?.id === op.id
+                                    selectedOperator === op
                                     ? "border-blue-500 bg-blue-50"
                                     : "border-gray-100 hover:border-blue-200 bg-white"
                                 }`}
                               >
-                                 <span className="font-bold text-sm text-gray-800">{op.name}</span>
-                                 {selectedOperator?.id === op.id && <CheckCircle2 className="h-4 w-4 text-blue-500" />}
+                                  <span className="font-bold text-sm text-gray-800">{op}</span>
+                                  {selectedOperator === op && <CheckCircle2 className="h-4 w-4 text-blue-500" />}
                               </button>
                             ))}
                           </div>
@@ -359,7 +368,7 @@ export default function Activate() {
                       <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
-                       <p className="text-[11px] text-gray-400 font-medium">Paiement sécurisé via SendavaPay</p>
+                       <p className="text-[11px] text-gray-400 font-medium">Paiement sécurisé via AshtechPay</p>
                     </div>
 
                     <div className="border-t border-gray-100 pt-3">
@@ -380,9 +389,15 @@ export default function Activate() {
                      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-center">
                        <MessageSquare className="h-6 w-6 text-blue-500 mx-auto mb-2" />
                        <p className="text-sm font-black text-blue-700 mb-1">Code OTP requis</p>
-                       <p className="text-xs text-blue-600">
-                         Un code OTP a été envoyé par SMS sur <span className="font-bold">{phone}</span>.
-                       </p>
+                          <p className="text-xs text-blue-600">
+                          Un code OTP a été envoyé par SMS sur <span className="font-bold">{phone}</span>.
+                        </p>
+                        {ussdCode && (
+                          <div className="mt-3 rounded-xl bg-amber-100 px-3 py-2">
+                            <p className="text-[11px] font-semibold text-amber-700">Code USSD à composer</p>
+                            <p className="font-black text-xl tracking-widest text-amber-800">{ussdCode}</p>
+                          </div>
+                        )}
                      </div>
 
                     <div>
@@ -455,7 +470,7 @@ export default function Activate() {
                         <span className="font-black text-sm">En attente de confirmation…</span>
                       </div>
                       <p className="text-xs text-gray-500">
-                         Confirmez le paiement sur votre téléphone (<span className="font-bold">{selectedOperator?.name}</span>).
+                         Confirmez le paiement sur votre téléphone (<span className="font-bold">{selectedOperator}</span>).
                         La vérification est automatique toutes les 6 secondes.
                       </p>
                       {checkCount > 0 && (

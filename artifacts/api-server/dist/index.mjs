@@ -34164,12 +34164,12 @@ var require_jwa = __commonJS({
       };
     }
     var bufferEqual;
-    var timingSafeEqual3 = "timingSafeEqual" in crypto2 ? function timingSafeEqual4(a, b) {
+    var timingSafeEqual = "timingSafeEqual" in crypto2 ? function timingSafeEqual2(a, b) {
       if (a.byteLength !== b.byteLength) {
         return false;
       }
       return crypto2.timingSafeEqual(a, b);
-    } : function timingSafeEqual4(a, b) {
+    } : function timingSafeEqual2(a, b) {
       if (!bufferEqual) {
         bufferEqual = require_buffer_equal_constant_time();
       }
@@ -34178,7 +34178,7 @@ var require_jwa = __commonJS({
     function createHmacVerifier(bits) {
       return function verify(thing, signature, secret) {
         var computedSig = createHmacSigner(bits)(thing, secret);
-        return timingSafeEqual3(Buffer3.from(signature), Buffer3.from(computedSig));
+        return timingSafeEqual(Buffer3.from(signature), Buffer3.from(computedSig));
       };
     }
     function createKeySigner(bits) {
@@ -83826,9 +83826,8 @@ var admin_default = router7;
 
 // src/routes/activation.ts
 var import_express8 = __toESM(require_express2(), 1);
-import { createHmac, timingSafeEqual } from "node:crypto";
 var router8 = (0, import_express8.Router)();
-var SENDAVAPAY_BASE2 = "https://sendavapay.com/api/sdk/v1";
+var ASHTECHPAY_BASE = "https://ashtechpay.top";
 var REFERRAL_BONUS_AMOUNT = 1500;
 var REFERRAL_BONUS_STEP = 10;
 var COUNTRY_ISO2 = {
@@ -83841,7 +83840,7 @@ var COUNTRY_ISO2 = {
   "Niger": "NE",
   "S\xE9n\xE9gal": "SN",
   "Gabon": "GA",
-  "RD Congo": "COD"
+  "RD Congo": "CD"
 };
 var CURRENCY_BY_ISO2 = {
   "TG": "XOF",
@@ -83853,8 +83852,19 @@ var CURRENCY_BY_ISO2 = {
   "SN": "XOF",
   "CM": "XAF",
   "GA": "XAF",
-  "CD": "CDF",
-  "COD": "CDF"
+  "CD": "CDF"
+};
+var FALLBACK_OPERATORS = {
+  TG: ["Flooz (Moov)", "T-Money"],
+  BJ: ["Celtiis Money", "Coris Money", "Moov Money", "MTN Money"],
+  CI: ["Moov Money", "MTN Money", "Orange Money", "Wave Money"],
+  CM: ["MTN Money", "Orange Money"],
+  BF: ["Moov Money", "Orange Money", "Wallet LigdiCash"],
+  ML: ["Moov Money", "Orange Money"],
+  NE: ["Airtel Money"],
+  SN: ["E-money", "Free Money", "Orange Money", "Wave Money"],
+  GA: ["Airtel Money", "Moov Money"],
+  CD: ["Afri Money", "Airtel", "Mpesa Money", "Orange", "Vodacom"]
 };
 router8.get("/settings/public", async (_req, res) => {
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
@@ -83872,34 +83882,55 @@ router8.get("/settings/public", async (_req, res) => {
 });
 router8.get("/activate/countries", async (req, res) => {
   const { country_code } = req.query;
-  if (!country_code || !Object.values(COUNTRY_ISO2).includes(country_code)) {
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  const apiKey = settings?.sendavapayApiKey;
+  if (apiKey) {
+    try {
+      const response = await fetch(`${ASHTECHPAY_BASE}/v1/countries`, {
+        headers: { Authorization: `Bearer ${apiKey}` }
+      });
+      if (response.ok) {
+        const countries = await response.json();
+        if (!Array.isArray(countries)) throw new Error("R\xE9ponse pays invalide");
+        if (country_code) {
+          if (!Object.values(COUNTRY_ISO2).includes(country_code)) {
+            res.status(400).json({ error: "Code pays invalide" });
+            return;
+          }
+          res.json({
+            operators: countries.find((country) => country.code === country_code)?.operators || []
+          });
+          return;
+        }
+        res.json(countries);
+        return;
+      }
+    } catch (_) {
+    }
+  }
+  if (country_code && !Object.values(COUNTRY_ISO2).includes(country_code)) {
     res.status(400).json({ error: "Code pays invalide" });
     return;
   }
-  try {
-    const response = await fetch(
-      `${SENDAVAPAY_BASE2}/operators/${encodeURIComponent(country_code)}`
-    );
-    const json3 = await response.json();
-    if (!response.ok || !json3.success || !Array.isArray(json3.data)) {
-      res.status(502).json({ error: "Impossible de charger les op\xE9rateurs Mobile Money" });
-      return;
-    }
-    res.json({
-      operators: json3.data.filter((operator) => operator.status === "online" && operator.available !== false).map((operator) => ({
-        id: String(operator.id),
-        name: operator.name || operator.operator || operator.slug,
-        slug: operator.slug,
-        requiresOtp: Boolean(operator.requiresOtp)
-      }))
-    });
-  } catch (_) {
-    res.status(502).json({ error: "Service de paiement temporairement indisponible" });
+  if (country_code) {
+    res.json({ operators: FALLBACK_OPERATORS[country_code] || [] });
+    return;
   }
+  res.json(Object.entries(FALLBACK_OPERATORS).map(([code, operators]) => ({
+    code,
+    name: Object.entries(COUNTRY_ISO2).find(([, value]) => value === code)?.[0] || code,
+    operators
+  })));
 });
 router8.post("/activate/initiate", authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const { country: formCountry, phone: formPhone, operatorId } = req.body || {};
+  const {
+    country: formCountry,
+    phone: formPhone,
+    operator: formOperator,
+    operatorId
+  } = req.body || {};
+  const operator = formOperator || operatorId;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) {
     res.status(404).json({ error: "Utilisateur non trouv\xE9" });
@@ -83916,10 +83947,10 @@ router8.post("/activate/initiate", authMiddleware, async (req, res) => {
     return;
   }
   if (!settings.sendavapayApiKey) {
-    res.status(503).json({ error: "La cl\xE9 API SendavaPay n'est pas configur\xE9e" });
+    res.status(503).json({ error: "La cl\xE9 API AshtechPay n'est pas configur\xE9e" });
     return;
   }
-  if (!operatorId) {
+  if (!operator) {
     res.status(400).json({ error: "Veuillez s\xE9lectionner un op\xE9rateur Mobile Money" });
     return;
   }
@@ -83935,86 +83966,113 @@ router8.post("/activate/initiate", authMiddleware, async (req, res) => {
       ...formPhone && !user.phone ? { phone: formPhone } : {}
     }).where(eq(usersTable.id, userId));
   }
-  const externalReference = `nexarix-activation-${userId}-${Date.now()}`;
+  const reference = `nexarix-act-${userId}-${Date.now()}`;
   try {
     const payload = {
       amount: activationFee,
       currency,
-      description: `Activation Nexarix \u2014 ${user.username}`,
-      customerName: user.username,
-      customerEmail: user.email || `${user.username}@nexarix.app`,
-      customerPhone: resolvedPhone || void 0,
-      payerCountry: countryIso,
-      webhookUrl: `${baseUrl}/api/activate/webhook`,
-      externalReference
+      phone: resolvedPhone,
+      operator,
+      country_code: countryIso,
+      reference,
+      notify_url: `${baseUrl}/api/activate/webhook`
     };
-    const response = await fetch(`${SENDAVAPAY_BASE2}/create-payment`, {
+    const response = await fetch(`${ASHTECHPAY_BASE}/v1/collect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${settings.sendavapayApiKey}`
+        Authorization: `Bearer ${settings.sendavapayApiKey}`
       },
       body: JSON.stringify(payload)
     });
     const json3 = await response.json();
-    if (!response.ok || !json3.success || !json3.data?.paymentToken || !json3.data?.reference) {
-      const detail = json3?.message || json3?.error || json3?.code || JSON.stringify(json3);
-      res.status(502).json({ error: detail });
+    if (response.status === 202) {
+      if (json3.flow === "wave" && json3.wave_url) {
+        res.json({ flow: "wave", waveUrl: json3.wave_url, transactionId: json3.transaction_id, reference });
+        return;
+      }
+      res.json({ flow: "ussd_push", transactionId: json3.transaction_id, reference });
       return;
     }
-    const sdkResponse = await fetch(`${SENDAVAPAY_BASE2}/initiate-payment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentToken: json3.data.paymentToken,
-        payerName: user.username,
-        payerPhone: resolvedPhone,
-        payerCountry: countryIso,
-        operatorId: String(operatorId)
-      })
-    });
-    const sdkJson = await sdkResponse.json();
-    if (!sdkResponse.ok || !sdkJson.success) {
-      const detail = sdkJson?.message || sdkJson?.error || JSON.stringify(sdkJson);
-      res.status(502).json({ error: detail });
+    if (response.status === 400 && json3.error === "otp_required") {
+      res.json({ flow: "otp", reference: json3.reference, ussdCode: json3.ussd_code || null });
       return;
     }
-    res.json({
-      reference: json3.data.reference,
-      requiresRedirect: Boolean(sdkJson.requiresRedirect),
-      redirectUrl: sdkJson.redirectUrl || null,
-      requiresOtp: Boolean(sdkJson.requiresOtp),
-      otpToken: sdkJson.otpToken || null
-    });
+    const detail = json3?.message || json3?.error || JSON.stringify(json3);
+    res.status(502).json({ error: detail });
   } catch (e) {
-    res.status(502).json({ error: "Impossible de contacter SendavaPay : " + e.message });
+    res.status(502).json({ error: "Impossible de contacter AshtechPay : " + e.message });
   }
 });
 router8.post("/activate/otp", authMiddleware, async (req, res) => {
-  const { otpToken, otp } = req.body || {};
-  if (!otpToken || !otp) {
-    res.status(400).json({ error: "OTP et jeton OTP obligatoires" });
+  const userId = req.userId;
+  const {
+    country: formCountry,
+    phone: formPhone,
+    operator,
+    otp,
+    reference: otpReference
+  } = req.body || {};
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) {
+    res.status(404).json({ error: "Utilisateur non trouv\xE9" });
     return;
   }
+  if (user.status === "active") {
+    res.json({ flow: "ussd_push", transactionId: null });
+    return;
+  }
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  if (!settings?.sendavapayApiKey) {
+    res.status(503).json({ error: "AshtechPay non configur\xE9" });
+    return;
+  }
+  if (!otp || !otpReference || !operator) {
+    res.status(400).json({ error: "OTP, op\xE9rateur et r\xE9f\xE9rence obligatoires" });
+    return;
+  }
+  const resolvedCountry = formCountry || user.country || "";
+  const resolvedPhone = (formPhone || user.phone || "").replace(/\s+/g, "");
+  const countryIso = COUNTRY_ISO2[resolvedCountry] || "TG";
+  const currency = CURRENCY_BY_ISO2[countryIso] || "XOF";
+  const activationFee = parseFloat(settings.activationFee || "3800");
+  const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
   try {
-    const response = await fetch(`${SENDAVAPAY_BASE2}/submit-otp`, {
+    const response = await fetch(`${ASHTECHPAY_BASE}/v1/collect`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ otpToken, otp: String(otp).trim() })
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.sendavapayApiKey}`
+      },
+      body: JSON.stringify({
+        amount: activationFee,
+        currency,
+        phone: resolvedPhone,
+        operator,
+        country_code: countryIso,
+        otp: String(otp).trim(),
+        reference: otpReference,
+        notify_url: `${baseUrl}/api/activate/webhook`
+      })
     });
     const json3 = await response.json();
-    if (!response.ok || !json3.success) {
-      res.status(502).json({ error: json3?.message || json3?.error || "Code OTP incorrect" });
+    if (response.status === 202) {
+      if (json3.flow === "wave" && json3.wave_url) {
+        res.json({ flow: "wave", waveUrl: json3.wave_url, transactionId: json3.transaction_id });
+        return;
+      }
+      res.json({ flow: "ussd_push", transactionId: json3.transaction_id });
       return;
     }
-    res.json({ success: true });
+    const detail = json3?.message || json3?.error || JSON.stringify(json3);
+    res.status(response.status).json({ error: detail });
   } catch (e) {
-    res.status(502).json({ error: "Erreur r\xE9seau SendavaPay : " + e.message });
+    res.status(502).json({ error: "Erreur r\xE9seau AshtechPay : " + e.message });
   }
 });
 router8.get("/activate/check", authMiddleware, async (req, res) => {
   const userId = req.userId;
-  const { reference } = req.query;
+  const { transactionId } = req.query;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) {
     res.status(404).json({ error: "Utilisateur non trouv\xE9" });
@@ -84024,17 +84082,15 @@ router8.get("/activate/check", authMiddleware, async (req, res) => {
     res.json({ status: "active" });
     return;
   }
-  if (reference) {
+  if (transactionId) {
     try {
       const [settings] = await db.select().from(siteSettingsTable).limit(1);
       if (settings?.sendavapayApiKey) {
-        const payment = await verifyCompletedPayment(reference, settings.sendavapayApiKey);
-        if (payment?.externalReference === void 0) {
-          res.json({ status: user.status });
-          return;
-        }
-        const expectedReference = new RegExp(`^nexarix-activation-${userId}-\\d+$`);
-        if (payment.status === "completed" && typeof payment.externalReference === "string" && expectedReference.test(payment.externalReference)) {
+        const response = await fetch(`${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(transactionId)}`, {
+          headers: { Authorization: `Bearer ${settings.sendavapayApiKey}` }
+        });
+        const json3 = await response.json();
+        if (json3.status === "success") {
           const [freshUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
           if (freshUser && freshUser.status !== "active") {
             await activateUser(freshUser);
@@ -84049,43 +84105,27 @@ router8.get("/activate/check", authMiddleware, async (req, res) => {
   res.json({ status: user.status });
 });
 router8.post("/activate/webhook", async (req, res) => {
-  const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body ?? {}));
-  const signature = req.headers["x-sendavapay-signature"];
-  const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (settings?.sendavapayWebhookSecret) {
-    if (!signature) {
-      res.status(401).json({ error: "Signature manquante" });
-      return;
-    }
-    const expected = "sha256=" + createHmac("sha256", settings.sendavapayWebhookSecret).update(rawBody).digest("hex");
-    if (signature.length !== expected.length || !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-      res.status(401).json({ error: "Signature invalide" });
-      return;
-    }
-  }
+  res.status(200).json({ received: true });
   let payload;
   try {
-    payload = JSON.parse(rawBody.toString());
+    const body = Buffer.isBuffer(req.body) ? req.body.toString() : req.body;
+    payload = typeof body === "string" ? JSON.parse(body) : body;
   } catch {
-    res.status(400).json({ error: "Payload invalide" });
     return;
   }
-  const event = req.headers["x-sendavapay-event"] || payload?.event;
-  if (event === "payment.completed") {
-    const reference = payload?.reference;
+  const event = payload?.event;
+  const reference = payload?.reference;
+  if (event === "payment.completed" && payload?.status === "completed" && typeof reference === "string") {
+    const match = reference.match(/^nexarix-act-(\d+)-\d+$/);
+    if (!match) return;
     try {
-      if (reference && settings?.sendavapayApiKey) {
-        const payment = await verifyCompletedPayment(reference, settings.sendavapayApiKey);
-        if (payment?.status === "completed") {
-          await activateUserByExternalReference(payment.externalReference);
-        }
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.id, parseInt(match[1], 10))).limit(1);
+      if (user && user.status !== "active") {
+        await activateUser(user);
       }
     } catch (_) {
-      res.status(502).json({ error: "V\xE9rification du paiement impossible" });
-      return;
     }
   }
-  res.json({ received: true });
 });
 router8.post("/spin", authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -84109,28 +84149,6 @@ router8.post("/spin", authMiddleware, async (req, res) => {
   }).where(eq(usersTable.id, userId));
   res.json({ fcfaEarned, newBalance: parseFloat(user.balance || "0") + fcfaEarned });
 });
-async function verifyCompletedPayment(reference, apiKey) {
-  const response = await fetch(`${SENDAVAPAY_BASE2}/verify-payment`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    },
-    body: JSON.stringify({ reference })
-  });
-  const json3 = await response.json();
-  if (!response.ok || !json3.success || json3.data?.status !== "completed") return null;
-  return json3.data;
-}
-async function activateUserByExternalReference(externalReference) {
-  if (typeof externalReference !== "string") return false;
-  const match = externalReference.match(/^nexarix-activation-(\d+)-\d+$/);
-  if (!match) return false;
-  const uid = parseInt(match[1], 10);
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, uid)).limit(1);
-  if (!user) return false;
-  return activateUser(user);
-}
 async function activateUser(user) {
   const [activatedUser] = await db.update(usersTable).set({
     status: "active",
@@ -84792,9 +84810,8 @@ var formations_default = router11;
 
 // src/routes/formation-purchases.ts
 var import_express12 = __toESM(require_express2(), 1);
-import { createHmac as createHmac2, timingSafeEqual as timingSafeEqual2 } from "crypto";
 var router12 = (0, import_express12.Router)();
-var SENDAVAPAY_BASE3 = "https://sendavapay.com/api/sdk/v1";
+var ASHTECHPAY_BASE2 = "https://ashtechpay.top";
 var COUNTRY_ISO3 = {
   "Togo": "TG",
   "B\xE9nin": "BJ",
@@ -84854,7 +84871,7 @@ router12.get("/formations/:id/purchase/check", authMiddleware, async (req, res) 
 router12.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res) => {
   const userId = req.userId;
   const formationId = parseInt(String(req.params.id));
-  const { country: formCountry, phone: formPhone } = req.body || {};
+  const { country: formCountry, phone: formPhone, operator, otp, reference: otpReference } = req.body || {};
   const [formation] = await db.select().from(formationsTable).where(eq(formationsTable.id, formationId)).limit(1);
   if (!formation) {
     res.status(404).json({ error: "Formation introuvable" });
@@ -84891,25 +84908,32 @@ router12.post("/formations/:id/purchase/initiate", authMiddleware, async (req, r
   const currency = CURRENCY_BY_ISO3[countryIso] || "XOF";
   const amount = parseFloat(String(formation.price));
   const baseUrl = settings.appBaseUrl || "https://nexarix.replit.app";
-  const [purchase] = await db.insert(formationPurchasesTable).values({
-    userId,
-    formationId,
-    amount: String(amount),
-    status: "pending"
-  }).returning();
+  let [purchase] = await db.select().from(formationPurchasesTable).where(
+    and(
+      eq(formationPurchasesTable.userId, userId),
+      eq(formationPurchasesTable.formationId, formationId),
+      eq(formationPurchasesTable.status, "pending")
+    )
+  ).limit(1);
+  if (!purchase) {
+    [purchase] = await db.insert(formationPurchasesTable).values({
+      userId,
+      formationId,
+      amount: String(amount),
+      status: "pending"
+    }).returning();
+  }
   try {
     const payload = {
       amount,
       currency,
-      description: `Achat formation "${formation.title}" \u2014 ${user.username}`,
-      customerName: user.username,
-      customerEmail: user.email || `${user.username}@nexarix.app`,
-      customerPhone: resolvedPhone || void 0,
-      payerCountry: countryIso,
-      webhookUrl: `${baseUrl}/api/formations/purchase/webhook`,
-      externalReference: `nexarix-formation-${purchase.id}`
+      phone: resolvedPhone,
+      operator,
+      country_code: countryIso,
+      reference: `nexarix-formation-${purchase.id}`,
+      notify_url: `${baseUrl}/api/formations/purchase/webhook`
     };
-    const response = await fetch(`${SENDAVAPAY_BASE3}/create-payment`, {
+    const response = await fetch(`${ASHTECHPAY_BASE2}/v1/collect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -84918,26 +84942,90 @@ router12.post("/formations/:id/purchase/initiate", authMiddleware, async (req, r
       body: JSON.stringify(payload)
     });
     const json3 = await response.json();
-    if (!response.ok || !json3.success) {
-      await db.delete(formationPurchasesTable).where(eq(formationPurchasesTable.id, purchase.id));
-      const detail = json3?.message || json3?.error || json3?.code || JSON.stringify(json3);
-      res.status(502).json({ error: detail });
+    if (response.status === 202) {
+      await db.update(formationPurchasesTable).set({ sendavapayReference: `nexarix-formation-${purchase.id}` }).where(eq(formationPurchasesTable.id, purchase.id));
+      res.json({
+        flow: json3.flow === "wave" ? "wave" : "ussd_push",
+        waveUrl: json3.wave_url || null,
+        transactionId: json3.transaction_id || null,
+        reference: `nexarix-formation-${purchase.id}`,
+        purchaseId: purchase.id
+      });
       return;
     }
-    await db.update(formationPurchasesTable).set({
-      sendavapayReference: json3.data.reference,
-      paymentToken: json3.data.paymentToken
-    }).where(eq(formationPurchasesTable.id, purchase.id));
-    res.json({
-      paymentToken: json3.data.paymentToken,
-      reference: json3.data.reference,
-      purchaseId: purchase.id
-    });
+    if (response.status === 400 && json3.error === "otp_required") {
+      await db.update(formationPurchasesTable).set({ sendavapayReference: json3.reference || `nexarix-formation-${purchase.id}` }).where(eq(formationPurchasesTable.id, purchase.id));
+      res.json({
+        flow: "otp",
+        reference: json3.reference || `nexarix-formation-${purchase.id}`,
+        ussdCode: json3.ussd_code || null,
+        purchaseId: purchase.id
+      });
+      return;
+    }
+    const detail = json3?.message || json3?.error || JSON.stringify(json3);
+    res.status(502).json({ error: detail });
   } catch (e) {
-    await db.delete(formationPurchasesTable).where(eq(formationPurchasesTable.id, purchase.id));
     res.status(502).json({
-      error: "Impossible de contacter Sendavapay : " + e.message
+      error: "Impossible de contacter AshtechPay : " + e.message
     });
+  }
+});
+router12.post("/formations/:id/purchase/otp", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const formationId = parseInt(String(req.params.id));
+  const { country: formCountry, phone: formPhone, operator, otp, reference } = req.body || {};
+  if (!operator || !otp || !reference) {
+    res.status(400).json({ error: "OTP, op\xE9rateur et r\xE9f\xE9rence obligatoires" });
+    return;
+  }
+  const [purchase] = await db.select().from(formationPurchasesTable).where(and(
+    eq(formationPurchasesTable.userId, userId),
+    eq(formationPurchasesTable.formationId, formationId),
+    eq(formationPurchasesTable.status, "pending")
+  )).limit(1);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const [formation] = await db.select().from(formationsTable).where(eq(formationsTable.id, formationId)).limit(1);
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  if (!purchase || !user || !formation || !settings?.sendavapayApiKey) {
+    res.status(404).json({ error: "Paiement ou formation introuvable" });
+    return;
+  }
+  const resolvedCountry = formCountry || user.country || "";
+  const resolvedPhone = (formPhone || user.phone || "").replace(/\s+/g, "");
+  const countryIso = COUNTRY_ISO3[resolvedCountry] || "TG";
+  const currency = CURRENCY_BY_ISO3[countryIso] || "XOF";
+  const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
+  try {
+    const response = await fetch(`${ASHTECHPAY_BASE2}/v1/collect`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.sendavapayApiKey}`
+      },
+      body: JSON.stringify({
+        amount: parseFloat(String(formation.price)),
+        currency,
+        phone: resolvedPhone,
+        operator,
+        country_code: countryIso,
+        otp: String(otp).trim(),
+        reference,
+        notify_url: `${baseUrl}/api/formations/purchase/webhook`
+      })
+    });
+    const json3 = await response.json();
+    if (response.status === 202) {
+      res.json({
+        flow: json3.flow === "wave" ? "wave" : "ussd_push",
+        waveUrl: json3.wave_url || null,
+        transactionId: json3.transaction_id || null
+      });
+      return;
+    }
+    res.status(response.status).json({ error: json3?.message || json3?.error || JSON.stringify(json3) });
+  } catch (e) {
+    res.status(502).json({ error: "Erreur r\xE9seau AshtechPay : " + e.message });
   }
 });
 router12.get("/formations/:id/purchase/status", authMiddleware, async (req, res) => {
@@ -84960,11 +85048,11 @@ router12.get("/formations/:id/purchase/status", authMiddleware, async (req, res)
       const [settings] = await db.select().from(siteSettingsTable).limit(1);
       if (settings?.sendavapayApiKey) {
         const resp = await fetch(
-          `${SENDAVAPAY_BASE3}/payment-status/${reference}`,
+          `${ASHTECHPAY_BASE2}/v1/transaction/${encodeURIComponent(reference)}`,
           { headers: { Authorization: `Bearer ${settings.sendavapayApiKey}` } }
         );
         const json3 = await resp.json();
-        if (json3.success && json3.data?.status === "completed") {
+        if (json3.status === "success") {
           await completePurchaseByReference(reference);
           res.json({ status: "completed" });
           return;
@@ -84976,52 +85064,20 @@ router12.get("/formations/:id/purchase/status", authMiddleware, async (req, res)
   res.json({ status: "pending" });
 });
 router12.post("/formations/purchase/webhook", async (req, res) => {
-  const rawBody = req.body;
-  const signature = req.headers["x-sendavapay-signature"];
-  const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (settings?.sendavapayWebhookSecret) {
-    if (!signature) {
-      res.status(401).json({ error: "Signature manquante" });
-      return;
-    }
-    const expected = "sha256=" + createHmac2("sha256", settings.sendavapayWebhookSecret).update(rawBody).digest("hex");
-    try {
-      if (!timingSafeEqual2(Buffer.from(signature), Buffer.from(expected))) {
-        res.status(401).json({ error: "Signature invalide" });
-        return;
-      }
-    } catch {
-      res.status(401).json({ error: "Signature invalide" });
-      return;
-    }
-  }
   let payload;
   try {
-    payload = JSON.parse(rawBody.toString());
+    const body = Buffer.isBuffer(req.body) ? req.body.toString() : req.body;
+    payload = typeof body === "string" ? JSON.parse(body) : body;
   } catch {
     res.status(400).json({ error: "Payload invalide" });
     return;
   }
-  const eventType = req.headers["x-sendavapay-event"] || payload.event;
-  if (eventType === "payment.completed") {
-    const reference = payload.reference || payload.externalReference;
+  const eventType = payload.event;
+  if (eventType === "payment.completed" && payload.status === "completed") {
+    const reference = payload.reference;
     if (reference) {
       try {
-        if (settings?.sendavapayApiKey) {
-          const resp = await fetch(`${SENDAVAPAY_BASE3}/verify-payment`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${settings.sendavapayApiKey}`
-            },
-            body: JSON.stringify({ reference })
-          });
-          const json3 = await resp.json();
-          if (json3.success && json3.data?.status === "completed") {
-            const extRef = json3.data.externalReference || payload.externalReference;
-            await completePurchaseByExternalRef(extRef);
-          }
-        }
+        await completePurchaseByReference(reference);
       } catch (_) {
       }
     }
@@ -85032,19 +85088,6 @@ async function completePurchaseByReference(sendavapayReference) {
   const [purchase] = await db.select().from(formationPurchasesTable).where(
     and(
       eq(formationPurchasesTable.sendavapayReference, sendavapayReference),
-      eq(formationPurchasesTable.status, "pending")
-    )
-  ).limit(1);
-  if (!purchase) return;
-  await completePurchase(purchase);
-}
-async function completePurchaseByExternalRef(externalRef) {
-  const match = typeof externalRef === "string" ? externalRef.match(/^nexarix-formation-(\d+)$/) : null;
-  if (!match) return;
-  const purchaseId = parseInt(match[1]);
-  const [purchase] = await db.select().from(formationPurchasesTable).where(
-    and(
-      eq(formationPurchasesTable.id, purchaseId),
       eq(formationPurchasesTable.status, "pending")
     )
   ).limit(1);

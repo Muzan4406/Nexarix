@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { db } from "@workspace/db";
 import { usersTable, siteSettingsTable, withdrawalsTable } from "@workspace/db";
 import { eq, sql, and, ne } from "drizzle-orm";
@@ -7,12 +6,12 @@ import { authMiddleware } from "../lib/auth";
 import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
 
 const router = Router();
-const SENDAVAPAY_BASE = "https://sendavapay.com/api/sdk/v1";
+const ASHTECHPAY_BASE = "https://ashtechpay.top";
 const WELCOME_BONUS = 50;
 const REFERRAL_BONUS_AMOUNT = 1500;
 const REFERRAL_BONUS_STEP = 10;
 
-// SendavaPay-supported countries only
+// AshtechPay-supported countries only
 const COUNTRY_ISO: Record<string, string> = {
   "Togo": "TG",
   "Bénin": "BJ",
@@ -23,7 +22,7 @@ const COUNTRY_ISO: Record<string, string> = {
   "Niger": "NE",
   "Sénégal": "SN",
   "Gabon": "GA",
-  "RD Congo": "COD",
+  "RD Congo": "CD",
 };
 
 const CURRENCY_BY_ISO: Record<string, string> = {
@@ -31,7 +30,19 @@ const CURRENCY_BY_ISO: Record<string, string> = {
   "BF": "XOF", "NE": "XOF", "SN": "XOF",
   "CM": "XAF", "GA": "XAF",
   "CD": "CDF",
-  "COD": "CDF",
+};
+
+const FALLBACK_OPERATORS: Record<string, string[]> = {
+  TG: ["Flooz (Moov)", "T-Money"],
+  BJ: ["Celtiis Money", "Coris Money", "Moov Money", "MTN Money"],
+  CI: ["Moov Money", "MTN Money", "Orange Money", "Wave Money"],
+  CM: ["MTN Money", "Orange Money"],
+  BF: ["Moov Money", "Orange Money", "Wallet LigdiCash"],
+  ML: ["Moov Money", "Orange Money"],
+  NE: ["Airtel Money"],
+  SN: ["E-money", "Free Money", "Orange Money", "Wave Money"],
+  GA: ["Airtel Money", "Moov Money"],
+  CD: ["Afri Money", "Airtel", "Mpesa Money", "Orange", "Vodacom"],
 };
 
 // ─── Public settings ─────────────────────────────────────────────────────────
@@ -51,44 +62,64 @@ router.get("/settings/public", async (_req, res) => {
   });
 });
 
-// ─── Country operators proxy (SendavaPay SDK v1) ─────────────────────────────
+// ─── Country operators proxy (AshtechPay /v1/countries) ──────────────────────
 router.get("/activate/countries", async (req, res) => {
   const { country_code } = req.query as { country_code?: string };
 
-  if (!country_code || !Object.values(COUNTRY_ISO).includes(country_code)) {
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  const apiKey = settings?.sendavapayApiKey;
+
+  if (apiKey) {
+    try {
+      const response = await fetch(`${ASHTECHPAY_BASE}/v1/countries`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      if (response.ok) {
+        const countries = await response.json() as any[];
+        if (!Array.isArray(countries)) throw new Error("Réponse pays invalide");
+        if (country_code) {
+          if (!Object.values(COUNTRY_ISO).includes(country_code)) {
+            res.status(400).json({ error: "Code pays invalide" });
+            return;
+          }
+          res.json({
+            operators: countries.find((country: any) => country.code === country_code)?.operators || [],
+          });
+          return;
+        }
+        res.json(countries);
+        return;
+      }
+    } catch (_) {
+      // Use the local list below when AshtechPay is temporarily unavailable.
+    }
+  }
+
+  if (country_code && !Object.values(COUNTRY_ISO).includes(country_code)) {
     res.status(400).json({ error: "Code pays invalide" });
     return;
   }
-
-  try {
-    const response = await fetch(
-      `${SENDAVAPAY_BASE}/operators/${encodeURIComponent(country_code)}`,
-    );
-    const json = await response.json() as any;
-    if (!response.ok || !json.success || !Array.isArray(json.data)) {
-      res.status(502).json({ error: "Impossible de charger les opérateurs Mobile Money" });
-      return;
-    }
-
-    res.json({
-      operators: json.data
-        .filter((operator: any) => operator.status === "online" && operator.available !== false)
-        .map((operator: any) => ({
-          id: String(operator.id),
-          name: operator.name || operator.operator || operator.slug,
-          slug: operator.slug,
-          requiresOtp: Boolean(operator.requiresOtp),
-        })),
-    });
-  } catch (_) {
-    res.status(502).json({ error: "Service de paiement temporairement indisponible" });
+  if (country_code) {
+    res.json({ operators: FALLBACK_OPERATORS[country_code] || [] });
+    return;
   }
+  res.json(Object.entries(FALLBACK_OPERATORS).map(([code, operators]) => ({
+    code,
+    name: Object.entries(COUNTRY_ISO).find(([, value]) => value === code)?.[0] || code,
+    operators,
+  })));
 });
 
-// ─── Create SendavaPay payment ────────────────────────────────────────────────
+// ─── Initiate AshtechPay payment ──────────────────────────────────────────────
 router.post("/activate/initiate", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
-  const { country: formCountry, phone: formPhone, operatorId } = req.body || {};
+  const {
+    country: formCountry,
+    phone: formPhone,
+    operator: formOperator,
+    operatorId,
+  } = req.body || {};
+  const operator = formOperator || operatorId;
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) { res.status(404).json({ error: "Utilisateur non trouvé" }); return; }
@@ -102,10 +133,10 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
     return;
   }
   if (!settings.sendavapayApiKey) {
-    res.status(503).json({ error: "La clé API SendavaPay n'est pas configurée" });
+    res.status(503).json({ error: "La clé API AshtechPay n'est pas configurée" });
     return;
   }
-  if (!operatorId) {
+  if (!operator) {
     res.status(400).json({ error: "Veuillez sélectionner un opérateur Mobile Money" });
     return;
   }
@@ -125,117 +156,136 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
     }).where(eq(usersTable.id, userId));
   }
 
-  // The external reference is the only user identifier accepted by the webhook.
-  const externalReference = `nexarix-activation-${userId}-${Date.now()}`;
+  const reference = `nexarix-act-${userId}-${Date.now()}`;
 
   try {
     const payload = {
       amount: activationFee,
       currency,
-      description: `Activation Nexarix — ${user.username}`,
-      customerName: user.username,
-      customerEmail: user.email || `${user.username}@nexarix.app`,
-      customerPhone: resolvedPhone || undefined,
-      payerCountry: countryIso,
-      webhookUrl: `${baseUrl}/api/activate/webhook`,
-      externalReference,
+      phone: resolvedPhone,
+      operator,
+      country_code: countryIso,
+      reference,
+      notify_url: `${baseUrl}/api/activate/webhook`,
     };
 
-    const response = await fetch(`${SENDAVAPAY_BASE}/create-payment`, {
+    const response = await fetch(`${ASHTECHPAY_BASE}/v1/collect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${settings.sendavapayApiKey}`,
+        Authorization: `Bearer ${settings.sendavapayApiKey}`,
       },
       body: JSON.stringify(payload),
     });
 
     const json = await response.json() as any;
-    if (!response.ok || !json.success || !json.data?.paymentToken || !json.data?.reference) {
-      const detail = json?.message || json?.error || json?.code || JSON.stringify(json);
-      res.status(502).json({ error: detail });
+    if (response.status === 202) {
+      if (json.flow === "wave" && json.wave_url) {
+        res.json({ flow: "wave", waveUrl: json.wave_url, transactionId: json.transaction_id, reference });
+        return;
+      }
+      res.json({ flow: "ussd_push", transactionId: json.transaction_id, reference });
       return;
     }
-
-    const sdkResponse = await fetch(`${SENDAVAPAY_BASE}/initiate-payment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        paymentToken: json.data.paymentToken,
-        payerName: user.username,
-        payerPhone: resolvedPhone,
-        payerCountry: countryIso,
-        operatorId: String(operatorId),
-      }),
-    });
-    const sdkJson = await sdkResponse.json() as any;
-    if (!sdkResponse.ok || !sdkJson.success) {
-      const detail = sdkJson?.message || sdkJson?.error || JSON.stringify(sdkJson);
-      res.status(502).json({ error: detail });
+    if (response.status === 400 && json.error === "otp_required") {
+      res.json({ flow: "otp", reference: json.reference, ussdCode: json.ussd_code || null });
       return;
     }
-
-    res.json({
-      reference: json.data.reference,
-      requiresRedirect: Boolean(sdkJson.requiresRedirect),
-      redirectUrl: sdkJson.redirectUrl || null,
-      requiresOtp: Boolean(sdkJson.requiresOtp),
-      otpToken: sdkJson.otpToken || null,
-    });
+    const detail = json?.message || json?.error || JSON.stringify(json);
+    res.status(502).json({ error: detail });
   } catch (e: any) {
-    res.status(502).json({ error: "Impossible de contacter SendavaPay : " + e.message });
+    res.status(502).json({ error: "Impossible de contacter AshtechPay : " + e.message });
   }
 });
 
-// ─── Submit OTP through the server-side SendavaPay proxy ──────────────────────
+// ─── Submit OTP through AshtechPay /v1/collect ─────────────────────────────────
 router.post("/activate/otp", authMiddleware, async (req, res) => {
-  const { otpToken, otp } = req.body || {};
-  if (!otpToken || !otp) {
-    res.status(400).json({ error: "OTP et jeton OTP obligatoires" });
+  const userId = (req as any).userId;
+  const {
+    country: formCountry,
+    phone: formPhone,
+    operator,
+    otp,
+    reference: otpReference,
+  } = req.body || {};
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) {
+    res.status(404).json({ error: "Utilisateur non trouvé" });
+    return;
+  }
+  if (user.status === "active") {
+    res.json({ flow: "ussd_push", transactionId: null });
+    return;
+  }
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  if (!settings?.sendavapayApiKey) {
+    res.status(503).json({ error: "AshtechPay non configuré" });
+    return;
+  }
+  if (!otp || !otpReference || !operator) {
+    res.status(400).json({ error: "OTP, opérateur et référence obligatoires" });
     return;
   }
 
+  const resolvedCountry = formCountry || user.country || "";
+  const resolvedPhone = (formPhone || user.phone || "").replace(/\s+/g, "");
+  const countryIso = COUNTRY_ISO[resolvedCountry] || "TG";
+  const currency = CURRENCY_BY_ISO[countryIso] || "XOF";
+  const activationFee = parseFloat(settings.activationFee || "3800");
+  const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
+
   try {
-    const response = await fetch(`${SENDAVAPAY_BASE}/submit-otp`, {
+    const response = await fetch(`${ASHTECHPAY_BASE}/v1/collect`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ otpToken, otp: String(otp).trim() }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.sendavapayApiKey}`,
+      },
+      body: JSON.stringify({
+        amount: activationFee,
+        currency,
+        phone: resolvedPhone,
+        operator,
+        country_code: countryIso,
+        otp: String(otp).trim(),
+        reference: otpReference,
+        notify_url: `${baseUrl}/api/activate/webhook`,
+      }),
     });
     const json = await response.json() as any;
-    if (!response.ok || !json.success) {
-      res.status(502).json({ error: json?.message || json?.error || "Code OTP incorrect" });
+    if (response.status === 202) {
+      if (json.flow === "wave" && json.wave_url) {
+        res.json({ flow: "wave", waveUrl: json.wave_url, transactionId: json.transaction_id });
+        return;
+      }
+      res.json({ flow: "ussd_push", transactionId: json.transaction_id });
       return;
     }
-    res.json({ success: true });
+    const detail = json?.message || json?.error || JSON.stringify(json);
+    res.status(response.status).json({ error: detail });
   } catch (e: any) {
-    res.status(502).json({ error: "Erreur réseau SendavaPay : " + e.message });
+    res.status(502).json({ error: "Erreur réseau AshtechPay : " + e.message });
   }
 });
 
 // ─── Check activation status ──────────────────────────────────────────────────
 router.get("/activate/check", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
-  const { reference } = req.query as { reference?: string };
+  const { transactionId } = req.query as { transactionId?: string };
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) { res.status(404).json({ error: "Utilisateur non trouvé" }); return; }
   if (user.status === "active") { res.json({ status: "active" }); return; }
 
-  if (reference) {
+  if (transactionId) {
     try {
       const [settings] = await db.select().from(siteSettingsTable).limit(1);
       if (settings?.sendavapayApiKey) {
-        const payment = await verifyCompletedPayment(reference, settings.sendavapayApiKey);
-        if (payment?.externalReference === undefined) {
-          res.json({ status: user.status });
-          return;
-        }
-        const expectedReference = new RegExp(`^nexarix-activation-${userId}-\\d+$`);
-        if (
-          payment.status === "completed" &&
-          typeof payment.externalReference === "string" &&
-          expectedReference.test(payment.externalReference)
-        ) {
+        const response = await fetch(`${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(transactionId)}`, {
+          headers: { Authorization: `Bearer ${settings.sendavapayApiKey}` },
+        });
+        const json = await response.json() as any;
+        if (json.status === "success") {
           const [freshUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
           if (freshUser && freshUser.status !== "active") {
             await activateUser(freshUser);
@@ -250,57 +300,30 @@ router.get("/activate/check", authMiddleware, async (req, res) => {
   res.json({ status: user.status });
 });
 
-// ─── Webhook (SendavaPay payment.completed / payment.failed) ─────────────────
+// ─── Webhook (AshtechPay payment.completed / payment.failed) ─────────────────
 router.post("/activate/webhook", async (req, res) => {
-  const rawBody: Buffer = Buffer.isBuffer(req.body)
-    ? req.body
-    : Buffer.from(JSON.stringify(req.body ?? {}));
-  const signature = req.headers["x-sendavapay-signature"] as string | undefined;
-  const [settings] = await db.select().from(siteSettingsTable).limit(1);
-
-  if (settings?.sendavapayWebhookSecret) {
-    if (!signature) {
-      res.status(401).json({ error: "Signature manquante" });
-      return;
-    }
-    const expected = "sha256=" + createHmac("sha256", settings.sendavapayWebhookSecret)
-      .update(rawBody)
-      .digest("hex");
-    if (
-      signature.length !== expected.length ||
-      !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
-    ) {
-      res.status(401).json({ error: "Signature invalide" });
-      return;
-    }
-  }
-
+  res.status(200).json({ received: true });
   let payload: any;
   try {
-    payload = JSON.parse(rawBody.toString());
+    const body = Buffer.isBuffer(req.body) ? req.body.toString() : req.body;
+    payload = typeof body === "string" ? JSON.parse(body) : body;
   } catch {
-    res.status(400).json({ error: "Payload invalide" });
     return;
   }
 
-  const event = req.headers["x-sendavapay-event"] as string || payload?.event;
-  if (event === "payment.completed") {
-    const reference = payload?.reference;
+  const event = payload?.event;
+  const reference = payload?.reference;
+  if (event === "payment.completed" && payload?.status === "completed" && typeof reference === "string") {
+    const match = reference.match(/^nexarix-act-(\d+)-\d+$/);
+    if (!match) return;
     try {
-      if (reference && settings?.sendavapayApiKey) {
-        const payment = await verifyCompletedPayment(reference, settings.sendavapayApiKey);
-        if (payment?.status === "completed") {
-          await activateUserByExternalReference(payment.externalReference);
-        }
+      const [user] = await db.select().from(usersTable)
+        .where(eq(usersTable.id, parseInt(match[1], 10))).limit(1);
+      if (user && user.status !== "active") {
+        await activateUser(user);
       }
-    } catch (_) {
-      // The provider will retry the webhook if it does not receive a 2xx response.
-      res.status(502).json({ error: "Vérification du paiement impossible" });
-      return;
-    }
+    } catch (_) {}
   }
-
-  res.json({ received: true });
 });
 
 // ─── Spin Wheel ───────────────────────────────────────────────────────────────
@@ -323,31 +346,6 @@ router.post("/spin", authMiddleware, async (req, res) => {
 });
 
 // ─── Internal: activate user + welcome bonus ──────────────────────────────────
-async function verifyCompletedPayment(reference: string, apiKey: string): Promise<any | null> {
-  const response = await fetch(`${SENDAVAPAY_BASE}/verify-payment`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({ reference }),
-  });
-  const json = await response.json() as any;
-  if (!response.ok || !json.success || json.data?.status !== "completed") return null;
-  return json.data;
-}
-
-async function activateUserByExternalReference(externalReference: unknown) {
-  if (typeof externalReference !== "string") return false;
-  const match = externalReference.match(/^nexarix-activation-(\d+)-\d+$/);
-  if (!match) return false;
-
-  const uid = parseInt(match[1], 10);
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, uid)).limit(1);
-  if (!user) return false;
-  return activateUser(user);
-}
-
 async function activateUser(user: any) {
   // No welcome bonus — only the spin wheel grants a bonus after activation
   const [activatedUser] = await db.update(usersTable).set({

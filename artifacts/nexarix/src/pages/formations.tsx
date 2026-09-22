@@ -10,14 +10,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const SENDAVAPAY_CLIENT = "https://sendavapay.com/api/sdk/v1";
+const ASHTECHPAY_PROXY = "/api/activate/countries";
 
 const COUNTRY_ISO: Record<string, string> = {
   "Togo": "TG", "Bénin": "BJ", "Côte d'Ivoire": "CI",
   "Cameroun": "CM", "Burkina Faso": "BF", "Mali": "ML",
   "Niger": "NE", "Sénégal": "SN", "Guinée": "GN",
   "Gabon": "GA", "Tchad": "TD", "Congo": "COG",
-  "République centrafricaine": "CF", "Guinée Équatoriale": "GQ", "RD Congo": "COD",
+  "République centrafricaine": "CF", "Guinée Équatoriale": "GQ", "RD Congo": "CD",
 };
 const COUNTRY_LIST = Object.keys(COUNTRY_ISO).sort();
 
@@ -43,7 +43,7 @@ const card = {
 };
 
 type PayPhase = "form" | "initiating" | "otp" | "waiting" | "success";
-interface SdkOperator { id: string; name: string; requiresOtp: boolean; status: string }
+type Operator = string;
 
 function useFormations(token: string | null) {
   return useQuery({
@@ -86,13 +86,13 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
   const [phase, setPhase] = useState<PayPhase>("form");
   const [country, setCountry] = useState(user?.country || "");
   const [phone, setPhone] = useState(user?.phone || "");
-  const [operators, setOperators] = useState<SdkOperator[]>([]);
-  const [selectedOp, setSelectedOp] = useState<SdkOperator | null>(null);
+  const [operators, setOperators] = useState<Operator[]>([]);
+  const [selectedOp, setSelectedOp] = useState("");
   const [loadingOps, setLoadingOps] = useState(false);
   const [opsLoaded, setOpsLoaded] = useState(false);
-  const [paymentToken, setPaymentToken] = useState("");
   const [reference, setReference] = useState("");
-  const [otpToken, setOtpToken] = useState("");
+  const [otpReference, setOtpReference] = useState("");
+  const [ussdCode, setUssdCode] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [submittingOtp, setSubmittingOtp] = useState(false);
@@ -104,20 +104,18 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
 
   // Load operators on country change
   useEffect(() => {
-    if (!countryCode) { setOperators([]); setSelectedOp(null); setOpsLoaded(false); return; }
+    if (!countryCode) { setOperators([]); setSelectedOp(""); setOpsLoaded(false); return; }
     let cancelled = false;
     setLoadingOps(true);
-    setSelectedOp(null);
+    setSelectedOp("");
     setOpsLoaded(false);
-    fetch(`${SENDAVAPAY_CLIENT}/operators/${countryCode}`)
+    fetch(`${ASHTECHPAY_PROXY}?country_code=${encodeURIComponent(countryCode)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(r => r.json())
       .then((json: any) => {
         if (cancelled) return;
-        if (json.success && Array.isArray(json.data)) {
-          setOperators(json.data.filter((op: SdkOperator) => op.status === "online"));
-        } else {
-          setOperators([]);
-        }
+        setOperators(Array.isArray(json.operators) ? json.operators : []);
         setOpsLoaded(true);
       })
       .catch(() => { if (!cancelled) { setOperators([]); setOpsLoaded(true); } })
@@ -157,44 +155,26 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
       const initRes = await fetch(`/api/formations/${formation.id}/purchase/initiate`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ country, phone: phone.trim() }),
+        body: JSON.stringify({ country, phone: phone.trim(), operator: selectedOp }),
       });
       const initJson = await initRes.json() as any;
       if (!initRes.ok) {
-        setErrorMsg(initJson?.error || "Erreur Sendavapay. Réessayez.");
+        setErrorMsg(initJson?.error || "Erreur AshtechPay. Réessayez.");
         setPhase("form");
         return;
       }
-      const { paymentToken: pt, reference: ref } = initJson;
-      setPaymentToken(pt);
-      setReference(ref);
-
-      const sdkRes = await fetch(`${SENDAVAPAY_CLIENT}/initiate-payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentToken: pt,
-          payerName: user?.username || "Client",
-          payerPhone: phone.trim(),
-          payerCountry: countryCode,
-          operatorId: selectedOp.id,
-        }),
-      });
-      const sdkJson = await sdkRes.json() as any;
-      if (!sdkJson.success) {
-        setErrorMsg(sdkJson.message || sdkJson.error || "Erreur Mobile Money.");
-        setPhase("form");
+      if (initJson.flow === "wave" && initJson.waveUrl) {
+        setReference(initJson.transactionId || "");
+        window.location.href = initJson.waveUrl;
         return;
       }
-      if (sdkJson.requiresRedirect && sdkJson.redirectUrl) {
-        window.location.href = sdkJson.redirectUrl;
-        return;
-      }
-      if (sdkJson.requiresOtp && sdkJson.otpToken) {
-        setOtpToken(sdkJson.otpToken);
+      if (initJson.flow === "otp") {
+        setOtpReference(initJson.reference || "");
+        setUssdCode(initJson.ussdCode || null);
         setPhase("otp");
         return;
       }
+      setReference(initJson.transactionId || "");
       setPhase("waiting");
     } catch (_) {
       setErrorMsg("Erreur réseau. Réessayez.");
@@ -207,13 +187,25 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
     setSubmittingOtp(true);
     setErrorMsg("");
     try {
-      const res = await fetch(`${SENDAVAPAY_CLIENT}/submit-otp`, {
+      const res = await fetch(`/api/formations/${formation.id}/purchase/otp`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otpToken, otp: otp.trim() }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          country,
+          phone: phone.trim(),
+          operator: selectedOp,
+          otp: otp.trim(),
+          reference: otpReference,
+        }),
       });
       const json = await res.json() as any;
-      if (!json.success) { setErrorMsg(json.message || "Code OTP incorrect."); return; }
+      if (!res.ok) { setErrorMsg(json.error || "Code OTP incorrect."); return; }
+      if (json.flow === "wave" && json.waveUrl) {
+        setReference(json.transactionId || "");
+        window.location.href = json.waveUrl;
+        return;
+      }
+      setReference(json.transactionId || "");
       setPhase("waiting");
     } catch (_) {
       setErrorMsg("Erreur réseau. Réessayez.");
@@ -230,7 +222,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
 
   const handleReset = () => {
     setPhase("form");
-    setPaymentToken(""); setReference(""); setOtpToken("");
+    setReference(""); setOtpReference(""); setUssdCode(null);
     setOtp(""); setErrorMsg("");
   };
 
@@ -284,7 +276,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
                   <div className="relative">
                     <select
                       value={country}
-                      onChange={e => { setCountry(e.target.value); setSelectedOp(null); }}
+                      onChange={e => { setCountry(e.target.value); setSelectedOp(""); }}
                       disabled={phase === "initiating"}
                       className="w-full h-11 pl-4 pr-10 rounded-2xl border-2 border-gray-100 focus:border-emerald-400 focus:outline-none text-sm font-semibold text-gray-800 bg-white appearance-none"
                     >
@@ -328,18 +320,18 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
                       <div className="space-y-1.5">
                         {operators.map(op => (
                           <button
-                            key={op.id}
+                             key={op}
                             onClick={() => setSelectedOp(op)}
                             disabled={phase === "initiating"}
                             className={cn(
                               "w-full flex items-center justify-between rounded-2xl px-4 py-2.5 border-2 transition-all text-sm font-bold",
-                              selectedOp?.id === op.id
+                              selectedOp === op
                                 ? "border-emerald-500 bg-emerald-50 text-emerald-800"
                                 : "border-gray-100 hover:border-emerald-200 text-gray-700"
                             )}
                           >
-                            {op.name}
-                            {selectedOp?.id === op.id && <CheckCircle className="h-4 w-4 text-emerald-500" />}
+                            {op}
+                            {selectedOp === op && <CheckCircle className="h-4 w-4 text-emerald-500" />}
                           </button>
                         ))}
                       </div>
@@ -366,7 +358,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
                 </button>
 
                 <p className="text-center text-[10px] text-gray-400 font-medium">
-                  🔒 Paiement sécurisé via Sendavapay
+                  🔒 Paiement sécurisé via AshtechPay
                 </p>
               </motion.div>
             )}
@@ -376,9 +368,15 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
               <motion.div key="otp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-center">
                   <p className="text-sm font-black text-amber-700 mb-1">Code OTP requis</p>
-                  <p className="text-xs text-amber-600">
-                    Un code a été envoyé par SMS sur <span className="font-bold">{phone}</span>.
-                  </p>
+                   <p className="text-xs text-amber-600">
+                     Un code a été envoyé par SMS sur <span className="font-bold">{phone}</span>.
+                   </p>
+                   {ussdCode && (
+                     <div className="mt-3 rounded-xl bg-amber-100 px-3 py-2">
+                       <p className="text-[11px] font-semibold text-amber-700">Code USSD à composer</p>
+                       <p className="font-black text-xl tracking-widest text-amber-800">{ussdCode}</p>
+                     </div>
+                   )}
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">Code OTP</label>
@@ -420,7 +418,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
                     <span className="font-black text-sm">En attente de confirmation…</span>
                   </div>
                   <p className="text-xs text-gray-500">
-                    Confirmez le paiement sur votre téléphone ({selectedOp?.name}).
+                     Confirmez le paiement sur votre téléphone ({selectedOp}).
                   </p>
                 </div>
                 <button

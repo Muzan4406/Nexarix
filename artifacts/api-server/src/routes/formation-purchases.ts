@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { createHmac, timingSafeEqual } from "crypto";
 import { db } from "@workspace/db";
 import {
   formationPurchasesTable,
@@ -12,7 +11,7 @@ import { authMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
 
 const router = Router();
-const SENDAVAPAY_BASE = "https://sendavapay.com/api/sdk/v1";
+const ASHTECHPAY_BASE = "https://ashtechpay.top";
 
 const COUNTRY_ISO: Record<string, string> = {
   "Togo": "TG", "Bénin": "BJ", "Côte d'Ivoire": "CI",
@@ -68,7 +67,7 @@ router.get("/formations/:id/purchase/check", authMiddleware, async (req, res) =>
 router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
   const formationId = parseInt(String(req.params.id));
-  const { country: formCountry, phone: formPhone } = req.body || {};
+  const { country: formCountry, phone: formPhone, operator, otp, reference: otpReference } = req.body || {};
 
   const [formation] = await db
     .select()
@@ -128,30 +127,42 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
   const amount = parseFloat(String(formation.price));
   const baseUrl = settings.appBaseUrl || "https://nexarix.replit.app";
 
-  const [purchase] = await db
-    .insert(formationPurchasesTable)
-    .values({
-      userId,
-      formationId,
-      amount: String(amount),
-      status: "pending",
-    })
-    .returning();
+  let [purchase] = await db
+    .select()
+    .from(formationPurchasesTable)
+    .where(
+      and(
+        eq(formationPurchasesTable.userId, userId),
+        eq(formationPurchasesTable.formationId, formationId),
+        eq(formationPurchasesTable.status, "pending"),
+      ),
+    )
+    .limit(1);
+
+  if (!purchase) {
+    [purchase] = await db
+      .insert(formationPurchasesTable)
+      .values({
+        userId,
+        formationId,
+        amount: String(amount),
+        status: "pending",
+      })
+      .returning();
+  }
 
   try {
     const payload = {
       amount,
       currency,
-      description: `Achat formation "${formation.title}" — ${user.username}`,
-      customerName: user.username,
-      customerEmail: user.email || `${user.username}@nexarix.app`,
-      customerPhone: resolvedPhone || undefined,
-      payerCountry: countryIso,
-      webhookUrl: `${baseUrl}/api/formations/purchase/webhook`,
-      externalReference: `nexarix-formation-${purchase.id}`,
+      phone: resolvedPhone,
+      operator,
+      country_code: countryIso,
+      reference: `nexarix-formation-${purchase.id}`,
+      notify_url: `${baseUrl}/api/formations/purchase/webhook`,
     };
 
-    const response = await fetch(`${SENDAVAPAY_BASE}/create-payment`, {
+    const response = await fetch(`${ASHTECHPAY_BASE}/v1/collect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -162,36 +173,101 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
 
     const json = (await response.json()) as any;
 
-    if (!response.ok || !json.success) {
+    if (response.status === 202) {
       await db
-        .delete(formationPurchasesTable)
+        .update(formationPurchasesTable)
+        .set({ sendavapayReference: `nexarix-formation-${purchase.id}` })
         .where(eq(formationPurchasesTable.id, purchase.id));
-      const detail =
-        json?.message || json?.error || json?.code || JSON.stringify(json);
-      res.status(502).json({ error: detail });
+      res.json({
+        flow: json.flow === "wave" ? "wave" : "ussd_push",
+        waveUrl: json.wave_url || null,
+        transactionId: json.transaction_id || null,
+        reference: `nexarix-formation-${purchase.id}`,
+        purchaseId: purchase.id,
+      });
       return;
     }
-
-    await db
-      .update(formationPurchasesTable)
-      .set({
-        sendavapayReference: json.data.reference,
-        paymentToken: json.data.paymentToken,
-      })
-      .where(eq(formationPurchasesTable.id, purchase.id));
-
-    res.json({
-      paymentToken: json.data.paymentToken,
-      reference: json.data.reference,
-      purchaseId: purchase.id,
-    });
+    if (response.status === 400 && json.error === "otp_required") {
+      await db
+        .update(formationPurchasesTable)
+        .set({ sendavapayReference: json.reference || `nexarix-formation-${purchase.id}` })
+        .where(eq(formationPurchasesTable.id, purchase.id));
+      res.json({
+        flow: "otp",
+        reference: json.reference || `nexarix-formation-${purchase.id}`,
+        ussdCode: json.ussd_code || null,
+        purchaseId: purchase.id,
+      });
+      return;
+    }
+    const detail = json?.message || json?.error || JSON.stringify(json);
+    res.status(502).json({ error: detail });
   } catch (e: any) {
-    await db
-      .delete(formationPurchasesTable)
-      .where(eq(formationPurchasesTable.id, purchase.id));
     res.status(502).json({
-      error: "Impossible de contacter Sendavapay : " + e.message,
+      error: "Impossible de contacter AshtechPay : " + e.message,
     });
+  }
+});
+
+// Submit an OTP for the pending formation payment through AshtechPay.
+router.post("/formations/:id/purchase/otp", authMiddleware, async (req, res) => {
+  const userId = (req as any).userId;
+  const formationId = parseInt(String(req.params.id));
+  const { country: formCountry, phone: formPhone, operator, otp, reference } = req.body || {};
+  if (!operator || !otp || !reference) {
+    res.status(400).json({ error: "OTP, opérateur et référence obligatoires" });
+    return;
+  }
+
+  const [purchase] = await db.select().from(formationPurchasesTable).where(and(
+    eq(formationPurchasesTable.userId, userId),
+    eq(formationPurchasesTable.formationId, formationId),
+    eq(formationPurchasesTable.status, "pending"),
+  )).limit(1);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const [formation] = await db.select().from(formationsTable).where(eq(formationsTable.id, formationId)).limit(1);
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  if (!purchase || !user || !formation || !settings?.sendavapayApiKey) {
+    res.status(404).json({ error: "Paiement ou formation introuvable" });
+    return;
+  }
+
+  const resolvedCountry = formCountry || user.country || "";
+  const resolvedPhone = (formPhone || user.phone || "").replace(/\s+/g, "");
+  const countryIso = COUNTRY_ISO[resolvedCountry] || "TG";
+  const currency = CURRENCY_BY_ISO[countryIso] || "XOF";
+  const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
+
+  try {
+    const response = await fetch(`${ASHTECHPAY_BASE}/v1/collect`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.sendavapayApiKey}`,
+      },
+      body: JSON.stringify({
+        amount: parseFloat(String(formation.price)),
+        currency,
+        phone: resolvedPhone,
+        operator,
+        country_code: countryIso,
+        otp: String(otp).trim(),
+        reference,
+        notify_url: `${baseUrl}/api/formations/purchase/webhook`,
+      }),
+    });
+    const json = await response.json() as any;
+    if (response.status === 202) {
+      res.json({
+        flow: json.flow === "wave" ? "wave" : "ussd_push",
+        waveUrl: json.wave_url || null,
+        transactionId: json.transaction_id || null,
+      });
+      return;
+    }
+    res.status(response.status).json({ error: json?.message || json?.error || JSON.stringify(json) });
+  } catch (e: any) {
+    res.status(502).json({ error: "Erreur réseau AshtechPay : " + e.message });
   }
 });
 
@@ -223,11 +299,11 @@ router.get("/formations/:id/purchase/status", authMiddleware, async (req, res) =
       const [settings] = await db.select().from(siteSettingsTable).limit(1);
       if (settings?.sendavapayApiKey) {
         const resp = await fetch(
-          `${SENDAVAPAY_BASE}/payment-status/${reference}`,
+          `${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(reference)}`,
           { headers: { Authorization: `Bearer ${settings.sendavapayApiKey}` } },
         );
         const json = (await resp.json()) as any;
-        if (json.success && json.data?.status === "completed") {
+        if (json.status === "success") {
           await completePurchaseByReference(reference);
           res.json({ status: "completed" });
           return;
@@ -241,62 +317,22 @@ router.get("/formations/:id/purchase/status", authMiddleware, async (req, res) =
 
 // Webhook (raw body registered in app.ts)
 router.post("/formations/purchase/webhook", async (req, res) => {
-  const rawBody: Buffer = req.body;
-  const signature = req.headers["x-sendavapay-signature"] as string | undefined;
-  const [settings] = await db.select().from(siteSettingsTable).limit(1);
-
-  if (settings?.sendavapayWebhookSecret) {
-    // Fail closed: if a webhook secret is configured, a valid signature is mandatory.
-    if (!signature) {
-      res.status(401).json({ error: "Signature manquante" });
-      return;
-    }
-    const expected =
-      "sha256=" +
-      createHmac("sha256", settings.sendavapayWebhookSecret)
-        .update(rawBody)
-        .digest("hex");
-    try {
-      if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
-        res.status(401).json({ error: "Signature invalide" });
-        return;
-      }
-    } catch {
-      res.status(401).json({ error: "Signature invalide" });
-      return;
-    }
-  }
-
   let payload: any;
   try {
-    payload = JSON.parse(rawBody.toString());
+    const body = Buffer.isBuffer(req.body) ? req.body.toString() : req.body;
+    payload = typeof body === "string" ? JSON.parse(body) : body;
   } catch {
     res.status(400).json({ error: "Payload invalide" });
     return;
   }
 
-  const eventType =
-    (req.headers["x-sendavapay-event"] as string) || payload.event;
+  const eventType = payload.event;
 
-  if (eventType === "payment.completed") {
-    const reference = payload.reference || payload.externalReference;
+  if (eventType === "payment.completed" && payload.status === "completed") {
+    const reference = payload.reference;
     if (reference) {
       try {
-        if (settings?.sendavapayApiKey) {
-          const resp = await fetch(`${SENDAVAPAY_BASE}/verify-payment`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${settings.sendavapayApiKey}`,
-            },
-            body: JSON.stringify({ reference }),
-          });
-          const json = (await resp.json()) as any;
-          if (json.success && json.data?.status === "completed") {
-            const extRef = json.data.externalReference || payload.externalReference;
-            await completePurchaseByExternalRef(extRef);
-          }
-        }
+        await completePurchaseByReference(reference);
       } catch (_) {}
     }
   }
@@ -311,29 +347,6 @@ async function completePurchaseByReference(sendavapayReference: string) {
     .where(
       and(
         eq(formationPurchasesTable.sendavapayReference, sendavapayReference),
-        eq(formationPurchasesTable.status, "pending"),
-      ),
-    )
-    .limit(1);
-
-  if (!purchase) return;
-  await completePurchase(purchase);
-}
-
-async function completePurchaseByExternalRef(externalRef: string) {
-  const match =
-    typeof externalRef === "string"
-      ? externalRef.match(/^nexarix-formation-(\d+)$/)
-      : null;
-  if (!match) return;
-
-  const purchaseId = parseInt(match[1]);
-  const [purchase] = await db
-    .select()
-    .from(formationPurchasesTable)
-    .where(
-      and(
-        eq(formationPurchasesTable.id, purchaseId),
         eq(formationPurchasesTable.status, "pending"),
       ),
     )
