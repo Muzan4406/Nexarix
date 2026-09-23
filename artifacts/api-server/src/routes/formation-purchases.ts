@@ -17,6 +17,7 @@ import {
   getProviderWebhookSecret,
   normalizeE164,
   toDrimPayOperator,
+  verifyAshtechWebhook,
   verifyDrimPayWebhook,
 } from "../lib/payment-provider";
 
@@ -27,14 +28,14 @@ const COUNTRY_ISO: Record<string, string> = {
   "Cameroun": "CM", "Burkina Faso": "BF", "Mali": "ML",
   "Niger": "NE", "Sénégal": "SN", "Guinée": "GN",
   "Gabon": "GA", "Tchad": "TD", "Congo": "COG",
-  "République centrafricaine": "CF", "Guinée Équatoriale": "GQ", "RD Congo": "COD",
+  "République centrafricaine": "CF", "Guinée Équatoriale": "GQ", "RD Congo": "CD",
 };
 
 const CURRENCY_BY_ISO: Record<string, string> = {
   "TG": "XOF", "BJ": "XOF", "CI": "XOF", "ML": "XOF",
   "BF": "XOF", "NE": "XOF", "SN": "XOF", "GN": "GNF",
   "CM": "XAF", "COG": "XAF", "CF": "XAF", "GQ": "XAF", "GA": "XAF", "TD": "XAF",
-  "COD": "CDF",
+  "CD": "CDF",
 };
 
 // List user's purchased formation IDs
@@ -222,7 +223,7 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
     const payload = {
       amount,
       currency,
-      phone: resolvedPhone,
+      phone: normalizeE164(resolvedPhone, countryIso),
       operator,
       country_code: countryIso,
       reference: `nexarix-formation-${purchase.id}`,
@@ -239,6 +240,17 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
     });
 
     const json = (await response.json()) as any;
+    const transactionId = json.transaction_id || json.reference || null;
+    if (json.status === "success" || json.status === "completed") {
+      await completePurchase(purchase);
+      res.json({
+        flow: "success",
+        transactionId,
+        reference: json.reference || `nexarix-formation-${purchase.id}`,
+        purchaseId: purchase.id,
+      });
+      return;
+    }
 
     if (response.status === 202) {
       await db
@@ -248,7 +260,7 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
       res.json({
         flow: json.flow === "wave" ? "wave" : "ussd_push",
         waveUrl: json.wave_url || null,
-        transactionId: json.transaction_id || null,
+        transactionId,
         reference: `nexarix-formation-${purchase.id}`,
         purchaseId: purchase.id,
       });
@@ -257,11 +269,11 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
     if (response.status === 400 && json.error === "otp_required") {
       await db
         .update(formationPurchasesTable)
-        .set({ sendavapayReference: json.reference || `nexarix-formation-${purchase.id}` })
+        .set({ sendavapayReference: json.reference || orderId })
         .where(eq(formationPurchasesTable.id, purchase.id));
       res.json({
         flow: "otp",
-        reference: json.reference || `nexarix-formation-${purchase.id}`,
+        reference: json.reference || orderId,
         ussdCode: json.ussd_code || null,
         purchaseId: purchase.id,
       });
@@ -356,7 +368,7 @@ router.post("/formations/:id/purchase/otp", authMiddleware, async (req, res) => 
       body: JSON.stringify({
         amount: parseFloat(String(formation.price)),
         currency,
-        phone: resolvedPhone,
+        phone: normalizeE164(resolvedPhone, countryIso),
         operator,
         country_code: countryIso,
         otp: String(otp).trim(),
@@ -365,11 +377,17 @@ router.post("/formations/:id/purchase/otp", authMiddleware, async (req, res) => 
       }),
     });
     const json = await response.json() as any;
+    const transactionId = json.transaction_id || json.reference || null;
+    if (json.status === "success" || json.status === "completed") {
+      await completePurchase(purchase);
+      res.json({ flow: "success", transactionId });
+      return;
+    }
     if (response.status === 202) {
       res.json({
         flow: json.flow === "wave" ? "wave" : "ussd_push",
         waveUrl: json.wave_url || null,
-        transactionId: json.transaction_id || null,
+        transactionId,
       });
       return;
     }
@@ -417,7 +435,20 @@ router.get("/formations/:id/purchase/status", authMiddleware, async (req, res) =
         );
         const json = (await resp.json()) as any;
         if (json.status === "success" || json.status === "completed") {
-          await completePurchaseByReference(reference);
+          if (provider === "ashtechpay") {
+            const [pendingPurchase] = await db
+              .select()
+              .from(formationPurchasesTable)
+              .where(and(
+                eq(formationPurchasesTable.userId, userId),
+                eq(formationPurchasesTable.formationId, formationId),
+                eq(formationPurchasesTable.status, "pending"),
+              ))
+              .limit(1);
+            if (pendingPurchase) await completePurchase(pendingPurchase);
+          } else {
+            await completePurchaseByReference(reference);
+          }
           res.json({ status: "completed" });
           return;
         }
@@ -431,17 +462,32 @@ router.get("/formations/:id/purchase/status", authMiddleware, async (req, res) =
 // Webhook (raw body registered in app.ts)
 router.post("/formations/purchase/webhook", async (req, res) => {
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (getPaymentProvider(settings) === "drimpay") {
+  const provider = getPaymentProvider(settings);
+  if (provider === "drimpay") {
     const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from("");
     const valid = verifyDrimPayWebhook(
       rawBody,
       req.header("x-drimpay-signature"),
       req.header("x-drimpay-timestamp"),
-      getProviderWebhookSecret(settings),
+      getProviderWebhookSecret(settings, "drimpay"),
     );
     if (!valid) {
       res.status(401).json({ error: "Signature DrimPay invalide" });
       return;
+    }
+  } else {
+    const ashtechSecret = getProviderWebhookSecret(settings, "ashtechpay");
+    if (ashtechSecret) {
+      const valid = verifyAshtechWebhook(
+        Buffer.isBuffer(req.body) ? req.body : Buffer.from(""),
+        req.header("x-ashtech-signature"),
+        req.header("x-ashtech-timestamp"),
+        ashtechSecret,
+      );
+      if (!valid) {
+        res.status(401).json({ error: "Signature AshTech Pay invalide" });
+        return;
+      }
     }
   }
   let payload: any;
@@ -459,6 +505,23 @@ router.post("/formations/purchase/webhook", async (req, res) => {
       eventType === "payin.success" || payload.status === "success") {
     const reference = payload.metadata?.orderId || payload.order_id || payload.reference;
     if (reference) {
+      let verified = provider !== "ashtechpay";
+      if (provider === "ashtechpay") {
+        const transactionId = payload.transaction_id;
+        const apiKey = getProviderApiKey(settings, "ashtechpay");
+        if (typeof transactionId === "string" && apiKey) {
+          try {
+            const statusResponse = await fetch(`${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(transactionId)}`, {
+              headers: { Authorization: `Bearer ${apiKey}` },
+            });
+            const statusJson = await statusResponse.json() as any;
+            verified = statusResponse.ok && (statusJson.status === "success" || statusJson.status === "completed");
+          } catch {
+            verified = false;
+          }
+        }
+      }
+      if (!verified) return;
       try {
         await completePurchaseByReference(reference);
       } catch (_) {}
@@ -488,29 +551,36 @@ async function completePurchaseByReference(paymentReference: string) {
 }
 
 async function completePurchase(purchase: any) {
-  await db
+  const [completedPurchase] = await db
     .update(formationPurchasesTable)
     .set({ status: "completed" })
-    .where(eq(formationPurchasesTable.id, purchase.id));
+    .where(and(
+      eq(formationPurchasesTable.id, purchase.id),
+      eq(formationPurchasesTable.status, "pending"),
+    ))
+    .returning();
+
+  if (!completedPurchase) return false;
 
   const [user] = await db
     .select()
     .from(usersTable)
-    .where(eq(usersTable.id, purchase.userId))
+    .where(eq(usersTable.id, completedPurchase.userId))
     .limit(1);
 
   const [formation] = await db
     .select()
     .from(formationsTable)
-    .where(eq(formationsTable.id, purchase.formationId))
+    .where(eq(formationsTable.id, completedPurchase.formationId))
     .limit(1);
 
   await sendTelegramNotification(
     `💳 <b>Formation achetée</b>\n` +
-      `👤 Utilisateur: <b>${user?.username || purchase.userId}</b>\n` +
-      `📚 Formation: <b>${formation?.title || purchase.formationId}</b>\n` +
-      `💰 Montant: <b>${parseFloat(purchase.amount || "0").toLocaleString()} FCFA</b>`,
+      `👤 Utilisateur: <b>${user?.username || completedPurchase.userId}</b>\n` +
+      `📚 Formation: <b>${formation?.title || completedPurchase.formationId}</b>\n` +
+      `💰 Montant: <b>${parseFloat(completedPurchase.amount || "0").toLocaleString()} FCFA</b>`,
   );
+  return true;
 }
 
 export default router;

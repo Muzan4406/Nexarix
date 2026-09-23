@@ -5,19 +5,19 @@ description: AshtechPay and DrimPay pay-in flows for activation and formation pu
 
 ## Provider contract
 
-Use `https://ashtechpay.top` server-side with the configured Bearer API key:
+Use `https://www.ashtechpay.com` server-side with a Direct API key (`ak_...`) sent as `Authorization: Bearer ...`:
 
 - `GET /v1/countries` for country operators
 - `POST /v1/collect` for Mobile Money initiation and OTP retry
 - `GET /v1/transaction/:transactionId` for status polling
 
-The collect payload uses `amount`, `currency`, `phone`, `operator`, `country_code`, `reference`, and `notify_url`. Responses can be `202` with USSD Push or Wave, or `400` with `error: "otp_required"`.
+The collect payload uses `amount`, `currency`, `phone`, `operator`, `country_code`, `reference`, and `notify_url`. Responses can be `200` with a completed/successful payment, `202` with USSD Push or Wave, or `400` with `error: "otp_required"`. OTP retries must reuse the returned or original merchant reference.
 
 **Why:** This is the provider used by the project. SendavaPay SDK endpoints are not part of the payment flow.
 
 ## Webhooks
 
-AshtechPay sends a `payment.completed` event with `status: "completed"` and the original `reference`. The reference embeds the Nexarix user or purchase ID and is matched before crediting anything. Activation updates the user conditionally so a webhook and status poll cannot distribute commissions twice.
+AshtechPay sends a `payment.completed` event with `status: "completed"` and the original `reference`. When a webhook secret (`whsec_...`) is configured, verify `X-Ashtech-Timestamp` and `X-Ashtech-Signature: sha256=...` using HMAC-SHA256 over `timestamp.raw_body` with a five-minute replay window. The server must re-read `GET /v1/transaction/:id` and require `success`/`completed` before fulfillment. The reference embeds the Nexarix user or purchase ID and is matched before crediting anything. Activation and formation completion are conditional/idempotent so duplicate webhooks cannot distribute commissions twice.
 
 ## Withdrawals
 

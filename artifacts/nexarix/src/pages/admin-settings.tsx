@@ -27,6 +27,7 @@ export default function AdminSettings() {
     paymentMode: "manual",
     paymentProvider: "ashtechpay",
     sendavapayApiKey: "",
+    sendavapayWebhookSecret: "",
     drimpayApiKey: "",
     drimpayWebhookSecret: "",
     appBaseUrl: "",
@@ -46,6 +47,7 @@ export default function AdminSettings() {
         paymentMode: settings.paymentMode || "manual",
         paymentProvider: (settings as any).paymentProvider || "ashtechpay",
         sendavapayApiKey: settings.sendavapayApiKey || "",
+        sendavapayWebhookSecret: settings.sendavapayWebhookSecret || "",
         drimpayApiKey: (settings as any).drimpayApiKey || "",
         drimpayWebhookSecret: (settings as any).drimpayWebhookSecret || "",
         appBaseUrl: settings.appBaseUrl || "",
@@ -64,6 +66,7 @@ export default function AdminSettings() {
         telegramChannel: form.telegramChannel || null,
         vcfLink: form.vcfLink || null,
         sendavapayApiKey: form.sendavapayApiKey || null,
+        sendavapayWebhookSecret: form.sendavapayWebhookSecret || null,
         drimpayApiKey: form.drimpayApiKey || null,
         drimpayWebhookSecret: form.drimpayWebhookSecret || null,
         appBaseUrl: form.appBaseUrl || null,
@@ -286,20 +289,36 @@ export default function AdminSettings() {
                  </div>
 
                  {form.paymentProvider === "ashtechpay" ? (
-                   <div>
-                     <Label className="flex items-center gap-2 mb-1.5">
-                       <Key className="h-4 w-4 text-amber-500" />Clé API AshtechPay
-                     </Label>
-                     <Input
-                       value={form.sendavapayApiKey}
-                       onChange={e => setForm(f => ({ ...f, sendavapayApiKey: e.target.value }))}
-                       placeholder="Clé Bearer AshtechPay"
-                       type="password"
-                     />
-                     <p className="text-xs text-muted-foreground mt-1">
-                       Clé disponible dans votre tableau de bord AshtechPay.
-                     </p>
-                   </div>
+                    <>
+                      <div>
+                        <Label className="flex items-center gap-2 mb-1.5">
+                          <Key className="h-4 w-4 text-amber-500" />Clé API Direct AshTech Pay
+                        </Label>
+                        <Input
+                          value={form.sendavapayApiKey}
+                          onChange={e => setForm(f => ({ ...f, sendavapayApiKey: e.target.value }))}
+                          placeholder="ak_..."
+                          type="password"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Utilisez une clé Direct API `ak_...` depuis le tableau de bord AshTech Pay.
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="flex items-center gap-2 mb-1.5">
+                          <Key className="h-4 w-4 text-amber-500" />Secret webhook AshTech Pay
+                        </Label>
+                        <Input
+                          value={form.sendavapayWebhookSecret}
+                          onChange={e => setForm(f => ({ ...f, sendavapayWebhookSecret: e.target.value }))}
+                          placeholder="whsec_..."
+                          type="password"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Recommandé pour vérifier les signatures `X-Ashtech-Signature`.
+                        </p>
+                      </div>
+                    </>
                  ) : (
                    <>
                      <div>

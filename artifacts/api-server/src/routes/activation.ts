@@ -13,6 +13,7 @@ import {
   getProviderWebhookSecret,
   normalizeE164,
   toDrimPayOperator,
+  verifyAshtechWebhook,
   verifyDrimPayWebhook,
 } from "../lib/payment-provider";
 
@@ -240,7 +241,7 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
     const payload = {
       amount: activationFee,
       currency,
-      phone: resolvedPhone,
+      phone: normalizeE164(resolvedPhone, countryIso),
       operator,
       country_code: countryIso,
       reference,
@@ -257,16 +258,27 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
     });
 
     const json = await response.json() as any;
+    const transactionId = json.transaction_id || json.reference || null;
+    if (json.status === "success" || json.status === "completed") {
+      const [freshUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      if (freshUser) await activateUser(freshUser);
+      res.json({ flow: "success", transactionId, reference });
+      return;
+    }
     if (response.status === 202) {
       if (json.flow === "wave" && json.wave_url) {
-        res.json({ flow: "wave", waveUrl: json.wave_url, transactionId: json.transaction_id, reference });
+        res.json({ flow: "wave", waveUrl: json.wave_url, transactionId, reference });
         return;
       }
-      res.json({ flow: "ussd_push", transactionId: json.transaction_id, reference });
+      res.json({ flow: "ussd_push", transactionId, reference });
       return;
     }
     if (response.status === 400 && json.error === "otp_required") {
-      res.json({ flow: "otp", reference: json.reference, ussdCode: json.ussd_code || null });
+      res.json({
+        flow: "otp",
+        reference: json.reference || reference,
+        ussdCode: json.ussd_code || null,
+      });
       return;
     }
     const detail = json?.message || json?.error || JSON.stringify(json);
@@ -359,7 +371,7 @@ router.post("/activate/otp", authMiddleware, async (req, res) => {
       body: JSON.stringify({
         amount: activationFee,
         currency,
-        phone: resolvedPhone,
+        phone: normalizeE164(resolvedPhone, countryIso),
         operator,
         country_code: countryIso,
         otp: String(otp).trim(),
@@ -368,12 +380,19 @@ router.post("/activate/otp", authMiddleware, async (req, res) => {
       }),
     });
     const json = await response.json() as any;
+    const transactionId = json.transaction_id || json.reference || null;
+    if (json.status === "success" || json.status === "completed") {
+      const [freshUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      if (freshUser) await activateUser(freshUser);
+      res.json({ flow: "success", transactionId });
+      return;
+    }
     if (response.status === 202) {
       if (json.flow === "wave" && json.wave_url) {
-        res.json({ flow: "wave", waveUrl: json.wave_url, transactionId: json.transaction_id });
+        res.json({ flow: "wave", waveUrl: json.wave_url, transactionId });
         return;
       }
-      res.json({ flow: "ussd_push", transactionId: json.transaction_id });
+      res.json({ flow: "ussd_push", transactionId });
       return;
     }
     const detail = json?.message || json?.error || JSON.stringify(json);
@@ -423,17 +442,32 @@ router.get("/activate/check", authMiddleware, async (req, res) => {
 // ─── Webhook (AshtechPay payment.completed / payment.failed) ─────────────────
 router.post("/activate/webhook", async (req, res) => {
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (getPaymentProvider(settings) === "drimpay") {
+  const provider = getPaymentProvider(settings);
+  if (provider === "drimpay") {
     const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from("");
     const valid = verifyDrimPayWebhook(
       rawBody,
       req.header("x-drimpay-signature"),
       req.header("x-drimpay-timestamp"),
-      getProviderWebhookSecret(settings),
+      getProviderWebhookSecret(settings, "drimpay"),
     );
     if (!valid) {
       res.status(401).json({ error: "Signature DrimPay invalide" });
       return;
+    }
+  } else {
+    const ashtechSecret = getProviderWebhookSecret(settings, "ashtechpay");
+    if (ashtechSecret) {
+      const valid = verifyAshtechWebhook(
+        Buffer.isBuffer(req.body) ? req.body : Buffer.from(""),
+        req.header("x-ashtech-signature"),
+        req.header("x-ashtech-timestamp"),
+        ashtechSecret,
+      );
+      if (!valid) {
+        res.status(401).json({ error: "Signature AshTech Pay invalide" });
+        return;
+      }
     }
   }
   res.status(200).json({ received: true });
@@ -448,7 +482,25 @@ router.post("/activate/webhook", async (req, res) => {
   const event = payload?.event;
   const reference = payload?.metadata?.orderId || payload?.order_id || payload?.reference;
   const isSuccess = payload?.status === "completed" || payload?.status === "success" || event === "payin.success";
-  if (isSuccess && typeof reference === "string") {
+  let verified = isSuccess;
+  if (provider === "ashtechpay" && isSuccess) {
+    const transactionId = payload?.transaction_id;
+    const apiKey = getProviderApiKey(settings, "ashtechpay");
+    if (typeof transactionId !== "string" || !apiKey) {
+      verified = false;
+    } else {
+      try {
+        const statusResponse = await fetch(`${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(transactionId)}`, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        const statusJson = await statusResponse.json() as any;
+        verified = statusResponse.ok && (statusJson.status === "success" || statusJson.status === "completed");
+      } catch {
+        verified = false;
+      }
+    }
+  }
+  if (verified && typeof reference === "string") {
     const match = reference.match(/^nexarix-act-(\d+)-\d+$/);
     if (!match) return;
     try {

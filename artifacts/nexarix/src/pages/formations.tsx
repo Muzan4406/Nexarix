@@ -205,6 +205,11 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
       });
       const json = await res.json() as any;
       if (!res.ok) { setErrorMsg(json.error || "Code OTP incorrect."); return; }
+      if (json.flow === "success") {
+        setPhase("success");
+        onSuccess(formation.id);
+        return;
+      }
       if (json.flow === "wave" && json.waveUrl) {
         setReference(json.transactionId || "");
         window.location.href = json.waveUrl;

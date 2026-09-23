@@ -190,6 +190,10 @@ export default function Activate() {
       });
       const json = await resp.json() as any;
       if (!resp.ok) { setErrorMsg(json?.error || "Code OTP incorrect."); return; }
+      if (json.flow === "success") {
+        setPhase("success");
+        return;
+      }
       if (json.flow === "wave" && json.waveUrl) {
         setWaveUrl(json.waveUrl);
         setTransactionId(json.transactionId || "");

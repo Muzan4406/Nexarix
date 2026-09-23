@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 
 export type PaymentProvider = "ashtechpay" | "drimpay";
 
-export const ASHTECHPAY_BASE = "https://ashtechpay.top";
+export const ASHTECHPAY_BASE = "https://www.ashtechpay.com";
 export const DRIMPAY_LIVE_BASE = "https://drimpay.com/api/v2";
 export const DRIMPAY_SANDBOX_BASE = "https://drimpay.com/sandbox-api/v2";
 
@@ -19,7 +19,7 @@ export const DRIMPAY_COUNTRIES: Record<string, string[]> = {
 const COUNTRY_CALLING_CODE: Record<string, string> = {
   TG: "228", BJ: "229", CI: "225", CM: "237", BF: "226",
   ML: "223", SN: "221", GN: "224", GA: "241", NE: "227",
-  CD: "243",
+  CD: "243", TD: "235", CF: "236", COG: "242", GQ: "240",
 };
 
 export function getPaymentProvider(settings: any): PaymentProvider {
@@ -27,13 +27,24 @@ export function getPaymentProvider(settings: any): PaymentProvider {
 }
 
 export function getProviderApiKey(settings: any, provider = getPaymentProvider(settings)): string | null {
-  return provider === "drimpay"
-    ? settings?.drimpayApiKey || null
-    : settings?.sendavapayApiKey || null;
+  const value = provider === "drimpay"
+    ? settings?.drimpayApiKey
+    : settings?.sendavapayApiKey;
+  if (typeof value !== "string") return null;
+  const key = value.replace(/^Bearer\s+/i, "").trim();
+  return key || null;
 }
 
-export function getProviderWebhookSecret(settings: any): string | null {
-  return settings?.drimpayWebhookSecret || null;
+export function getProviderWebhookSecret(
+  settings: any,
+  provider = getPaymentProvider(settings),
+): string | null {
+  const value = provider === "drimpay"
+    ? settings?.drimpayWebhookSecret
+    : settings?.sendavapayWebhookSecret;
+  if (typeof value !== "string") return null;
+  const secret = value.trim();
+  return secret || null;
 }
 
 export function getDrimPayBase(apiKey: string): string {
@@ -75,6 +86,28 @@ export function verifyDrimPayWebhook(
 
   const expected = createHmac("sha256", secret)
     .update(`${timestamp}.${rawBody.toString("utf8")}`)
+    .digest("hex");
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  const providedBuffer = Buffer.from(provided, "utf8");
+  return expectedBuffer.length === providedBuffer.length &&
+    timingSafeEqual(expectedBuffer, providedBuffer);
+}
+
+export function verifyAshtechWebhook(
+  rawBody: Buffer,
+  signatureHeader: string | undefined,
+  timestampHeader: string | undefined,
+  secret: string | null,
+): boolean {
+  if (!secret || !signatureHeader || !timestampHeader) return false;
+
+  const timestamp = Number(timestampHeader);
+  const provided = signatureHeader.replace(/^sha256=/i, "").trim();
+  if (!Number.isFinite(timestamp) || !/^[a-f0-9]{64}$/i.test(provided)) return false;
+  if (Math.abs(Math.floor(Date.now() / 1000) - timestamp) > 300) return false;
+
+  const expected = createHmac("sha256", secret)
+    .update(`${timestampHeader}.${rawBody.toString("utf8")}`)
     .digest("hex");
   const expectedBuffer = Buffer.from(expected, "utf8");
   const providedBuffer = Buffer.from(provided, "utf8");

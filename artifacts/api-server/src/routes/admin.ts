@@ -19,7 +19,7 @@ if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
   console.warn("[security] ADMIN_EMAIL / ADMIN_PASSWORD non définis en variable d'environnement !");
 }
 
-// Code secret requis pour confirmer un retrait avant déclenchement du payout auto
+// Code secret requis pour confirmer l'approbation manuelle d'un retrait
 const WITHDRAWAL_CONFIRMATION_CODE = process.env.WITHDRAWAL_CONFIRMATION_CODE ?? "";
 
 if (!WITHDRAWAL_CONFIRMATION_CODE) {
@@ -572,44 +572,6 @@ router.get("/admin/withdrawals", authMiddleware, adminMiddleware, async (req, re
   })));
 });
 
-const SENDAVAPAY_BASE = "https://sendavapay.com/api/sdk/v1";
-
-const COUNTRY_ISO: Record<string, string> = {
-  "Togo": "TG", "Bénin": "BJ", "Côte d'Ivoire": "CI",
-  "Cameroun": "CM", "Burkina Faso": "BF", "Mali": "ML",
-  "Niger": "NE", "Sénégal": "SN", "Guinée": "GN",
-  "Gabon": "GA", "Tchad": "TD", "Congo": "COG",
-  "République centrafricaine": "CF", "Guinée Équatoriale": "GQ", "RD Congo": "COD",
-};
-
-const CURRENCY_BY_ISO: Record<string, string> = {
-  "TG": "XOF", "BJ": "XOF", "CI": "XOF", "ML": "XOF",
-  "BF": "XOF", "NE": "XOF", "SN": "XOF", "GN": "GNF",
-  "CM": "XAF", "COG": "XAF", "CF": "XAF", "GQ": "XAF", "GA": "XAF", "TD": "XAF",
-  "COD": "CDF",
-};
-
-function getOperatorSlug(name: string): string {
-  const n = name.toLowerCase();
-  if (n.includes("tmoney")) return "tmoney";
-  if (n.includes("moov") || n.includes("flooz")) return "moov";
-  if (n.includes("mtn")) return "mtn";
-  if (n.includes("orange")) return "orange";
-  if (n.includes("wave")) return "wave";
-  if (n.includes("airtel")) return "airtel";
-  if (n.includes("free")) return "freemoney";
-  if (n.includes("cellcom")) return "cellcom";
-  if (n.includes("wizall")) return "wizall";
-  return n.replace(/\s+/g, "");
-}
-
-function normalizePhone(phone: string): string {
-  const cleaned = phone.replace(/\s+/g, "");
-  if (cleaned.startsWith("00")) return "+" + cleaned.slice(2);
-  if (!cleaned.startsWith("+")) return "+" + cleaned;
-  return cleaned;
-}
-
 router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMiddleware, withdrawalConfirmLimiter, async (req, res) => {
   const withdrawalId = parseInt(req.params.withdrawalId as string);
   const { confirmationCode } = req.body;
@@ -644,94 +606,22 @@ router.patch("/admin/withdrawals/:withdrawalId/approve", authMiddleware, adminMi
 
   const w = withdrawal.withdrawal;
 
-  const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  // SendavaPay is used only for activation pay-ins. Withdrawals are always manual.
-  const isAutoMode = false;
-
-  let sendavapayRef: string | null = null;
-  let sendavapayStatus: string | null = null;
-  let payoutError: string | null = null;
-
-  if (isAutoMode) {
-    const countryIso = COUNTRY_ISO[w.country || ""] || "TG";
-    const currency = CURRENCY_BY_ISO[countryIso] || "XOF";
-    const operatorSlug = getOperatorSlug(w.operator);
-    const phone = normalizePhone(w.phone);
-    const amountNet = parseFloat(w.amountNet || "0");
-
-    try {
-      const resp = await fetch(`${SENDAVAPAY_BASE}/withdraw`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${settings!.sendavapayApiKey}`,
-        },
-        body: JSON.stringify({
-          amount: amountNet,
-          phoneNumber: phone,
-          operator: operatorSlug,
-          country: countryIso,
-          currency,
-          description: `Retrait Nexarix #${withdrawalId}`,
-          externalReference: `nexarix-withdrawal-${withdrawalId}`,
-        }),
-      });
-      const json = await resp.json() as any;
-      if (json.success) {
-        sendavapayRef = json.data.reference;
-        sendavapayStatus = json.data.status;
-      } else {
-        payoutError = json.error || json.code || "Erreur Sendavapay";
-      }
-    } catch (e: any) {
-      payoutError = e.message;
-    }
-  }
-
-  // Si le payout auto a échoué (ex: solde Sendavapay insuffisant), on NE marque PAS
-  // le retrait comme "paid" — il reste "pending" pour permettre une nouvelle tentative
-  // (ex: après rechargement du solde Sendavapay) sans perdre la trace de l'argent.
-  const payoutFailed = isAutoMode && !!payoutError;
-
   const [updated] = await db.update(withdrawalsTable)
-    .set(
-      payoutFailed
-        ? { sendavapayStatus: "failed" }
-        : { status: "paid", sendavapayReference: sendavapayRef, sendavapayStatus: sendavapayStatus }
-    )
+    .set({ status: "paid" })
     .where(eq(withdrawalsTable.id, withdrawalId))
     .returning();
 
-  if (isAutoMode && sendavapayRef) {
-    sendTelegramNotification(
-      `✅ <b>Retrait approuvé + payout envoyé</b>\n` +
-      `👤 Utilisateur: <b>${withdrawal.username}</b>\n` +
-      `💰 Montant net: <b>${parseFloat(updated.amountNet || "0").toLocaleString()} FCFA</b>\n` +
-      `🏦 ${updated.operator} — ${updated.phone}\n` +
-      `🔖 Réf Sendavapay: <code>${sendavapayRef}</code>`
-    );
-  } else if (isAutoMode && payoutError) {
-    sendTelegramNotification(
-      `⚠️ <b>Retrait approuvé — payout ÉCHOUÉ</b>\n` +
-      `👤 Utilisateur: <b>${withdrawal.username}</b>\n` +
-      `💰 Montant net: <b>${parseFloat(updated.amountNet || "0").toLocaleString()} FCFA</b>\n` +
-      `🏦 ${updated.operator} — ${updated.phone}\n` +
-      `❌ Erreur: ${payoutError}`
-    );
-  } else {
-    sendTelegramNotification(
-      `✅ <b>Retrait approuvé (manuel)</b>\n` +
-      `👤 Utilisateur: <b>${withdrawal.username}</b>\n` +
-      `💰 Montant net: <b>${parseFloat(updated.amountNet || "0").toLocaleString()} FCFA</b>\n` +
-      `🏦 Opérateur: ${updated.operator} — ${updated.phone}`
-    );
-  }
+  sendTelegramNotification(
+    `✅ <b>Retrait approuvé (manuel)</b>\n` +
+    `👤 Utilisateur: <b>${withdrawal.username}</b>\n` +
+    `💰 Montant net: <b>${parseFloat(updated.amountNet || "0").toLocaleString()} FCFA</b>\n` +
+    `🏦 Opérateur: ${updated.operator} — ${updated.phone}`
+  );
 
   res.json({
     ...formatAdminWithdrawal(updated),
     username: withdrawal.username,
     userId: updated.userId,
-    payoutError: payoutError || undefined,
   });
 });
 
