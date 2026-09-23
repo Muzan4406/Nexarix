@@ -37,7 +37,7 @@ export default function Store() {
   const { data: items, isLoading } = useStoreItems();
   const [filter, setFilter] = useState("all");
 
-  const categories = ["all", ...Array.from(new Set((items || []).map((i: any) => i.category)))];
+  const categories: string[] = ["all", ...Array.from(new Set<string>((items || []).map((i: any) => String(i.category || ""))))];
   const filtered = filter === "all" ? (items || []) : (items || []).filter((i: any) => i.category === filter);
 
   return (

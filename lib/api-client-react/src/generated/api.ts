@@ -29,6 +29,7 @@ import type {
   AdminWithdrawal,
   ApproveInput,
   AuthResponse,
+  CheckActivationStatusParams,
   ConvertPointsResult,
   DashboardStats,
   DeleteAdminUser200,
@@ -2295,20 +2296,27 @@ export const useInitiateActivation = <TError = ErrorType<unknown>,
       return useMutation(getInitiateActivationMutationOptions(options));
     }
 
-export const getCheckActivationStatusUrl = () => {
+export const getCheckActivationStatusUrl = (params?: CheckActivationStatusParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/activate/check`
+  return stringifiedParams.length > 0 ? `/api/activate/check?${stringifiedParams}` : `/api/activate/check`
 }
 
 /**
  * @summary Check current activation status
  */
-export const checkActivationStatus = async ( options?: RequestInit): Promise<ActivateStatusResponse> => {
+export const checkActivationStatus = async (params?: CheckActivationStatusParams, options?: RequestInit): Promise<ActivateStatusResponse> => {
 
-  return customFetch<ActivateStatusResponse>(getCheckActivationStatusUrl(),
+  return customFetch<ActivateStatusResponse>(getCheckActivationStatusUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2321,23 +2329,23 @@ export const checkActivationStatus = async ( options?: RequestInit): Promise<Act
 
 
 
-export const getCheckActivationStatusQueryKey = () => {
+export const getCheckActivationStatusQueryKey = (params?: CheckActivationStatusParams,) => {
     return [
-    `/api/activate/check`
+    `/api/activate/check`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getCheckActivationStatusQueryOptions = <TData = Awaited<ReturnType<typeof checkActivationStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkActivationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getCheckActivationStatusQueryOptions = <TData = Awaited<ReturnType<typeof checkActivationStatus>>, TError = ErrorType<unknown>>(params?: CheckActivationStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkActivationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getCheckActivationStatusQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getCheckActivationStatusQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkActivationStatus>>> = ({ signal }) => checkActivationStatus({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkActivationStatus>>> = ({ signal }) => checkActivationStatus(params, { signal, ...requestOptions });
 
 
 
@@ -2355,11 +2363,11 @@ export type CheckActivationStatusQueryError = ErrorType<unknown>
  */
 
 export function useCheckActivationStatus<TData = Awaited<ReturnType<typeof checkActivationStatus>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkActivationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: CheckActivationStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkActivationStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getCheckActivationStatusQueryOptions(options)
+  const queryOptions = getCheckActivationStatusQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

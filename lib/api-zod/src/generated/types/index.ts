@@ -15,6 +15,7 @@ export * from './adminUserUpdate';
 export * from './adminWithdrawal';
 export * from './approveInput';
 export * from './authResponse';
+export * from './checkActivationStatusParams';
 export * from './convertPointsResult';
 export * from './dashboardStats';
 export * from './dashboardStatsEarnings';

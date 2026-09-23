@@ -11,10 +11,12 @@ export interface SiteSettings {
   id: number;
   supportEmail: string;
   telegramLink: string;
+  telegramChannel?: string;
   whatsappLink: string;
   /** @nullable */
   vcfLink?: string | null;
   activationFee: number;
+  minWithdrawal?: number;
   paymentMode: string;
   paymentProvider?: SiteSettingsPaymentProvider;
   /** @nullable */

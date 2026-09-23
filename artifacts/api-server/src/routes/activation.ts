@@ -214,7 +214,8 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
         }),
       });
       const json = await response.json() as any;
-      if (response.status === 400 && json?.code === "INVALID_OTP") {
+      const drimPayErrorCode = json?.code ?? json?.error;
+      if (response.status === 400 && drimPayErrorCode === "INVALID_OTP") {
         res.json({ flow: "otp", reference });
         return;
       }

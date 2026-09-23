@@ -159,7 +159,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
       });
       const initJson = await initRes.json() as any;
       if (!initRes.ok) {
-        setErrorMsg(initJson?.error || "Erreur AshtechPay. Réessayez.");
+        setErrorMsg(initJson?.error || "Erreur de paiement. Réessayez.");
         setPhase("form");
         return;
       }
@@ -363,7 +363,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
                 </button>
 
                 <p className="text-center text-[10px] text-gray-400 font-medium">
-                  🔒 Paiement sécurisé via AshtechPay
+                  🔒 Paiement sécurisé
                 </p>
               </motion.div>
             )}
@@ -480,7 +480,7 @@ export default function Formations() {
 
   const purchasedIds: number[] = purchasesData?.purchasedIds || [];
 
-  const categories = ["all", ...Array.from(new Set((formations || []).map((f: any) => f.category)))];
+  const categories: string[] = ["all", ...Array.from(new Set<string>((formations || []).map((f: any) => String(f.category || ""))))];
   const filtered = filter === "all" ? (formations || []) : (formations || []).filter((f: any) => f.category === filter);
 
   const handlePaySuccess = (formationId: number) => {

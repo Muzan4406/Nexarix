@@ -660,6 +660,12 @@ paths:
       summary: Check current activation status
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: transactionId
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: OK
@@ -1179,6 +1185,20 @@ components:
         paymentProvider:
           type: string
           enum: [ashtechpay, drimpay]
+        minWithdrawal:
+          type: number
+        supportEmail:
+          type: ["string", "null"]
+        telegramLink:
+          type: ["string", "null"]
+        telegramChannel:
+          type: ["string", "null"]
+        whatsappLink:
+          type: ["string", "null"]
+        vcfLink:
+          type: ["string", "null"]
+        maintenanceMode:
+          type: boolean
       required: [activationFee, paymentMode]
 
     ActivateInitiateResponse:
@@ -1215,11 +1235,15 @@ components:
           type: string
         telegramLink:
           type: string
+        telegramChannel:
+          type: string
         whatsappLink:
           type: string
         vcfLink:
           type: ["string", "null"]
         activationFee:
+          type: number
+        minWithdrawal:
           type: number
         paymentMode:
           type: string

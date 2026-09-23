@@ -61022,11 +61022,21 @@ var RejectWithdrawalResponse = objectType({
 var GetPublicSettingsResponse = objectType({
   "activationFee": numberType(),
   "paymentMode": stringType(),
-  "paymentProvider": enumType(["ashtechpay", "drimpay"]).optional()
+  "paymentProvider": enumType(["ashtechpay", "drimpay"]).optional(),
+  "minWithdrawal": numberType().optional(),
+  "supportEmail": stringType().nullish(),
+  "telegramLink": stringType().nullish(),
+  "telegramChannel": stringType().nullish(),
+  "whatsappLink": stringType().nullish(),
+  "vcfLink": stringType().nullish(),
+  "maintenanceMode": booleanType().optional()
 });
 var InitiateActivationResponse = objectType({
   "paymentUrl": stringType(),
   "paymentId": stringType()
+});
+var CheckActivationStatusQueryParams = objectType({
+  "transactionId": coerce.string().optional()
 });
 var CheckActivationStatusResponse = objectType({
   "status": stringType()
@@ -61035,9 +61045,11 @@ var GetAdminSettingsResponse = objectType({
   "id": numberType(),
   "supportEmail": stringType(),
   "telegramLink": stringType(),
+  "telegramChannel": stringType().optional(),
   "whatsappLink": stringType(),
   "vcfLink": stringType().nullish(),
   "activationFee": numberType(),
+  "minWithdrawal": numberType().optional(),
   "paymentMode": stringType(),
   "paymentProvider": enumType(["ashtechpay", "drimpay"]).optional(),
   "sendavapayApiKey": stringType().nullish(),
@@ -61064,9 +61076,11 @@ var UpdateAdminSettingsResponse = objectType({
   "id": numberType(),
   "supportEmail": stringType(),
   "telegramLink": stringType(),
+  "telegramChannel": stringType().optional(),
   "whatsappLink": stringType(),
   "vcfLink": stringType().nullish(),
   "activationFee": numberType(),
+  "minWithdrawal": numberType().optional(),
   "paymentMode": stringType(),
   "paymentProvider": enumType(["ashtechpay", "drimpay"]).optional(),
   "sendavapayApiKey": stringType().nullish(),
@@ -84126,7 +84140,8 @@ router8.post("/activate/initiate", authMiddleware, async (req, res) => {
         })
       });
       const json4 = await response2.json();
-      if (response2.status === 400 && json4?.code === "INVALID_OTP") {
+      const drimPayErrorCode = json4?.code ?? json4?.error;
+      if (response2.status === 400 && drimPayErrorCode === "INVALID_OTP") {
         res.json({ flow: "otp", reference });
         return;
       }
@@ -85184,7 +85199,8 @@ router12.post("/formations/:id/purchase/initiate", authMiddleware, async (req, r
         })
       });
       const json4 = await response2.json();
-      if (response2.status === 400 && json4?.code === "INVALID_OTP") {
+      const drimPayErrorCode = json4?.code ?? json4?.error;
+      if (response2.status === 400 && drimPayErrorCode === "INVALID_OTP") {
         await db.update(formationPurchasesTable).set({ sendavapayReference: orderId }).where(eq(formationPurchasesTable.id, purchase.id));
         res.json({ flow: "otp", reference: orderId, purchaseId: purchase.id });
         return;

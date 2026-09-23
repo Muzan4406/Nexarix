@@ -643,7 +643,14 @@ export const RejectWithdrawalResponse = zod.object({
 export const GetPublicSettingsResponse = zod.object({
   "activationFee": zod.number(),
   "paymentMode": zod.string(),
-  "paymentProvider": zod.enum(['ashtechpay', 'drimpay']).optional()
+  "paymentProvider": zod.enum(['ashtechpay', 'drimpay']).optional(),
+  "minWithdrawal": zod.number().optional(),
+  "supportEmail": zod.string().nullish(),
+  "telegramLink": zod.string().nullish(),
+  "telegramChannel": zod.string().nullish(),
+  "whatsappLink": zod.string().nullish(),
+  "vcfLink": zod.string().nullish(),
+  "maintenanceMode": zod.boolean().optional()
 })
 
 
@@ -659,6 +666,10 @@ export const InitiateActivationResponse = zod.object({
 /**
  * @summary Check current activation status
  */
+export const CheckActivationStatusQueryParams = zod.object({
+  "transactionId": zod.coerce.string().optional()
+})
+
 export const CheckActivationStatusResponse = zod.object({
   "status": zod.string()
 })
@@ -671,9 +682,11 @@ export const GetAdminSettingsResponse = zod.object({
   "id": zod.number(),
   "supportEmail": zod.string(),
   "telegramLink": zod.string(),
+  "telegramChannel": zod.string().optional(),
   "whatsappLink": zod.string(),
   "vcfLink": zod.string().nullish(),
   "activationFee": zod.number(),
+  "minWithdrawal": zod.number().optional(),
   "paymentMode": zod.string(),
   "paymentProvider": zod.enum(['ashtechpay', 'drimpay']).optional(),
   "sendavapayApiKey": zod.string().nullish(),
@@ -706,9 +719,11 @@ export const UpdateAdminSettingsResponse = zod.object({
   "id": zod.number(),
   "supportEmail": zod.string(),
   "telegramLink": zod.string(),
+  "telegramChannel": zod.string().optional(),
   "whatsappLink": zod.string(),
   "vcfLink": zod.string().nullish(),
   "activationFee": zod.number(),
+  "minWithdrawal": zod.number().optional(),
   "paymentMode": zod.string(),
   "paymentProvider": zod.enum(['ashtechpay', 'drimpay']).optional(),
   "sendavapayApiKey": zod.string().nullish(),

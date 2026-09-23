@@ -282,6 +282,18 @@ export interface PublicSettings {
   activationFee: number;
   paymentMode: string;
   paymentProvider?: PublicSettingsPaymentProvider;
+  minWithdrawal?: number;
+  /** @nullable */
+  supportEmail?: string | null;
+  /** @nullable */
+  telegramLink?: string | null;
+  /** @nullable */
+  telegramChannel?: string | null;
+  /** @nullable */
+  whatsappLink?: string | null;
+  /** @nullable */
+  vcfLink?: string | null;
+  maintenanceMode?: boolean;
 }
 
 export interface ActivateInitiateResponse {
@@ -310,10 +322,12 @@ export interface SiteSettings {
   id: number;
   supportEmail: string;
   telegramLink: string;
+  telegramChannel?: string;
   whatsappLink: string;
   /** @nullable */
   vcfLink?: string | null;
   activationFee: number;
+  minWithdrawal?: number;
   paymentMode: string;
   paymentProvider?: SiteSettingsPaymentProvider;
   /** @nullable */
@@ -373,5 +387,9 @@ export type DeleteAdminUser200 = {
 
 export type GetAdminWithdrawalsParams = {
 status?: string;
+};
+
+export type CheckActivationStatusParams = {
+transactionId?: string;
 };
 
