@@ -28,6 +28,7 @@ const COUNTRY_ISO: Record<string, string> = {
 };
 
 const COUNTRY_LIST = Object.keys(COUNTRY_ISO).sort();
+const DRIMPAY_COUNTRY_CODES = new Set(["TG", "BJ", "CM", "BF", "ML", "SN", "CI"]);
 
 type Phase = "form" | "initiating" | "otp" | "wave" | "waiting" | "success";
 export default function Activate() {
@@ -55,8 +56,12 @@ export default function Activate() {
 
   const paymentMode = publicSettings?.paymentMode ?? "manual";
   const paymentProvider = (publicSettings as any)?.paymentProvider ?? "ashtechpay";
+  const paymentProviderLabel = paymentProvider === "drimpay" ? "DrimPay" : "AshTech Pay";
   const activationFee = publicSettings?.activationFee ?? 3800;
   const countryCode = COUNTRY_ISO[country] || "";
+  const availableCountries = paymentProvider === "drimpay"
+    ? COUNTRY_LIST.filter(name => DRIMPAY_COUNTRY_CODES.has(COUNTRY_ISO[name]))
+    : COUNTRY_LIST;
 
   useEffect(() => {
     if (user?.country && !country) setCountry(user.country);
@@ -85,7 +90,7 @@ export default function Activate() {
       .catch(() => { if (!cancelled) setOperators([]); })
       .finally(() => { if (!cancelled) setLoadingOperators(false); });
     return () => { cancelled = true; };
-  }, [countryCode, paymentMode]);
+  }, [countryCode, paymentMode, paymentProvider]);
 
   // Auto-redirect after success
   useEffect(() => {
@@ -298,7 +303,7 @@ export default function Activate() {
                           disabled={phase === "initiating"}
                         >
                           <option value="">— Sélectionner votre pays —</option>
-                          {COUNTRY_LIST.map(c => <option key={c} value={c}>{c}</option>)}
+                           {availableCountries.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                       </div>
@@ -377,7 +382,7 @@ export default function Activate() {
                       <svg className="h-3.5 w-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
-                       <p className="text-[11px] text-gray-400 font-medium">Paiement sécurisé</p>
+                        <p className="text-[11px] text-gray-400 font-medium">Paiement sécurisé via {paymentProviderLabel}</p>
                     </div>
 
                     <div className="border-t border-gray-100 pt-3">

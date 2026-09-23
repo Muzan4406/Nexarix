@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const ASHTECHPAY_PROXY = "/api/activate/countries";
+const PAYMENT_PROVIDER_PROXY = "/api/activate/countries";
 
 const COUNTRY_ISO: Record<string, string> = {
   "Togo": "TG", "Bénin": "BJ", "Côte d'Ivoire": "CI",
@@ -20,6 +20,7 @@ const COUNTRY_ISO: Record<string, string> = {
   "République centrafricaine": "CF", "Guinée Équatoriale": "GQ", "RD Congo": "CD",
 };
 const COUNTRY_LIST = Object.keys(COUNTRY_ISO).sort();
+const DRIMPAY_COUNTRY_CODES = new Set(["TG", "BJ", "CM", "BF", "ML", "SN", "CI"]);
 
 const LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
   debutant:      { label: "Débutant",      color: "bg-emerald-100 text-emerald-600" },
@@ -83,6 +84,14 @@ interface PayModalProps {
 }
 
 function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps) {
+  const { data: publicSettings } = useQuery({
+    queryKey: ["public-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/settings/public");
+      if (!res.ok) throw new Error("Erreur de configuration");
+      return res.json();
+    },
+  });
   const [phase, setPhase] = useState<PayPhase>("form");
   const [country, setCountry] = useState(user?.country || "");
   const [phone, setPhone] = useState(user?.phone || "");
@@ -101,6 +110,11 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
 
   const countryCode = COUNTRY_ISO[country] || "";
   const price = formation.price;
+  const paymentProvider = publicSettings?.paymentProvider || "ashtechpay";
+  const paymentProviderLabel = paymentProvider === "drimpay" ? "DrimPay" : "AshTech Pay";
+  const availableCountries = paymentProvider === "drimpay"
+    ? COUNTRY_LIST.filter(name => DRIMPAY_COUNTRY_CODES.has(COUNTRY_ISO[name]))
+    : COUNTRY_LIST;
 
   // Load operators on country change
   useEffect(() => {
@@ -109,7 +123,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
     setLoadingOps(true);
     setSelectedOp("");
     setOpsLoaded(false);
-    fetch(`${ASHTECHPAY_PROXY}?country_code=${encodeURIComponent(countryCode)}`, {
+    fetch(`${PAYMENT_PROVIDER_PROXY}?country_code=${encodeURIComponent(countryCode)}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
@@ -121,7 +135,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
       .catch(() => { if (!cancelled) { setOperators([]); setOpsLoaded(true); } })
       .finally(() => { if (!cancelled) setLoadingOps(false); });
     return () => { cancelled = true; };
-  }, [countryCode]);
+  }, [countryCode, paymentProvider]);
 
   // Polling in waiting phase
   useEffect(() => {
@@ -261,7 +275,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
             </div>
             <div>
               <p className="text-white font-black text-sm leading-tight line-clamp-1">{formation.title}</p>
-              <p className="text-emerald-100 text-xs">Paiement Mobile Money</p>
+               <p className="text-emerald-100 text-xs">Paiement Mobile Money via {paymentProviderLabel}</p>
             </div>
           </div>
           <div className="mt-3 bg-white/15 rounded-2xl px-4 py-2.5 text-center">
@@ -291,7 +305,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
                       className="w-full h-11 pl-4 pr-10 rounded-2xl border-2 border-gray-100 focus:border-emerald-400 focus:outline-none text-sm font-semibold text-gray-800 bg-white appearance-none"
                     >
                       <option value="">— Sélectionner votre pays —</option>
-                      {COUNTRY_LIST.map(c => <option key={c} value={c}>{c}</option>)}
+                       {availableCountries.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   </div>
@@ -368,7 +382,7 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
                 </button>
 
                 <p className="text-center text-[10px] text-gray-400 font-medium">
-                  🔒 Paiement sécurisé
+                   🔒 Paiement sécurisé via {paymentProviderLabel}
                 </p>
               </motion.div>
             )}

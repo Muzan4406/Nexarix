@@ -81,6 +81,8 @@ export default function AdminSettings() {
     });
   };
 
+  const paymentProviderLabel = form.paymentProvider === "drimpay" ? "DrimPay" : "AshTech Pay";
+
   const togglePaymentMode = () => {
     setForm(f => ({ ...f, paymentMode: f.paymentMode === "auto" ? "manual" : "auto" }));
   };
@@ -255,7 +257,7 @@ export default function AdminSettings() {
                 <p className="font-semibold text-sm">Paiement automatique</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {form.paymentMode === "auto"
-                    ? "✅ Activé — Les utilisateurs paient via AshtechPay automatiquement"
+                    ? `✅ Activé — Les utilisateurs paient via ${paymentProviderLabel} automatiquement`
                     : "❌ Désactivé — Paiement manuel via WhatsApp"
                   }
                 </p>
