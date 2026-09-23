@@ -9,9 +9,18 @@ import {
 import { eq, and } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
 import { sendTelegramNotification } from "../lib/telegram";
+import {
+  ASHTECHPAY_BASE,
+  getDrimPayBase,
+  getPaymentProvider,
+  getProviderApiKey,
+  getProviderWebhookSecret,
+  normalizeE164,
+  toDrimPayOperator,
+  verifyDrimPayWebhook,
+} from "../lib/payment-provider";
 
 const router = Router();
-const ASHTECHPAY_BASE = "https://ashtechpay.top";
 
 const COUNTRY_ISO: Record<string, string> = {
   "Togo": "TG", "Bénin": "BJ", "Côte d'Ivoire": "CI",
@@ -67,7 +76,7 @@ router.get("/formations/:id/purchase/check", authMiddleware, async (req, res) =>
 router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
   const formationId = parseInt(String(req.params.id));
-  const { country: formCountry, phone: formPhone, operator, otp, reference: otpReference } = req.body || {};
+  const { country: formCountry, phone: formPhone, operator, operatorOtp } = req.body || {};
 
   const [formation] = await db
     .select()
@@ -115,8 +124,14 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
 
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
 
-  if (!settings?.sendavapayApiKey) {
-    res.status(503).json({ error: "Le paiement automatique n'est pas configuré" });
+  const provider = getPaymentProvider(settings);
+  const apiKey = getProviderApiKey(settings, provider);
+  if (!apiKey) {
+    res.status(503).json({ error: `La clé API ${provider === "drimpay" ? "DrimPay" : "AshtechPay"} n'est pas configurée` });
+    return;
+  }
+  if (provider === "drimpay" && !getProviderWebhookSecret(settings)) {
+    res.status(503).json({ error: "Le secret webhook DrimPay n'est pas configuré" });
     return;
   }
 
@@ -125,7 +140,7 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
   const countryIso = COUNTRY_ISO[resolvedCountry] || "TG";
   const currency = CURRENCY_BY_ISO[countryIso] || "XOF";
   const amount = parseFloat(String(formation.price));
-  const baseUrl = settings.appBaseUrl || "https://nexarix.replit.app";
+  const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
 
   let [purchase] = await db
     .select()
@@ -152,6 +167,57 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
   }
 
   try {
+    const orderId = `nexarix-formation-${purchase.id}`;
+    if (provider === "drimpay") {
+      const response = await fetch(`${getDrimPayBase(apiKey)}/payin/initiate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          amount,
+          currency,
+          country_code: countryIso,
+          operator: toDrimPayOperator(operator, countryIso),
+          phone: normalizeE164(resolvedPhone, countryIso),
+          order_id: orderId,
+          webhook_url: `${baseUrl}/api/formations/purchase/webhook`,
+          description: `Formation Nexarix #${formationId}`,
+          expires_in_minutes: 5,
+          ...(operatorOtp ? { operator_otp: String(operatorOtp).trim() } : {}),
+          metadata: { purchaseId: purchase.id, kind: "formation", orderId },
+        }),
+      });
+      const json = await response.json() as any;
+      if (response.status === 400 && json?.code === "INVALID_OTP") {
+        await db.update(formationPurchasesTable)
+          .set({ sendavapayReference: orderId })
+          .where(eq(formationPurchasesTable.id, purchase.id));
+        res.json({ flow: "otp", reference: orderId, purchaseId: purchase.id });
+        return;
+      }
+      if (!response.ok) {
+        res.status(502).json({ error: json?.message || json?.error || json?.code || "Erreur DrimPay" });
+        return;
+      }
+      const providerReference = json.reference || orderId;
+      await db.update(formationPurchasesTable)
+        .set({ sendavapayReference: providerReference })
+        .where(eq(formationPurchasesTable.id, purchase.id));
+      if (json.status === "success") {
+        await completePurchase(purchase);
+        res.json({ flow: "success", transactionId: providerReference, reference: providerReference, purchaseId: purchase.id });
+        return;
+      }
+      if (json.payment_url) {
+        res.json({ flow: "wave", waveUrl: json.payment_url, transactionId: providerReference, reference: providerReference, purchaseId: purchase.id });
+        return;
+      }
+      res.json({ flow: "ussd_push", transactionId: providerReference, reference: providerReference, purchaseId: purchase.id });
+      return;
+    }
+
     const payload = {
       amount,
       currency,
@@ -166,7 +232,7 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${settings.sendavapayApiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(payload),
     });
@@ -204,7 +270,7 @@ router.post("/formations/:id/purchase/initiate", authMiddleware, async (req, res
     res.status(502).json({ error: detail });
   } catch (e: any) {
     res.status(502).json({
-      error: "Impossible de contacter AshtechPay : " + e.message,
+      error: `Impossible de contacter ${provider === "drimpay" ? "DrimPay" : "AshtechPay"} : ${e.message}`,
     });
   }
 });
@@ -227,7 +293,9 @@ router.post("/formations/:id/purchase/otp", authMiddleware, async (req, res) => 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const [formation] = await db.select().from(formationsTable).where(eq(formationsTable.id, formationId)).limit(1);
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (!purchase || !user || !formation || !settings?.sendavapayApiKey) {
+  const provider = getPaymentProvider(settings);
+  const apiKey = getProviderApiKey(settings, provider);
+  if (!purchase || !user || !formation || !apiKey) {
     res.status(404).json({ error: "Paiement ou formation introuvable" });
     return;
   }
@@ -239,11 +307,50 @@ router.post("/formations/:id/purchase/otp", authMiddleware, async (req, res) => 
   const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
 
   try {
+    if (provider === "drimpay") {
+      const response = await fetch(`${getDrimPayBase(apiKey)}/payin/initiate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          amount: parseFloat(String(formation.price)),
+          currency,
+          country_code: countryIso,
+          operator: toDrimPayOperator(operator, countryIso),
+          phone: normalizeE164(resolvedPhone, countryIso),
+          order_id: reference,
+          webhook_url: `${baseUrl}/api/formations/purchase/webhook`,
+          description: `Formation Nexarix #${formationId}`,
+          expires_in_minutes: 5,
+          operator_otp: String(otp).trim(),
+          metadata: { purchaseId: purchase.id, kind: "formation", orderId: reference },
+        }),
+      });
+      const json = await response.json() as any;
+      if (!response.ok) {
+        res.status(response.status === 400 ? 400 : 502)
+          .json({ error: json?.message || json?.error || json?.code || "Erreur DrimPay" });
+        return;
+      }
+      const providerReference = json.reference || reference;
+      await db.update(formationPurchasesTable)
+        .set({ sendavapayReference: providerReference })
+        .where(eq(formationPurchasesTable.id, purchase.id));
+      if (json.payment_url) {
+        res.json({ flow: "wave", waveUrl: json.payment_url, transactionId: providerReference });
+        return;
+      }
+      res.json({ flow: "ussd_push", transactionId: providerReference });
+      return;
+    }
+
     const response = await fetch(`${ASHTECHPAY_BASE}/v1/collect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${settings.sendavapayApiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         amount: parseFloat(String(formation.price)),
@@ -297,13 +404,18 @@ router.get("/formations/:id/purchase/status", authMiddleware, async (req, res) =
   if (reference) {
     try {
       const [settings] = await db.select().from(siteSettingsTable).limit(1);
-      if (settings?.sendavapayApiKey) {
+      const provider = getPaymentProvider(settings);
+      const apiKey = getProviderApiKey(settings, provider);
+      if (apiKey) {
+        const statusUrl = provider === "drimpay"
+          ? `${getDrimPayBase(apiKey)}/payin/${encodeURIComponent(reference)}`
+          : `${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(reference)}`;
         const resp = await fetch(
-          `${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(reference)}`,
-          { headers: { Authorization: `Bearer ${settings.sendavapayApiKey}` } },
+          statusUrl,
+          { headers: { Authorization: `Bearer ${apiKey}` } },
         );
         const json = (await resp.json()) as any;
-        if (json.status === "success") {
+        if (json.status === "success" || json.status === "completed") {
           await completePurchaseByReference(reference);
           res.json({ status: "completed" });
           return;
@@ -317,6 +429,20 @@ router.get("/formations/:id/purchase/status", authMiddleware, async (req, res) =
 
 // Webhook (raw body registered in app.ts)
 router.post("/formations/purchase/webhook", async (req, res) => {
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  if (getPaymentProvider(settings) === "drimpay") {
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from("");
+    const valid = verifyDrimPayWebhook(
+      rawBody,
+      req.header("x-drimpay-signature"),
+      req.header("x-drimpay-timestamp"),
+      getProviderWebhookSecret(settings),
+    );
+    if (!valid) {
+      res.status(401).json({ error: "Signature DrimPay invalide" });
+      return;
+    }
+  }
   let payload: any;
   try {
     const body = Buffer.isBuffer(req.body) ? req.body.toString() : req.body;
@@ -328,8 +454,9 @@ router.post("/formations/purchase/webhook", async (req, res) => {
 
   const eventType = payload.event;
 
-  if (eventType === "payment.completed" && payload.status === "completed") {
-    const reference = payload.reference;
+  if ((eventType === "payment.completed" && payload.status === "completed") ||
+      eventType === "payin.success" || payload.status === "success") {
+    const reference = payload.metadata?.orderId || payload.order_id || payload.reference;
     if (reference) {
       try {
         await completePurchaseByReference(reference);
@@ -340,13 +467,16 @@ router.post("/formations/purchase/webhook", async (req, res) => {
   res.json({ received: true });
 });
 
-async function completePurchaseByReference(sendavapayReference: string) {
+async function completePurchaseByReference(paymentReference: string) {
+  const orderMatch = String(paymentReference).match(/^nexarix-formation-(\d+)$/);
   const [purchase] = await db
     .select()
     .from(formationPurchasesTable)
     .where(
       and(
-        eq(formationPurchasesTable.sendavapayReference, sendavapayReference),
+        orderMatch
+          ? eq(formationPurchasesTable.id, parseInt(orderMatch[1], 10))
+          : eq(formationPurchasesTable.sendavapayReference, paymentReference),
         eq(formationPurchasesTable.status, "pending"),
       ),
     )

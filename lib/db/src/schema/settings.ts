@@ -10,8 +10,11 @@ export const siteSettingsTable = pgTable("site_settings", {
   activationFee: numeric("activation_fee", { precision: 12, scale: 2 }).notNull().default("3800"),
   minWithdrawal: numeric("min_withdrawal", { precision: 12, scale: 2 }).notNull().default("3000"),
   paymentMode: text("payment_mode").notNull().default("manual"),
+  paymentProvider: text("payment_provider").notNull().default("ashtechpay"),
   sendavapayApiKey: text("sendavapay_api_key"),
   sendavapayWebhookSecret: text("sendavapay_webhook_secret"),
+  drimpayApiKey: text("drimpay_api_key"),
+  drimpayWebhookSecret: text("drimpay_webhook_secret"),
   appBaseUrl: text("app_base_url"),
   maintenanceMode: boolean("maintenance_mode").notNull().default(false),
 });

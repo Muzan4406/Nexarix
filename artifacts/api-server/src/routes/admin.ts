@@ -809,13 +809,21 @@ router.get("/admin/settings", authMiddleware, adminMiddleware, async (req, res) 
     ...settings,
     activationFee: parseFloat(settings.activationFee || "3800"),
     minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
+    paymentProvider: settings.paymentProvider === "drimpay" ? "drimpay" : "ashtechpay",
     sendavapayApiKey: maskSecret(settings.sendavapayApiKey),
     sendavapayWebhookSecret: maskSecret(settings.sendavapayWebhookSecret),
+    drimpayApiKey: maskSecret(settings.drimpayApiKey),
+    drimpayWebhookSecret: maskSecret(settings.drimpayWebhookSecret),
   });
 });
 
 router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res) => {
-  const { supportEmail, telegramLink, telegramChannel, whatsappLink, vcfLink, activationFee, minWithdrawal, paymentMode, sendavapayApiKey, sendavapayWebhookSecret, appBaseUrl, maintenanceMode } = req.body;
+  const {
+    supportEmail, telegramLink, telegramChannel, whatsappLink, vcfLink,
+    activationFee, minWithdrawal, paymentMode, paymentProvider,
+    sendavapayApiKey, sendavapayWebhookSecret,
+    drimpayApiKey, drimpayWebhookSecret, appBaseUrl, maintenanceMode,
+  } = req.body;
 
   let [settings] = await db.select().from(siteSettingsTable).limit(1);
   const updates: any = {};
@@ -827,10 +835,19 @@ router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res
   if (activationFee !== undefined) updates.activationFee = activationFee.toString();
   if (minWithdrawal !== undefined) updates.minWithdrawal = minWithdrawal.toString();
   if (paymentMode !== undefined) updates.paymentMode = paymentMode;
+  if (paymentProvider !== undefined) {
+    if (paymentProvider !== "ashtechpay" && paymentProvider !== "drimpay") {
+      res.status(400).json({ error: "Fournisseur de paiement invalide" });
+      return;
+    }
+    updates.paymentProvider = paymentProvider;
+  }
   // Ignore masked placeholders coming back from the settings form (the client
   // only re-sends these if the admin actually typed a new value).
   if (sendavapayApiKey !== undefined && !isMaskedSecret(sendavapayApiKey)) updates.sendavapayApiKey = sendavapayApiKey;
   if (sendavapayWebhookSecret !== undefined && !isMaskedSecret(sendavapayWebhookSecret)) updates.sendavapayWebhookSecret = sendavapayWebhookSecret;
+  if (drimpayApiKey !== undefined && !isMaskedSecret(drimpayApiKey)) updates.drimpayApiKey = drimpayApiKey;
+  if (drimpayWebhookSecret !== undefined && !isMaskedSecret(drimpayWebhookSecret)) updates.drimpayWebhookSecret = drimpayWebhookSecret;
   if (appBaseUrl !== undefined) updates.appBaseUrl = appBaseUrl;
   if (maintenanceMode !== undefined) updates.maintenanceMode = maintenanceMode;
 
@@ -846,8 +863,11 @@ router.patch("/admin/settings", authMiddleware, adminMiddleware, async (req, res
     ...settings,
     activationFee: parseFloat(settings.activationFee || "3800"),
     minWithdrawal: parseFloat(settings.minWithdrawal || "3000"),
+    paymentProvider: settings.paymentProvider === "drimpay" ? "drimpay" : "ashtechpay",
     sendavapayApiKey: maskSecret(settings.sendavapayApiKey),
     sendavapayWebhookSecret: maskSecret(settings.sendavapayWebhookSecret),
+    drimpayApiKey: maskSecret(settings.drimpayApiKey),
+    drimpayWebhookSecret: maskSecret(settings.drimpayWebhookSecret),
   });
 });
 

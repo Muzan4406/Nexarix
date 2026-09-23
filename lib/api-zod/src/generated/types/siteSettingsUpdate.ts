@@ -5,6 +5,7 @@
  * Nexarix Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { SiteSettingsUpdatePaymentProvider } from './siteSettingsUpdatePaymentProvider';
 
 export interface SiteSettingsUpdate {
   supportEmail?: string;
@@ -14,10 +15,15 @@ export interface SiteSettingsUpdate {
   vcfLink?: string | null;
   activationFee?: number;
   paymentMode?: string;
+  paymentProvider?: SiteSettingsUpdatePaymentProvider;
   /** @nullable */
   sendavapayApiKey?: string | null;
   /** @nullable */
   sendavapayWebhookSecret?: string | null;
+  /** @nullable */
+  drimpayApiKey?: string | null;
+  /** @nullable */
+  drimpayWebhookSecret?: string | null;
   /** @nullable */
   appBaseUrl?: string | null;
 }

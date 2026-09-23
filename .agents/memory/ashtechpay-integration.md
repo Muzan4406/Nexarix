@@ -1,6 +1,6 @@
 ---
-name: AshtechPay integration
-description: AshtechPay v1 pay-in flow for activation and formation purchases
+name: Payment providers
+description: AshtechPay and DrimPay pay-in flows for activation and formation purchases
 ---
 
 ## Provider contract
@@ -22,6 +22,14 @@ AshtechPay sends a `payment.completed` event with `status: "completed"` and the 
 ## Withdrawals
 
 Withdrawals remain manual. Approving a withdrawal must never call a provider payout endpoint.
+
+## DrimPay alternative
+
+DrimPay uses `/api/v2/payin/initiate` and `/api/v2/payin/:reference`. Live keys start with `dp_live_sk_`; sandbox keys start with `dp_sandbox_sk_`. DrimPay confirmations require HMAC-SHA256 over `timestamp.raw_body` with a five-minute replay window. Its operator names are slugs (`tmoney`, `moov`, `mtn`, `orange`, `wave`, `wizall`, `airtel`, `vodacom`) and phone numbers must be E.164.
+
+**Why:** The admin can switch the provider for both activation and formation payments. Provider selection must not alter commission logic or enable withdrawal payouts.
+
+**How to apply:** Keep the provider-specific API key and webhook secret server-side. Test DrimPay with sandbox credentials before selecting it for live payments.
 
 ## Legacy storage names
 

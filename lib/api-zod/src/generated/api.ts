@@ -642,7 +642,8 @@ export const RejectWithdrawalResponse = zod.object({
  */
 export const GetPublicSettingsResponse = zod.object({
   "activationFee": zod.number(),
-  "paymentMode": zod.string()
+  "paymentMode": zod.string(),
+  "paymentProvider": zod.enum(['ashtechpay', 'drimpay']).optional()
 })
 
 
@@ -674,8 +675,11 @@ export const GetAdminSettingsResponse = zod.object({
   "vcfLink": zod.string().nullish(),
   "activationFee": zod.number(),
   "paymentMode": zod.string(),
+  "paymentProvider": zod.enum(['ashtechpay', 'drimpay']).optional(),
   "sendavapayApiKey": zod.string().nullish(),
   "sendavapayWebhookSecret": zod.string().nullish(),
+  "drimpayApiKey": zod.string().nullish(),
+  "drimpayWebhookSecret": zod.string().nullish(),
   "appBaseUrl": zod.string().nullish()
 })
 
@@ -690,8 +694,11 @@ export const UpdateAdminSettingsBody = zod.object({
   "vcfLink": zod.string().nullish(),
   "activationFee": zod.number().optional(),
   "paymentMode": zod.string().optional(),
+  "paymentProvider": zod.enum(['ashtechpay', 'drimpay']).optional(),
   "sendavapayApiKey": zod.string().nullish(),
   "sendavapayWebhookSecret": zod.string().nullish(),
+  "drimpayApiKey": zod.string().nullish(),
+  "drimpayWebhookSecret": zod.string().nullish(),
   "appBaseUrl": zod.string().nullish()
 })
 
@@ -703,8 +710,11 @@ export const UpdateAdminSettingsResponse = zod.object({
   "vcfLink": zod.string().nullish(),
   "activationFee": zod.number(),
   "paymentMode": zod.string(),
+  "paymentProvider": zod.enum(['ashtechpay', 'drimpay']).optional(),
   "sendavapayApiKey": zod.string().nullish(),
   "sendavapayWebhookSecret": zod.string().nullish(),
+  "drimpayApiKey": zod.string().nullish(),
+  "drimpayWebhookSecret": zod.string().nullish(),
   "appBaseUrl": zod.string().nullish()
 })
 

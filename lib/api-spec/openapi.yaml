@@ -1176,6 +1176,9 @@ components:
           type: number
         paymentMode:
           type: string
+        paymentProvider:
+          type: string
+          enum: [ashtechpay, drimpay]
       required: [activationFee, paymentMode]
 
     ActivateInitiateResponse:
@@ -1220,9 +1223,16 @@ components:
           type: number
         paymentMode:
           type: string
+        paymentProvider:
+          type: string
+          enum: [ashtechpay, drimpay]
         sendavapayApiKey:
           type: ["string", "null"]
         sendavapayWebhookSecret:
+          type: ["string", "null"]
+        drimpayApiKey:
+          type: ["string", "null"]
+        drimpayWebhookSecret:
           type: ["string", "null"]
         appBaseUrl:
           type: ["string", "null"]
@@ -1243,9 +1253,16 @@ components:
           type: number
         paymentMode:
           type: string
+        paymentProvider:
+          type: string
+          enum: [ashtechpay, drimpay]
         sendavapayApiKey:
           type: ["string", "null"]
         sendavapayWebhookSecret:
+          type: ["string", "null"]
+        drimpayApiKey:
+          type: ["string", "null"]
+        drimpayWebhookSecret:
           type: ["string", "null"]
         appBaseUrl:
           type: ["string", "null"]

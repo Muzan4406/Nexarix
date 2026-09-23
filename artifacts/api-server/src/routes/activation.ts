@@ -4,9 +4,19 @@ import { usersTable, siteSettingsTable, withdrawalsTable } from "@workspace/db";
 import { eq, sql, and, ne } from "drizzle-orm";
 import { authMiddleware } from "../lib/auth";
 import { sendTelegramNotification, escapeHtml } from "../lib/telegram";
+import {
+  ASHTECHPAY_BASE,
+  getDrimPayBase,
+  DRIMPAY_COUNTRIES,
+  getPaymentProvider,
+  getProviderApiKey,
+  getProviderWebhookSecret,
+  normalizeE164,
+  toDrimPayOperator,
+  verifyDrimPayWebhook,
+} from "../lib/payment-provider";
 
 const router = Router();
-const ASHTECHPAY_BASE = "https://ashtechpay.top";
 const WELCOME_BONUS = 50;
 const REFERRAL_BONUS_AMOUNT = 1500;
 const REFERRAL_BONUS_STEP = 10;
@@ -52,6 +62,7 @@ router.get("/settings/public", async (_req, res) => {
   res.json({
     activationFee: parseFloat(settings?.activationFee || "3800"),
     paymentMode: settings?.paymentMode || "manual",
+    paymentProvider: getPaymentProvider(settings),
     minWithdrawal: parseFloat(settings?.minWithdrawal || "3000"),
     supportEmail: settings?.supportEmail || null,
     telegramLink: settings?.telegramLink || null,
@@ -62,12 +73,27 @@ router.get("/settings/public", async (_req, res) => {
   });
 });
 
-// ─── Country operators proxy (AshtechPay /v1/countries) ──────────────────────
+// ─── Country operators proxy ───────────────────────────────────────────────────
 router.get("/activate/countries", async (req, res) => {
   const { country_code } = req.query as { country_code?: string };
 
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  const apiKey = settings?.sendavapayApiKey;
+  const provider = getPaymentProvider(settings);
+
+  if (provider === "drimpay") {
+    if (country_code && !DRIMPAY_COUNTRIES[country_code]) {
+      res.status(400).json({ error: "Pays non supporté par DrimPay" });
+      return;
+    }
+    if (country_code) {
+      res.json({ operators: DRIMPAY_COUNTRIES[country_code] || [] });
+      return;
+    }
+    res.json(Object.entries(DRIMPAY_COUNTRIES).map(([code, operators]) => ({ code, operators })));
+    return;
+  }
+
+  const apiKey = getProviderApiKey(settings, "ashtechpay");
 
   if (apiKey) {
     try {
@@ -118,6 +144,7 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
     phone: formPhone,
     operator: formOperator,
     operatorId,
+    operatorOtp,
   } = req.body || {};
   const operator = formOperator || operatorId;
 
@@ -132,8 +159,14 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
     res.status(400).json({ error: "Le paiement automatique n'est pas activé" });
     return;
   }
-  if (!settings.sendavapayApiKey) {
-    res.status(503).json({ error: "La clé API AshtechPay n'est pas configurée" });
+  const provider = getPaymentProvider(settings);
+  const apiKey = getProviderApiKey(settings, provider);
+  if (!apiKey) {
+    res.status(503).json({ error: `La clé API ${provider === "drimpay" ? "DrimPay" : "AshtechPay"} n'est pas configurée` });
+    return;
+  }
+  if (provider === "drimpay" && !getProviderWebhookSecret(settings)) {
+    res.status(503).json({ error: "Le secret webhook DrimPay n'est pas configuré" });
     return;
   }
   if (!operator) {
@@ -159,6 +192,50 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
   const reference = `nexarix-act-${userId}-${Date.now()}`;
 
   try {
+    if (provider === "drimpay") {
+      const response = await fetch(`${getDrimPayBase(apiKey)}/payin/initiate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          amount: activationFee,
+          currency,
+          country_code: countryIso,
+          operator: toDrimPayOperator(operator, countryIso),
+          phone: normalizeE164(resolvedPhone, countryIso),
+          order_id: reference,
+          webhook_url: `${baseUrl}/api/activate/webhook`,
+          description: `Activation Nexarix #${userId}`,
+          expires_in_minutes: 5,
+          ...(operatorOtp ? { operator_otp: String(operatorOtp).trim() } : {}),
+          metadata: { userId, kind: "activation", orderId: reference },
+        }),
+      });
+      const json = await response.json() as any;
+      if (response.status === 400 && json?.code === "INVALID_OTP") {
+        res.json({ flow: "otp", reference });
+        return;
+      }
+      if (!response.ok) {
+        res.status(502).json({ error: json?.message || json?.error || json?.code || "Erreur DrimPay" });
+        return;
+      }
+      if (json.status === "success") {
+        const [freshUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+        if (freshUser) await activateUser(freshUser);
+        res.json({ flow: "success", transactionId: json.reference, reference });
+        return;
+      }
+      if (json.payment_url) {
+        res.json({ flow: "wave", waveUrl: json.payment_url, transactionId: json.reference, reference });
+        return;
+      }
+      res.json({ flow: "ussd_push", transactionId: json.reference, reference });
+      return;
+    }
+
     const payload = {
       amount: activationFee,
       currency,
@@ -173,7 +250,7 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${settings.sendavapayApiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(payload),
     });
@@ -194,7 +271,7 @@ router.post("/activate/initiate", authMiddleware, async (req, res) => {
     const detail = json?.message || json?.error || JSON.stringify(json);
     res.status(502).json({ error: detail });
   } catch (e: any) {
-    res.status(502).json({ error: "Impossible de contacter AshtechPay : " + e.message });
+    res.status(502).json({ error: `Impossible de contacter ${provider === "drimpay" ? "DrimPay" : "AshtechPay"} : ${e.message}` });
   }
 });
 
@@ -218,8 +295,10 @@ router.post("/activate/otp", authMiddleware, async (req, res) => {
     return;
   }
   const [settings] = await db.select().from(siteSettingsTable).limit(1);
-  if (!settings?.sendavapayApiKey) {
-    res.status(503).json({ error: "AshtechPay non configuré" });
+  const provider = getPaymentProvider(settings);
+  const apiKey = getProviderApiKey(settings, provider);
+  if (!apiKey) {
+    res.status(503).json({ error: `${provider === "drimpay" ? "DrimPay" : "AshtechPay"} non configuré` });
     return;
   }
   if (!otp || !otpReference || !operator) {
@@ -235,11 +314,46 @@ router.post("/activate/otp", authMiddleware, async (req, res) => {
   const baseUrl = settings.appBaseUrl || `${req.protocol}://${req.get("host")}`;
 
   try {
+    if (provider === "drimpay") {
+      const response = await fetch(`${getDrimPayBase(apiKey)}/payin/initiate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          amount: parseFloat(settings.activationFee || "3800"),
+          currency,
+          country_code: countryIso,
+          operator: toDrimPayOperator(operator, countryIso),
+          phone: normalizeE164(resolvedPhone, countryIso),
+          order_id: otpReference,
+          webhook_url: `${baseUrl}/api/activate/webhook`,
+          description: `Activation Nexarix #${userId}`,
+          expires_in_minutes: 5,
+          operator_otp: String(otp).trim(),
+          metadata: { userId, kind: "activation", orderId: otpReference },
+        }),
+      });
+      const json = await response.json() as any;
+      if (!response.ok) {
+        res.status(response.status === 400 ? 400 : 502)
+          .json({ error: json?.message || json?.error || json?.code || "Erreur DrimPay" });
+        return;
+      }
+      if (json.payment_url) {
+        res.json({ flow: "wave", waveUrl: json.payment_url, transactionId: json.reference });
+        return;
+      }
+      res.json({ flow: "ussd_push", transactionId: json.reference });
+      return;
+    }
+
     const response = await fetch(`${ASHTECHPAY_BASE}/v1/collect`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${settings.sendavapayApiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         amount: activationFee,
@@ -280,12 +394,17 @@ router.get("/activate/check", authMiddleware, async (req, res) => {
   if (transactionId) {
     try {
       const [settings] = await db.select().from(siteSettingsTable).limit(1);
-      if (settings?.sendavapayApiKey) {
-        const response = await fetch(`${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(transactionId)}`, {
-          headers: { Authorization: `Bearer ${settings.sendavapayApiKey}` },
+      const provider = getPaymentProvider(settings);
+      const apiKey = getProviderApiKey(settings, provider);
+      if (apiKey) {
+        const statusUrl = provider === "drimpay"
+          ? `${getDrimPayBase(apiKey)}/payin/${encodeURIComponent(transactionId)}`
+          : `${ASHTECHPAY_BASE}/v1/transaction/${encodeURIComponent(transactionId)}`;
+        const response = await fetch(statusUrl, {
+          headers: { Authorization: `Bearer ${apiKey}` },
         });
         const json = await response.json() as any;
-        if (json.status === "success") {
+        if (json.status === "success" || json.status === "completed") {
           const [freshUser] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
           if (freshUser && freshUser.status !== "active") {
             await activateUser(freshUser);
@@ -302,6 +421,20 @@ router.get("/activate/check", authMiddleware, async (req, res) => {
 
 // ─── Webhook (AshtechPay payment.completed / payment.failed) ─────────────────
 router.post("/activate/webhook", async (req, res) => {
+  const [settings] = await db.select().from(siteSettingsTable).limit(1);
+  if (getPaymentProvider(settings) === "drimpay") {
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from("");
+    const valid = verifyDrimPayWebhook(
+      rawBody,
+      req.header("x-drimpay-signature"),
+      req.header("x-drimpay-timestamp"),
+      getProviderWebhookSecret(settings),
+    );
+    if (!valid) {
+      res.status(401).json({ error: "Signature DrimPay invalide" });
+      return;
+    }
+  }
   res.status(200).json({ received: true });
   let payload: any;
   try {
@@ -312,8 +445,9 @@ router.post("/activate/webhook", async (req, res) => {
   }
 
   const event = payload?.event;
-  const reference = payload?.reference;
-  if (event === "payment.completed" && payload?.status === "completed" && typeof reference === "string") {
+  const reference = payload?.metadata?.orderId || payload?.order_id || payload?.reference;
+  const isSuccess = payload?.status === "completed" || payload?.status === "success" || event === "payin.success";
+  if (isSuccess && typeof reference === "string") {
     const match = reference.match(/^nexarix-act-(\d+)-\d+$/);
     if (!match) return;
     try {

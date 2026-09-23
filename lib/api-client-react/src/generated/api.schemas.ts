@@ -270,9 +270,18 @@ export interface ApproveInput {
   confirmationCode: string;
 }
 
+export type PublicSettingsPaymentProvider = typeof PublicSettingsPaymentProvider[keyof typeof PublicSettingsPaymentProvider];
+
+
+export const PublicSettingsPaymentProvider = {
+  ashtechpay: 'ashtechpay',
+  drimpay: 'drimpay',
+} as const;
+
 export interface PublicSettings {
   activationFee: number;
   paymentMode: string;
+  paymentProvider?: PublicSettingsPaymentProvider;
 }
 
 export interface ActivateInitiateResponse {
@@ -289,6 +298,14 @@ export interface SpinResult {
   totalPoints: number;
 }
 
+export type SiteSettingsPaymentProvider = typeof SiteSettingsPaymentProvider[keyof typeof SiteSettingsPaymentProvider];
+
+
+export const SiteSettingsPaymentProvider = {
+  ashtechpay: 'ashtechpay',
+  drimpay: 'drimpay',
+} as const;
+
 export interface SiteSettings {
   id: number;
   supportEmail: string;
@@ -298,13 +315,26 @@ export interface SiteSettings {
   vcfLink?: string | null;
   activationFee: number;
   paymentMode: string;
+  paymentProvider?: SiteSettingsPaymentProvider;
   /** @nullable */
   sendavapayApiKey?: string | null;
   /** @nullable */
   sendavapayWebhookSecret?: string | null;
   /** @nullable */
+  drimpayApiKey?: string | null;
+  /** @nullable */
+  drimpayWebhookSecret?: string | null;
+  /** @nullable */
   appBaseUrl?: string | null;
 }
+
+export type SiteSettingsUpdatePaymentProvider = typeof SiteSettingsUpdatePaymentProvider[keyof typeof SiteSettingsUpdatePaymentProvider];
+
+
+export const SiteSettingsUpdatePaymentProvider = {
+  ashtechpay: 'ashtechpay',
+  drimpay: 'drimpay',
+} as const;
 
 export interface SiteSettingsUpdate {
   supportEmail?: string;
@@ -314,10 +344,15 @@ export interface SiteSettingsUpdate {
   vcfLink?: string | null;
   activationFee?: number;
   paymentMode?: string;
+  paymentProvider?: SiteSettingsUpdatePaymentProvider;
   /** @nullable */
   sendavapayApiKey?: string | null;
   /** @nullable */
   sendavapayWebhookSecret?: string | null;
+  /** @nullable */
+  drimpayApiKey?: string | null;
+  /** @nullable */
+  drimpayWebhookSecret?: string | null;
   /** @nullable */
   appBaseUrl?: string | null;
 }

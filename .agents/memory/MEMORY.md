@@ -1,4 +1,4 @@
-- [AshtechPay integration](ashtechpay-integration.md) — activation and formation pay-ins use server-side /v1/collect, /v1/countries and /v1/transaction; withdrawals stay manual
+- [Payment providers](ashtechpay-integration.md) — activation and formation pay-ins can use AshtechPay or DrimPay; withdrawals stay manual
 - [Security hardening](security-hardening.md) — rate limiters, helmet, CORS, hardcoded admin creds moved to env/secrets, Telegram intrusion alerts; see file for required env vars
 
 - [Plesk deploy "looks broken"](plesk-deploy-stale-browser-cache.md) — check stale browser cache (incognito test) before debugging code when a fresh deploy seems not to work

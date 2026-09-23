@@ -163,6 +163,11 @@ function PayModal({ formation, token, user, onClose, onSuccess }: PayModalProps)
         setPhase("form");
         return;
       }
+      if (initJson.flow === "success") {
+        setPhase("success");
+        onSuccess(formation.id);
+        return;
+      }
       if (initJson.flow === "wave" && initJson.waveUrl) {
         setReference(initJson.transactionId || "");
         window.location.href = initJson.waveUrl;

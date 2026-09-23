@@ -5,8 +5,10 @@
  * Nexarix Platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { PublicSettingsPaymentProvider } from './publicSettingsPaymentProvider';
 
 export interface PublicSettings {
   activationFee: number;
   paymentMode: string;
+  paymentProvider?: PublicSettingsPaymentProvider;
 }

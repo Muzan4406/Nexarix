@@ -25,7 +25,10 @@ export default function AdminSettings() {
     activationFee: "3000",
     minWithdrawal: "3000",
     paymentMode: "manual",
+    paymentProvider: "ashtechpay",
     sendavapayApiKey: "",
+    drimpayApiKey: "",
+    drimpayWebhookSecret: "",
     appBaseUrl: "",
     maintenanceMode: false,
   });
@@ -41,7 +44,10 @@ export default function AdminSettings() {
         activationFee: String(settings.activationFee ?? 3000),
         minWithdrawal: String(settings.minWithdrawal ?? 3000),
         paymentMode: settings.paymentMode || "manual",
+        paymentProvider: (settings as any).paymentProvider || "ashtechpay",
         sendavapayApiKey: settings.sendavapayApiKey || "",
+        drimpayApiKey: (settings as any).drimpayApiKey || "",
+        drimpayWebhookSecret: (settings as any).drimpayWebhookSecret || "",
         appBaseUrl: settings.appBaseUrl || "",
         maintenanceMode: (settings as any).maintenanceMode ?? false,
       });
@@ -54,9 +60,12 @@ export default function AdminSettings() {
         ...form,
         activationFee: parseFloat(form.activationFee) || 3000,
         minWithdrawal: parseFloat(form.minWithdrawal) || 3000,
+        paymentProvider: form.paymentProvider,
         telegramChannel: form.telegramChannel || null,
         vcfLink: form.vcfLink || null,
         sendavapayApiKey: form.sendavapayApiKey || null,
+        drimpayApiKey: form.drimpayApiKey || null,
+        drimpayWebhookSecret: form.drimpayWebhookSecret || null,
         appBaseUrl: form.appBaseUrl || null,
         maintenanceMode: form.maintenanceMode,
       } as any
@@ -81,6 +90,7 @@ export default function AdminSettings() {
 
   const baseUrl = form.appBaseUrl || window.location.origin;
   const webhookUrl = `${baseUrl}/api/activate/webhook`;
+  const formationWebhookUrl = `${baseUrl}/api/formations/purchase/webhook`;
   const redirectUrl = `${baseUrl}/payment-status`;
 
   if (isLoading) return <AdminLayout><div className="flex items-center justify-center h-64 text-muted-foreground">Chargement...</div></AdminLayout>;
@@ -115,7 +125,9 @@ export default function AdminSettings() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">URL Webhook AshtechPay</p>
+               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                 URL Webhook {form.paymentProvider === "drimpay" ? "DrimPay" : "AshtechPay"}
+               </p>
 
               <div className="bg-muted rounded-lg p-3 space-y-2">
                 <div>
@@ -135,7 +147,7 @@ export default function AdminSettings() {
                   </div>
                 </div>
 
-                <div>
+                 <div>
                   <p className="text-xs text-muted-foreground mb-1">URL Webhook</p>
                   <div className="flex items-center gap-2">
                     <code className="text-xs flex-1 bg-background rounded px-2 py-1.5 truncate font-mono border">
@@ -150,11 +162,27 @@ export default function AdminSettings() {
                       {copied === "webhook" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
                   </div>
+                 <div>
+                   <p className="text-xs text-muted-foreground mb-1">URL Webhook formations</p>
+                   <div className="flex items-center gap-2">
+                     <code className="text-xs flex-1 bg-background rounded px-2 py-1.5 truncate font-mono border">
+                       {formationWebhookUrl}
+                     </code>
+                     <Button
+                       size="icon"
+                       variant="ghost"
+                       className="h-7 w-7 shrink-0"
+                       onClick={() => copyToClipboard(formationWebhookUrl, "formation-webhook")}
+                     >
+                       {copied === "formation-webhook" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                     </Button>
+                   </div>
+                 </div>
                 </div>
               </div>
 
               <p className="text-xs text-amber-600 dark:text-amber-400">
-                ⚠️ Configurez cette URL dans votre tableau de bord AshtechPay. Après changement de domaine, mettez à jour l'URL de base et re-copiez.
+                 ⚠️ Configurez les webhooks du fournisseur sélectionné. Après changement de domaine, mettez à jour l'URL de base et re-copiez.
               </p>
             </div>
           </CardContent>
@@ -215,7 +243,7 @@ export default function AdminSettings() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Key className="h-4 w-4 text-primary" />
-              Mode de paiement — AshtechPay
+               Mode de paiement automatique
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -241,20 +269,70 @@ export default function AdminSettings() {
             </div>
 
             {form.paymentMode === "auto" && (
-              <div>
-                <Label className="flex items-center gap-2 mb-1.5">
-                  <Key className="h-4 w-4 text-amber-500" />Clé API AshtechPay
-                </Label>
-                <Input
-                  value={form.sendavapayApiKey}
-                  onChange={e => setForm(f => ({ ...f, sendavapayApiKey: e.target.value }))}
-                  placeholder="ak_live_..."
-                  type="password"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                   Clé Bearer disponible dans votre tableau de bord AshtechPay (ashtechpay.top).
-                </p>
-              </div>
+               <div className="space-y-4">
+                 <div>
+                   <Label className="mb-1.5 block">Fournisseur des paiements automatiques</Label>
+                   <select
+                     value={form.paymentProvider}
+                     onChange={e => setForm(f => ({ ...f, paymentProvider: e.target.value }))}
+                     className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                   >
+                     <option value="ashtechpay">AshtechPay</option>
+                     <option value="drimpay">DrimPay</option>
+                   </select>
+                   <p className="text-xs text-muted-foreground mt-1">
+                     Ce fournisseur sera utilisé pour les activations et les achats de formations.
+                   </p>
+                 </div>
+
+                 {form.paymentProvider === "ashtechpay" ? (
+                   <div>
+                     <Label className="flex items-center gap-2 mb-1.5">
+                       <Key className="h-4 w-4 text-amber-500" />Clé API AshtechPay
+                     </Label>
+                     <Input
+                       value={form.sendavapayApiKey}
+                       onChange={e => setForm(f => ({ ...f, sendavapayApiKey: e.target.value }))}
+                       placeholder="Clé Bearer AshtechPay"
+                       type="password"
+                     />
+                     <p className="text-xs text-muted-foreground mt-1">
+                       Clé disponible dans votre tableau de bord AshtechPay.
+                     </p>
+                   </div>
+                 ) : (
+                   <>
+                     <div>
+                       <Label className="flex items-center gap-2 mb-1.5">
+                         <Key className="h-4 w-4 text-amber-500" />Clé API DrimPay
+                       </Label>
+                       <Input
+                         value={form.drimpayApiKey}
+                         onChange={e => setForm(f => ({ ...f, drimpayApiKey: e.target.value }))}
+                         placeholder="dp_live_sk_..."
+                         type="password"
+                       />
+                       <p className="text-xs text-muted-foreground mt-1">
+                         Utilisez une clé `dp_live_sk_` en production ou `dp_sandbox_sk_` pour les tests.
+                       </p>
+                     </div>
+                     <div>
+                       <Label className="flex items-center gap-2 mb-1.5">
+                         <Key className="h-4 w-4 text-amber-500" />Secret webhook DrimPay
+                       </Label>
+                       <Input
+                         value={form.drimpayWebhookSecret}
+                         onChange={e => setForm(f => ({ ...f, drimpayWebhookSecret: e.target.value }))}
+                         placeholder="Secret HMAC DrimPay"
+                         type="password"
+                       />
+                       <p className="text-xs text-muted-foreground mt-1">
+                         Obligatoire pour accepter les confirmations signées.
+                       </p>
+                     </div>
+                   </>
+                 )}
+               </div>
             )}
           </CardContent>
         </Card>

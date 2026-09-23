@@ -54,6 +54,7 @@ export default function Activate() {
   const [submittingOtp, setSubmittingOtp] = useState(false);
 
   const paymentMode = publicSettings?.paymentMode ?? "manual";
+  const paymentProvider = (publicSettings as any)?.paymentProvider ?? "ashtechpay";
   const activationFee = publicSettings?.activationFee ?? 3800;
   const countryCode = COUNTRY_ISO[country] || "";
 
@@ -140,12 +141,16 @@ export default function Activate() {
       });
       const json = await resp.json() as any;
       if (!resp.ok) {
-          setErrorMsg(json?.error || "Erreur AshtechPay. Vérifiez la configuration.");
+           setErrorMsg(json?.error || `Erreur ${paymentProvider === "drimpay" ? "DrimPay" : "AshtechPay"}. Vérifiez la configuration.`);
         setPhase("form");
         return;
       }
 
-      if (json.flow === "wave" && json.waveUrl) {
+       if (json.flow === "success") {
+         setPhase("success");
+         return;
+       }
+       if (json.flow === "wave" && json.waveUrl) {
         setWaveUrl(json.waveUrl);
         setTransactionId(json.transactionId || "");
         setPhase("wave");

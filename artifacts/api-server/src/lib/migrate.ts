@@ -78,6 +78,13 @@ export async function runStartupMigrations(): Promise<void> {
     `);
 
     await db.execute(sql`
+      ALTER TABLE site_settings
+        ADD COLUMN IF NOT EXISTS payment_provider TEXT NOT NULL DEFAULT 'ashtechpay',
+        ADD COLUMN IF NOT EXISTS drimpay_api_key TEXT,
+        ADD COLUMN IF NOT EXISTS drimpay_webhook_secret TEXT;
+    `);
+
+    await db.execute(sql`
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
